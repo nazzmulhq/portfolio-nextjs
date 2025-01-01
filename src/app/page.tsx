@@ -128,22 +128,19 @@ export const info = {
     ],
     education: [
         {
-            title: "The origin",
-            date: "May, 2020",
-            description:
-                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+            title: "Daffodil International University",
+            degree: "Bachelor of Science in Computer Science and Engineering",
+            date: "2016 - 2020",
         },
         {
-            title: "The origin",
-            date: "May, 2020",
-            description:
-                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+            title: "Meherpur College of Engineering & Technology",
+            degree: "Diploma-in-Computer Engineering",
+            date: "2012 - 2016",
         },
         {
-            title: "The origin",
-            date: "May, 2020",
-            description:
-                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+            title: "Kobi Nazrul Shikkha Manzil",
+            degree: "Secondary School Certificate",
+            date: "2010 - 2012",
         },
     ],
     works: [
