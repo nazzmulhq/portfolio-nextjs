@@ -1,21 +1,13 @@
-@tailwind base;
+@layer tailwind-base, antd;
+
+@layer tailwind-base {
+    @tailwind base;
+}
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
-
-body {
-  color: var(--foreground);
-  background: var(--background);
-  font-family: Arial, Helvetica, sans-serif;
+.bg-grid {
+    background-color: #000000;
+    background-image: url("../../public/sq.svg");
+    background-size: 40px 40px;
 }

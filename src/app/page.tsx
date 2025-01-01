@@ -1,101 +1,196 @@
-import Image from "next/image";
+import me from "@public/images/person.png";
+import Education from "@src/components/home/Education";
+import Experience from "@src/components/home/Experience";
+import Home from "@src/components/home/Home";
+import { NavBar, NavBarMobile } from "@src/components/home/NavBar";
+import Skills from "@src/components/home/Skills";
+import Works from "@src/components/home/Works";
 
-export default function Home() {
-  return (
-    <div className="grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20 font-[family-name:var(--font-geist-sans)]">
-      <main className="flex flex-col gap-8 row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="list-inside list-decimal text-sm text-center sm:text-left font-[family-name:var(--font-geist-mono)]">
-          <li className="mb-2">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] px-1 py-0.5 rounded font-semibold">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li>Save and see your changes instantly.</li>
-        </ol>
+export const info = {
+    me: {
+        name: "Nazmul Haque",
+        title: "Full Stack Developer",
+        email: "nazmul2018s@gmail.com",
+        phone: "+8801917003822",
+        experience: "4+ experience",
+        image: me,
+        linkedin: "https://www.linkedin.com/in/nazzmulhq/",
+        github: "https://www.github.com/nazzmulhq",
+        resume: "https://www.github.com/nazzmulhq",
+    },
+    skills: [
+        "JavaScript",
+        "TypeScript",
+        "React.js",
+        "Node.js",
+        "Express.js",
+        "Next.js",
+        "Nest.js",
+        "Tailwind CSS",
+        "Material UI",
+        "Ant Design",
+        "Docker",
+        "Kubernetes",
+    ],
+    experience: [
+        {
+            icon: "https://img.icons8.com/ios/50/000000/react-native.png",
+            title: "Software Specialist (Fullstack)",
+            address: " 27, 1 New Eskaton Road, Dhaka 1000",
+            company: "SSL Wireless Ltd.",
+            date: "Oct 2023 - Present",
+            description: [
+                "Lead ERP frontend development using Next.js 14 and TypeScript",
+                "Design and implement modular ERP components with Ant Design and TailwindCSS",
+                "Create complex state management solutions using Redux Toolkit",
+                "Set up automated CI/CD pipelines GitHub Actions for deployment using Docker",
+            ],
+            technologies: [
+                "Next.js 14",
+                "TypeScript",
+                "Ant Design",
+                "TailwindCSS",
+                "Docker",
+                "Kubernetes",
+                "GitHub Actions",
+                "Redux Toolkit",
+            ],
+        },
+        {
+            icon: "https://img.icons8.com/ios/50/000000/react-native.png",
+            title: "Software Engineer (Fullstack)",
+            company: "APSIS Ltd.",
+            date: "Nov 2022 - Oct 2023",
+            address: "Ahmed Tower, 30 Kemal Ataturk Ave, Dhaka 1213",
+            description: [
+                "Developed enterprise ERP system using Next.js and NestJS",
+                "Built scalable RESTful APIs using NestJS with Knex",
+                "Implemented responsive UI components using Ant Design and TailwindCSS",
+                "Designed and optimized PostgreSQL database schemas for ERP modules",
+            ],
+            technologies: [
+                "Next.js",
+                "NestJS",
+                "TypeScript",
+                "Ant Design",
+                "TailwindCSS",
+                "PostgreSQL",
+                "Redis",
+                "Microservices",
+            ],
+        },
+        {
+            icon: "https://img.icons8.com/ios/50/000000/react-native.png",
+            title: "Software Engineer (Frontend)",
+            company: "mPower Social Enterprises Ltd.",
+            date: "Nov 2020 - Nov 2022",
+            address:
+                "Level 10 House 77, Nur Empori, Road 11 Banani Bridge, Dhaka 1213",
+            description: [
+                "Led frontend development using React.js and TypeScript for enterprise applications",
+                "Created reusable component libraries and established frontend architecture",
+                "Conducted requirement analysis and created detailed technical specifications",
+                "Designed RESTful API integrations and state management using Redux",
+            ],
+            technologies: [
+                "React.js",
+                "TypeScript",
+                "Material-UI",
+                "Redux",
+                "Jest",
+                "REST APIs",
+                "Git",
+                "Agile/Scrum",
+            ],
+        },
+        {
+            icon: "https://img.icons8.com/ios/50/000000/react-native.png",
+            title: "Associate Software Engineer",
+            address: "Komlapur, Dhaka",
+            company: "ROTech Ltd.",
+            date: "Jul 2020 - Nov 2020",
+            description: [
+                "Developed backend APIs using Python Django frameworks with RESTful architecture",
+                "Designed ERP Module and implemented & responsive frontend using HTML5, CSS3, and JavaScript",
+                "Conducted requirement analysis and created detailed technical specifications",
+                "Designed and optimized PostgreSQL database schemas and queries",
+            ],
+            technologies: [
+                "Python",
+                "Django",
+                "HTML5/CSS3",
+                "JavaScript",
+                "PostgreSQL",
+                "Git",
+                "RESTful APIs",
+            ],
+        },
+    ],
+    education: [
+        {
+            title: "The origin",
+            date: "May, 2020",
+            description:
+                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+        },
+        {
+            title: "The origin",
+            date: "May, 2020",
+            description:
+                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+        },
+        {
+            title: "The origin",
+            date: "May, 2020",
+            description:
+                "Acme was founded in Milan, Italy. Pretium lectus quam id leo. Urna et pharetra pharetra massa massa. Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+        },
+    ],
+    works: [
+        {
+            imageOrVideo:
+                "https://images.unsplash.com/photo-1557683316-973673baf926?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max&ixid=eyJhcHBfaWQiOjE0NTg5fQ",
+            title: "The origin",
+            technologies: ["React.js", "Node.js", "Express.js"],
+            description: [
+                "Pretium lectus quam id leo.",
+                "Urna et pharetra pharetra massa massa.",
+                "Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+            ],
+            link: "https://www.google.com",
+        },
+    ],
+};
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:min-w-44"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+export default function Page() {
+    return (
+        <div className="container relative p-4 text-white min-h-screen md:w-3/4 lg:w-3/4 xl:w-1/2 2xl:w-2/3 mx-auto">
+            <NavBar />
+
+            <div className="md:mt-16">
+                <div className="w-full border border-b-0 border-white h-8 flex justify-between">
+                    <div className="w-1/12 border-r border-white bg-white text-black text-center text-2xl font-medium">
+                        0
+                    </div>
+                    <div className="w-11/12 border-r border-white "></div>
+                    <div className="w-1/12 "></div>
+                </div>
+                <div className="w-full border border-white">
+                    <Home />
+                    <Skills />
+                    <Experience />
+                    <Education />
+                    <Works />
+                </div>
+                <div className="w-full border border-t-0 border-white h-8 flex justify-between">
+                    <div className="w-1/12 border-r border-white "></div>
+                    <div className="w-11/12 border-r border-white "></div>
+                    <div className="w-1/12 bg-white text-black text-center text-2xl font-medium">
+                        9
+                    </div>
+                </div>
+            </div>
+            <NavBarMobile />
         </div>
-      </main>
-      <footer className="row-start-3 flex gap-6 flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
-    </div>
-  );
+    );
 }
