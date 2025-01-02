@@ -161,7 +161,7 @@ export const info = {
 
 export default function Page() {
     return (
-        <div className="container relative p-4 text-white min-h-screen md:w-3/4 lg:w-3/4 xl:w-1/2 2xl:w-2/3 mx-auto">
+        <div className="container relative p-4 text-white min-h-screen mx-auto sm:w-full md:w-3/4 lg:w-2/3 xl:w-1/2 2xl:w-2/3">
             <NavBar />
 
             <div className="md:mt-16">
