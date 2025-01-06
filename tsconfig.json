@@ -22,6 +22,7 @@
             "@src/*": ["./src/*"],
             "@public/*": ["./public/*"],
             "@components/*": ["./src/components/*"],
+            "@assets/*": ["./src/assets/*"],
             "@routes/*": ["./src/lib/routes/*"],
             "@styles/*": ["./src/styles/*"],
             "@types/*": ["./src/lib/types/*"],
