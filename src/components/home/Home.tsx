@@ -1,4 +1,5 @@
 import { info } from "@src/app/page";
+
 import Image from "next/image";
 import { FC } from "react";
 
@@ -10,12 +11,18 @@ const Home: FC<IHome> = () => {
         <section className="flex justify-center " id="home">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
-                    <Image alt="alt" src={me.image} />
+                    <Image
+                        alt="alt"
+                        className="animate-gradient-x"
+                        src={me.image}
+                    />
                 </div>
 
-                <h1 className="sm:text-4xl text-2xl font-bold text-center ">
+                <h1 className="sm:text-4xl text-2xl font-bold text-center text-white">
                     Hello, I&apos;m{" "}
-                    <span className="text-blue-500">{me.name}</span>
+                    <span className="text-blue-500 bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 bg-clip-text text-transparent animate-gradient-x">
+                        {me.name}
+                    </span>
                 </h1>
                 <p className="lg:text-xl text-lg text-center ">
                     I&apos;m a {me.title}
@@ -58,7 +65,7 @@ const Home: FC<IHome> = () => {
                 </div>
                 <div className="flex space-x-4 mt-4 justify-center ">
                     <a
-                        className="text-white border border-white px-4 py-2 w-3/4 md:w-2/3 block text-center"
+                        className="text-white border border-white px-4 py-2 w-3/4 md:w-2/3 block text-center hover:bg-gray-700/50"
                         href={me.resume}
                         target="_blank"
                     >

@@ -8,16 +8,9 @@ const Works: FC<IWorks> = () => {
             <h2 className="text-2xl font-bold border-b border-t pr-4 text-right border-white">
                 Works
             </h2>
-            <div className="flex justify-center my-6">
-                <div className="flex border border-white rounded">
-                    <button className=" px-4 py-1">All</button>
-                    <button className=" py-1">Frontend</button>
-                    <button className=" px-4 py-1">Package</button>
-                </div>
-            </div>
-            <div className="w-full px-4 pb-4">
+            <div className="w-full px-4 pb-4 mt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {Array.from({ length: 6 }).map((_, i) => (
+                    {Array.from({ length: 3 }).map((_, i) => (
                         <div className=" border border-white" key={i}>
                             <img
                                 alt=""

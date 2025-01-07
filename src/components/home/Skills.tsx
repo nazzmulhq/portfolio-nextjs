@@ -14,7 +14,7 @@ const Skills: FC<ISkills> = () => {
                 <div className="grid grid-cols-2 gap-4 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 px-4">
                     {skills.map((skill, index) => (
                         <div
-                            className="py-1 px-2 border rounded text-center"
+                            className="py-1 px-2 border rounded text-center bg-gray-700/50"
                             key={index}
                         >
                             {skill}

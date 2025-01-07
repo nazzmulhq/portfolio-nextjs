@@ -12,10 +12,7 @@ const Education: FC<IEducation> = () => {
             </h2>
             <div className="w-full max-w-4xl mx-auto my-6 px-4">
                 {education.map((edu, index) => (
-                    <div
-                        className="relative p-6 mb-6 bg-gray-700/50"
-                        key={index}
-                    >
+                    <div className="relative p-6 mb-6 border" key={index}>
                         <time className="sm:mr-4 text-sm font-medium text-gray-300">
                             {edu.date}
                         </time>
