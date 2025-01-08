@@ -1,4 +1,4 @@
-import me from "@public/images/person.png";
+const me = "/api/read-image?file=person.png";
 
 const info = {
     me: {
@@ -7,7 +7,7 @@ const info = {
         email: "nazmul2018s@gmail.com",
         phone: "+8801917003822",
         experience: "4+ experience",
-        image: me.src,
+        image: me,
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
         resume: "https://www.github.com/nazzmulhq",
