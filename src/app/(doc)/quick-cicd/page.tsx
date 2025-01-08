@@ -165,8 +165,8 @@ export default defineConfig({
 
 export default function Page() {
     return (
-        <>
+        <section className="container relative p-4 text-white min-h-screen mx-auto sm:w-full md:w-3/4 lg:w-2/3 xl:w-1/2 2xl:w-2/3">
             <QuickCiCdDoc data={data} />
-        </>
+        </section>
     );
 }

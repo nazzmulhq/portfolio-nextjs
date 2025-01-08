@@ -11,10 +11,10 @@ export default function QuickCiCdDoc({ data }) {
                 return (
                     <div
                         key={item.title}
-                        className="w-full h-full glass-card rounded-xl p-4 space-y-4 relative"
+                        className="w-full h-full p-4 space-y-4 relative  border border-white"
                     >
                         {item?.step && (
-                            <span className="text-xl absolute left-0 top-0 bg-green-100 text-center rounded-xl w-8 h-8 text-green-500 rounded-tr-none rounded-bl-none">
+                            <span className="text-xl absolute left-0 top-0 bg-green-100 text-center  w-8 h-8 text-green-500 ">
                                 {item?.step}
                             </span>
                         )}
@@ -42,10 +42,10 @@ export default function QuickCiCdDoc({ data }) {
                 return (
                     <div
                         key={item.title}
-                        className="w-full h-full glass-card rounded-xl p-4 space-y-4 relative"
+                        className="w-full h-full p-4 space-y-4 relative border border-white"
                     >
                         {item?.step && (
-                            <span className="text-xl absolute left-0 top-0 bg-green-200 text-center rounded-xl w-8 h-8 text-green-500 rounded-tr-none rounded-bl-none">
+                            <span className="text-xl absolute left-0 top-0 bg-green-200 text-center  w-8 h-8 text-green-500 ">
                                 {item?.step}
                             </span>
                         )}
@@ -84,15 +84,15 @@ export default function QuickCiCdDoc({ data }) {
                 return (
                     <div
                         key={item.title}
-                        className="w-full h-full glass-card rounded-xl p-4 space-y-4 relative"
+                        className="w-full h-full border border-white p-4 space-y-4 relative"
                     >
                         {item?.step && (
-                            <span className="text-xl absolute left-0 top-0 bg-green-200 text-center rounded-xl w-8 h-8 text-green-500 rounded-tr-none rounded-bl-none">
+                            <span className="text-xl absolute left-0 top-0 bg-green-200 text-center  w-8 h-8 text-green-500 ">
                                 {item?.step}
                             </span>
                         )}
 
-                        <div>
+                        <div className="w-full">
                             <ul className="flex my-2 justify-center">
                                 {item.tabs.map((tab, index) => (
                                     <li key={index} className="text-white">
@@ -118,7 +118,7 @@ export default function QuickCiCdDoc({ data }) {
                             </ul>
                             <div className="flex justify-center w-full">
                                 {
-                                    <div className="md:w-[50%] space-y-2">
+                                    <div className=" space-y-2">
                                         {activeTab.title && (
                                             <p className="text-2xl text-white font-bold">
                                                 {activeTab.title}
@@ -162,15 +162,8 @@ export default function QuickCiCdDoc({ data }) {
         }
     };
     return (
-        <div
-            className="min-h-screen p-4 space-y-4"
-            style={{
-                background:
-                    "linear-gradient( 45deg,#2496ed,#61dafb,#68a063,#3776ab, #555555, #8993be)",
-                backgroundSize: "400% 400%",
-            }}
-        >
-            <h1 className="text-4xl text-center  glass-card text-white">
+        <div>
+            <h1 className="text-4xl text-center text-white border border-white">
                 Quick CI/CD
             </h1>
 
