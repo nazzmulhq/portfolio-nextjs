@@ -7,7 +7,7 @@ export async function GET(request: Request) {
 
     return new Response(filePath, {
         headers: {
-            "Content-Type": "image/jpeg",
+            "Content-Type": "image/png",
         },
     });
 }
