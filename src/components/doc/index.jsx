@@ -1,5 +1,5 @@
 "use client";
-import { useState } from "react";
+import React, { useState } from "react";
 
 import Link from "next/link";
 import ReactCodeBlocks from "./ReactCodeBlocks";
@@ -60,7 +60,10 @@ export default function QuickCiCdDoc({ data }) {
                         {item.list && (
                             <ul className="list-disc list-inside pl-4">
                                 {item.list.map((listItem, index) => (
-                                    <li key={index} className="text-white">
+                                    <li
+                                        key={`${item.title}-${index}`}
+                                        className="text-white"
+                                    >
                                         <span className="font-bold mr-1">
                                             {listItem.title}
                                         </span>
@@ -92,8 +95,8 @@ export default function QuickCiCdDoc({ data }) {
                             </span>
                         )}
 
-                        <div className="w-full">
-                            <ul className="flex my-2 justify-center">
+                        <div className="">
+                            <ul className="flex w-full my-2 justify-center">
                                 {item.tabs.map((tab, index) => (
                                     <li key={index} className="text-white">
                                         <button
@@ -110,13 +113,18 @@ export default function QuickCiCdDoc({ data }) {
 
 												`}
                                             onClick={() => setActiveTab(tab)}
+                                            data-copied={
+                                                activeTab.title === tab.title
+                                                    ? "true"
+                                                    : "false"
+                                            }
                                         >
                                             {tab.title}
                                         </button>
                                     </li>
                                 ))}
                             </ul>
-                            <div className="flex justify-center w-full">
+                            <div className="w-full">
                                 {
                                     <div className=" space-y-2">
                                         {activeTab.title && (
@@ -158,7 +166,7 @@ export default function QuickCiCdDoc({ data }) {
                     </div>
                 );
             default:
-                return "";
+                return null;
         }
     };
     return (
@@ -176,8 +184,12 @@ export default function QuickCiCdDoc({ data }) {
                     Go to npm package
                 </Link>
             </div>
-            <div className="w-full space-y-4">
-                {data.map((item, i) => getComponent(item))}
+            <div className="w-full space-y-4" key={"doc"}>
+                {data.map((item, i) => (
+                    <React.Fragment key={i}>
+                        {getComponent(item)}
+                    </React.Fragment>
+                ))}
             </div>
         </div>
     );
