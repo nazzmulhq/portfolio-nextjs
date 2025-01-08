@@ -1,4 +1,4 @@
-import { info } from "@src/app/page";
+import { info } from "./data";
 
 import Image from "next/image";
 import { FC } from "react";

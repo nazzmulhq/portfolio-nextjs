@@ -1,5 +1,5 @@
-import { info } from "@src/app/page";
 import { FC } from "react";
+import { info } from "./data";
 
 export interface ISkills {}
 
