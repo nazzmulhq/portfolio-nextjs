@@ -1,5 +1,5 @@
 import { FC } from "react";
-import { info } from "./data";
+import info from "./data";
 
 export interface IEducation {}
 

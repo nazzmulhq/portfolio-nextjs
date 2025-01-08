@@ -1,13 +1,13 @@
 import me from "@public/images/person.png";
 
-export const info = {
+const info = {
     me: {
         name: "Nazmul Haque",
         title: "Full Stack Developer",
         email: "nazmul2018s@gmail.com",
         phone: "+8801917003822",
         experience: "4+ experience",
-        image: me,
+        image: me.src,
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
         resume: "https://www.github.com/nazzmulhq",
@@ -152,3 +152,5 @@ export const info = {
         },
     ],
 };
+
+export default info;
