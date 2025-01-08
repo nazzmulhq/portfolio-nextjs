@@ -5,7 +5,7 @@ import { PERMISSIONS } from "./permissions";
 const SHARED_ROUTES: IRoutes[] = [
     {
         type: "shared",
-        path: "/profile",
+        path: "/quick-cicd",
         children: [],
         parentId: null,
         name: "Profile",

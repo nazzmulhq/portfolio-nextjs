@@ -6,6 +6,15 @@ import { PERMISSIONS } from "./permissions";
 const GUEST_ROUTES: IRoutes[] = [
     {
         type: "guest",
+        path: "/",
+        children: [],
+        parentId: null,
+        name: "Login",
+        isComponent: false,
+        permissions: [PERMISSIONS.GLOBAL],
+    },
+    {
+        type: "guest",
         path: "/permissions",
         children: [],
         parentId: null,
