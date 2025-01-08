@@ -1,7 +1,7 @@
-import Nest from "@assets/doc/nest.mp4";
-import Next from "@assets/doc/next.mp4";
-import Php from "@assets/doc/php.mp4";
-import Vite from "@assets/doc/vite.mp4";
+const Nest = "/api/read-video?file=nest.mp4";
+const Next = "/api/read-video?file=next.mp4";
+const Php = "/api/read-video?file=php.mp4";
+const Vite = "/api/read-video?file=vite.mp4";
 
 import QuickCiCdDoc from "@src/components/doc";
 
@@ -75,25 +75,25 @@ export default defineConfig({
 });
 `,
                 language: "javascript",
-                videoLink: Vite.src,
+                videoLink: Vite,
             },
             {
                 title: "Next.js",
                 content:
                     "Full setup guide for Next JS projects. This guide will help you set up a new Next JS project and integrate Quick CI/CD for automated deployments.",
-                videoLink: Next.src,
+                videoLink: Next,
             },
             {
                 title: "Nest.js",
                 content:
                     "Full setup guide for Nest JS projects. This guide will help you set up a new Nest JS project and integrate Quick CI/CD for automated deployments.",
-                videoLink: Nest.src,
+                videoLink: Nest,
             },
             {
                 title: "PHP-Laravel",
                 content:
                     "Full setup guide for PHP Laravel projects. This guide will help you set up a new PHP Laravel project and integrate Quick CI/CD for automated deployments.",
-                videoLink: Php.src,
+                videoLink: Php,
             },
         ],
     },
