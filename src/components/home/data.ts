@@ -1,4 +1,5 @@
 import me from "@public/images/person.png";
+
 export const info = {
     me: {
         name: "Nazmul Haque",

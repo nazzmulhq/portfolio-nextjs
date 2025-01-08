@@ -11,11 +11,7 @@ const Home: FC<IHome> = () => {
         <section className="flex justify-center " id="home">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
-                    <Image
-                        alt="alt"
-                        className="animate-gradient-x"
-                        src={me.image}
-                    />
+                    <Image alt="Nazmul" src={me.image} />
                 </div>
 
                 <h1 className="sm:text-4xl text-2xl font-bold text-center text-white">
