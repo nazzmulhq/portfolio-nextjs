@@ -14,7 +14,7 @@ const Home: FC<IHome> = () => {
                     <Image
                         alt="Nazmul"
                         height={208}
-                        src={me.image}
+                        src={"/images/person.png"}
                         width={208}
                     />
                 </div>
