@@ -1,5 +1,6 @@
 import info from "./data";
 
+import Image from "next/image";
 import { FC } from "react";
 
 export interface IHome {}
@@ -10,7 +11,12 @@ const Home: FC<IHome> = () => {
         <section className="flex justify-center " id="home">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
-                    <img alt="Nazmul" height={208} src={me.image} width={208} />
+                    <Image
+                        alt="Nazmul"
+                        height={208}
+                        src={me.image}
+                        width={208}
+                    />
                 </div>
 
                 <h1 className="sm:text-4xl text-2xl font-bold text-center text-white">
