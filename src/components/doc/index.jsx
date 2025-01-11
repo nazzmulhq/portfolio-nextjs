@@ -147,9 +147,9 @@ export default function QuickCiCdDoc({ data }) {
                                         )}
                                         {activeTab.videoLink && (
                                             <video
-                                                controls
                                                 className="rounded-xl w-full"
-                                                src={activeTab.videoLink}
+                                                controls
+                                                controlsList="nodownload"
                                             >
                                                 <source
                                                     src={activeTab.videoLink}
