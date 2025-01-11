@@ -11,7 +11,14 @@ const Home: FC<IHome> = () => {
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img alt="Nazmul" height={208} src={me.image} width={208} />
+                    <img
+                        alt="Nazmul"
+                        className="object-cover w-full h-full"
+                        height={208}
+                        loading="eager"
+                        src={me.image}
+                        width={208}
+                    />
                 </div>
 
                 <h1 className="sm:text-4xl text-2xl font-bold text-center text-white">
