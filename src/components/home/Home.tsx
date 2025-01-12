@@ -1,5 +1,4 @@
 "use client";
-import Image from "next/image";
 import { FC } from "react";
 import info from "./data";
 
@@ -13,13 +12,12 @@ const Home: FC<IHome> = () => {
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
                     {}
-                    <Image
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
                         alt="Nazmul"
-                        blurDataURL={"/images/person.png"}
                         className="rounded-lg"
                         height={208}
-                        placeholder="blur"
-                        src={"/images/person.png"}
+                        src={me.image}
                         width={208}
                     />
                 </div>
