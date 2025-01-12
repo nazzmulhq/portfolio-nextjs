@@ -1,9 +1,5 @@
 import type { NextConfig } from "next";
 
-const nextConfig: NextConfig = {
-    images: {
-        // Remove custom loader configuration
-    },
-};
+const nextConfig: NextConfig = {};
 
 export default nextConfig;

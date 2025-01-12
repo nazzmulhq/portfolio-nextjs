@@ -1,25 +1,25 @@
 "use client";
-import { FC, useState } from "react";
+import Image from "next/image";
+import { FC } from "react";
 import info from "./data";
 
 export interface IHome {}
 
 const Home: FC<IHome> = () => {
     const { me } = info;
-    const [isLoaded, setIsLoaded] = useState(false);
 
     return (
         <section className="flex justify-center " id="home">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    {}
+                    <Image
                         alt="Nazmul"
-                        className={`object-cover w-full h-full transition-all duration-500 ${isLoaded ? "blur-0" : "blur-2xl"}`}
+                        blurDataURL={"/images/person.png"}
+                        className="rounded-lg"
                         height={208}
-                        loading="eager"
-                        onLoad={() => setIsLoaded(true)}
-                        src={me.image}
+                        placeholder="blur"
+                        src={"/images/person.png"}
                         width={208}
                     />
                 </div>
