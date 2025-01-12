@@ -4,12 +4,7 @@ import { FC, useState } from "react";
 export interface INavBar {}
 
 export const NavBarMobile: FC<INavBar> = () => {
-    const [isNavVisible, setIsNavVisible] = useState(false);
     const [isActive, setIsActive] = useState("home");
-
-    const toggleNav = () => {
-        setIsNavVisible(!isNavVisible);
-    };
 
     const scrollToSection = (sectionId: string) => {
         setIsActive(sectionId);
@@ -30,63 +25,40 @@ export const NavBarMobile: FC<INavBar> = () => {
 
     return (
         <div className="block md:hidden">
-            {isNavVisible ? (
-                <div
-                    className="fixed bottom-4 right-6 z-10 w-6 text-2xl font-normal"
-                    onClick={toggleNav}
-                    role="button"
-                >
-                    x
+            <div className="fixed bottom-3 right-4 z-10 bg-black/70 rounded">
+                <div className="border border-white rounded">
+                    <button
+                        className={`block px-1 text-xs w-full py-1 ${isActive === "home" ? "bg-white text-black" : ""}`}
+                        onClick={() => scrollToSection("home")}
+                    >
+                        Home
+                    </button>
+                    <button
+                        className={`block px-1 text-xs w-full py-1 ${isActive === "skills" ? "bg-white text-black" : ""}`}
+                        onClick={() => scrollToSection("skills")}
+                    >
+                        Skills
+                    </button>
+                    <button
+                        className={`block px-1 text-xs w-full py-1 ${isActive === "experience" ? "bg-white text-black" : ""}`}
+                        onClick={() => scrollToSection("experience")}
+                    >
+                        Experience
+                    </button>
+                    <button
+                        className={`block px-1 text-xs w-full py-1 ${isActive === "education" ? "bg-white text-black" : ""}`}
+                        onClick={() => scrollToSection("education")}
+                    >
+                        Education
+                    </button>
+                    <button
+                        className={`block px-1 text-xs w-full py-1 ${isActive === "works" ? "bg-white text-black" : ""}`}
+                        onClick={() => scrollToSection("works")}
+                    >
+                        Works
+                    </button>
                 </div>
-            ) : (
-                <div
-                    className="fixed bottom-5 right-8 z-10 w-6"
-                    onClick={toggleNav}
-                    role="button"
-                >
-                    <div className="bg-white h-[1px] mb-1" />
-                    <div className="bg-white h-[1px] mb-1" />
-                    <div className="bg-white h-[1px] mb-1" />
-                    <div className="bg-white h-[1px] mb-1" />
-                </div>
-            )}
-
-            {isNavVisible && (
-                <div className="fixed bottom-14 right-2 z-10 bg-black rounded">
-                    <div className="border border-white rounded">
-                        <button
-                            className={`block px-1 text-xs w-full py-1 ${isActive === "home" ? "bg-white text-black" : ""}`}
-                            onClick={() => scrollToSection("home")}
-                        >
-                            Home
-                        </button>
-                        <button
-                            className={`block px-1 text-xs w-full py-1 ${isActive === "skills" ? "bg-white text-black" : ""}`}
-                            onClick={() => scrollToSection("skills")}
-                        >
-                            Skills
-                        </button>
-                        <button
-                            className={`block px-1 text-xs w-full py-1 ${isActive === "experience" ? "bg-white text-black" : ""}`}
-                            onClick={() => scrollToSection("experience")}
-                        >
-                            Experience
-                        </button>
-                        <button
-                            className={`block px-1 text-xs w-full py-1 ${isActive === "education" ? "bg-white text-black" : ""}`}
-                            onClick={() => scrollToSection("education")}
-                        >
-                            Education
-                        </button>
-                        <button
-                            className={`block px-1 text-xs w-full py-1 ${isActive === "works" ? "bg-white text-black" : ""}`}
-                            onClick={() => scrollToSection("works")}
-                        >
-                            Works
-                        </button>
-                    </div>
-                </div>
-            )}
+            </div>
         </div>
     );
 };
