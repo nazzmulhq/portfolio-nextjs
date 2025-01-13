@@ -1,4 +1,3 @@
-"use client";
 import { FC } from "react";
 import info from "./data";
 
@@ -17,7 +16,7 @@ const Home: FC<IHome> = () => {
                         alt="Nazmul"
                         className="rounded-lg"
                         height={208}
-                        src={me.image}
+                        src={`${me.image}`}
                         width={208}
                     />
                 </div>

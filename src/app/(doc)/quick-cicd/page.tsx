@@ -1,7 +1,7 @@
 const Nest = "/api/read-video?file=nest.mp4";
 const Next = "/api/read-video?file=next.mp4";
 const Php = "/api/read-video?file=php.mp4";
-const Vite = "/api/read-video?file=vite.mp4";
+const Vite = "/videos/vite.mp4";
 
 import QuickCiCdDoc from "@src/components/doc";
 

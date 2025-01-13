@@ -1,4 +1,5 @@
-const me = "/api/read-image?file=person.png";
+// const me = "/api/read-image?file=person.png";
+const me = "/images/person.png";
 
 const info = {
     me: {
