@@ -1,5 +1,3 @@
-const me = "/images/person.png";
-
 const info = {
     me: {
         name: "Nazmul Haque",
@@ -7,7 +5,7 @@ const info = {
         email: "nazmul2018s@gmail.com",
         phone: "+8801917003822",
         experience: "4+ experience",
-        image: me,
+        image: "/images/person.png",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
         resume: "https://www.github.com/nazzmulhq",
@@ -139,16 +137,26 @@ const info = {
     ],
     works: [
         {
-            imageOrVideo:
-                "https://images.unsplash.com/photo-1557683316-973673baf926?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max&ixid=eyJhcHBfaWQiOjE0NTg5fQ",
-            title: "The origin",
-            technologies: ["React.js", "Node.js", "Express.js"],
+            imageOrVideo: "/videos/project/lms.mp4",
+            title: "Quick Dockerize Tool",
+            technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
-                "Pretium lectus quam id leo.",
-                "Urna et pharetra pharetra massa massa.",
-                "Adipiscing enim eu neque aliquam vestibulum morbi blandit cursus risus.",
+                "Developed a CLI tool to quickly dockerize any Node.js or Php project",
+                "Automatically generates Dockerfile and docker-compose.yml files",
+                "Allows to choose between Node.js or Php and the version",
             ],
-            link: "https://www.google.com",
+            link: "https://www.npmjs.com/package/quick-cicd",
+        },
+        {
+            imageOrVideo: "/videos/project/lms.mp4",
+            title: "E-Learning Platform",
+            technologies: ["React.js", "Laravel", "TailwindCSS", "MySQL"],
+            description: [
+                "Figma design analysis and deviated the design into components",
+                "Developed the frontend using React.js",
+                "Use Redux for state management and RTK Query for API fetching and caching",
+            ],
+            link: null,
         },
     ],
 };
