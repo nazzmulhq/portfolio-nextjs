@@ -137,7 +137,7 @@ const info = {
     ],
     works: [
         {
-            imageOrVideo: "/videos/project/lms.mp4",
+            imageOrVideo: "/videos/project/lms.png",
             title: "Quick Dockerize Tool",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [

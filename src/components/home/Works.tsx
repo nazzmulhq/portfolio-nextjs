@@ -1,8 +1,12 @@
+import Image from "next/image";
+import Link from "next/link";
 import { FC } from "react";
+import info from "./data";
 
 export interface IWorks {}
 
 const Works: FC<IWorks> = () => {
+    const { works } = info;
     return (
         <section className="" id="works">
             <h2 className="text-2xl font-bold border-b border-t pr-4 text-right border-white">
@@ -10,22 +14,42 @@ const Works: FC<IWorks> = () => {
             </h2>
             <div className="w-full px-4 pb-4 mt-4">
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                    {Array.from({ length: 3 }).map((_, i) => (
+                    {works.map((_, i) => (
                         <div className=" border border-white" key={i}>
-                            <img
-                                alt=""
-                                className="object-cover w-full h-48 rounded-t opacity-80"
-                                src="https://images.unsplash.com/photo-1557683316-973673baf926?ixid=MnwxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8&ixlib=rb-1.2.1&q=80&fm=jpg&crop=entropy&cs=tinysrgb&w=400&fit=max&ixid=eyJhcHBfaWQiOjE0NTg5fQ"
-                            />
+                            {_.imageOrVideo.includes("png") ? (
+                                <Image
+                                    alt={_.title}
+                                    className="object-cover w-full h-48 opacity-80"
+                                    height={200}
+                                    src={_.imageOrVideo}
+                                    width={300}
+                                />
+                            ) : (
+                                <video
+                                    className="object-cover w-full h-48 opacity-80"
+                                    controls
+                                >
+                                    <source src={_.imageOrVideo} />
+                                </video>
+                            )}
                             <div className="p-4">
-                                <h3 className="text-xl font-bold">
-                                    The origin
-                                </h3>
-                                <p>
-                                    Pretium lectus quam id leo. Urna et pharetra
-                                    pharetra massa massa. Adipiscing enim eu
-                                    neque aliquam vestibulum morbi blandit
-                                    cursus risus.
+                                <div className="flex justify-between items-center">
+                                    <h3 className="text-sm lg:text-xl font-bold">
+                                        {_.title}
+                                    </h3>
+                                    {_.link && (
+                                        <Link
+                                            className="text-center text-xs px-2 py-1 bg-blue-500 text-white rounded-md"
+                                            href={_.link}
+                                            rel="noopener noreferrer"
+                                            target="_blank"
+                                        >
+                                            More
+                                        </Link>
+                                    )}
+                                </div>
+                                <p className="text-xs lg:text-sm">
+                                    {_.description.join(". ")}.
                                 </p>
                             </div>
                         </div>

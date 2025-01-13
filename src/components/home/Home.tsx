@@ -1,3 +1,4 @@
+import Image from "next/image";
 import { FC } from "react";
 import info from "./data";
 
@@ -10,9 +11,7 @@ const Home: FC<IHome> = () => {
         <section className="flex justify-center " id="home">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
-                    {}
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
+                    <Image
                         alt="Nazmul"
                         className="rounded-lg"
                         height={208}
