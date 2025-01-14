@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { FC } from "react";
 import info from "./data";
@@ -17,12 +16,10 @@ const Works: FC<IWorks> = () => {
                     {works.map((_, i) => (
                         <div className=" border border-white" key={i}>
                             {_.imageOrVideo.includes("png") ? (
-                                <Image
+                                <img
                                     alt={_.title}
                                     className="object-cover w-full h-48 opacity-80"
-                                    height={200}
                                     src={_.imageOrVideo}
-                                    width={300}
                                 />
                             ) : (
                                 <video
