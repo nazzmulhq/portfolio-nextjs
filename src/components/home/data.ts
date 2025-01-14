@@ -8,7 +8,7 @@ const info = {
         image: "/images/person.png",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
-        resume: "https://www.github.com/nazzmulhq",
+        resume: "https://drive.google.com/file/d/1JLesdboFsUrMNa906dXYMCWkuvS6wLTo/view",
     },
     skills: [
         "JavaScript",
@@ -137,7 +137,7 @@ const info = {
     ],
     works: [
         {
-            imageOrVideo: "/videos/project/lms.png",
+            imageOrVideo: "/images/quick-cicd.png",
             title: "Quick Dockerize Tool",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
@@ -147,17 +147,17 @@ const info = {
             ],
             link: "https://www.npmjs.com/package/quick-cicd",
         },
-        {
-            imageOrVideo: "/videos/project/lms.mp4",
-            title: "E-Learning Platform",
-            technologies: ["React.js", "Laravel", "TailwindCSS", "MySQL"],
-            description: [
-                "Figma design analysis and deviated the design into components",
-                "Developed the frontend using React.js",
-                "Use Redux for state management and RTK Query for API fetching and caching",
-            ],
-            link: null,
-        },
+        // {
+        //     imageOrVideo: "/videos/project/lms.mp4",
+        //     title: "E-Learning Platform",
+        //     technologies: ["React.js", "Laravel", "TailwindCSS", "MySQL"],
+        //     description: [
+        //         "Figma design analysis and deviated the design into components",
+        //         "Developed the frontend using React.js",
+        //         "Use Redux for state management and RTK Query for API fetching and caching",
+        //     ],
+        //     link: null,
+        // },
     ],
 };
 
