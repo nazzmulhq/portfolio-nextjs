@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import ReactCodeBlocks from "./ReactCodeBlocks";
 
-export default function QuickCiCdDoc({ data }) {
+export default function QuickCiCdDoc({ data, title }) {
     const getComponent = item => {
         switch (item.type) {
             case "basic":
@@ -172,15 +172,22 @@ export default function QuickCiCdDoc({ data }) {
     };
     return (
         <div>
-            <h1 className="text-4xl text-center text-white border border-white">
-                Quick CI/CD
+            <h1 className="text-4xl text-center text-white border border-white py-2">
+                {title}
             </h1>
 
-            <div className="my-4 text-right">
+            <div className="flex justify-end  space-x-4 p-4">
                 <Link
                     target="_blank"
                     href="https://www.npmjs.com/package/quick-cicd"
-                    className="text-white text-right px-4 py-2 bg-blue-400 rounded-md text-lg font-bold hover:bg-blue-500 hover:text-white"
+                    className="text-white text-right px-4 py-2 hover:bg-gray-700/50  text-lg font-bold hover:text-white border border-white"
+                >
+                    Home
+                </Link>
+                <Link
+                    target="_blank"
+                    href="https://www.npmjs.com/package/quick-cicd"
+                    className="text-white text-right px-4 py-2 text-lg font-bold hover:bg-gray-700/50  hover:text-white border border-white"
                 >
                     Go to npm package
                 </Link>
