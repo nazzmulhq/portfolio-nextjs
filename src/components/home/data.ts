@@ -145,7 +145,7 @@ const info = {
                 "Automatically generates Dockerfile and docker-compose.yml files",
                 "Allows to choose between Node.js or Php and the version",
             ],
-            link: "https://www.npmjs.com/package/quick-cicd",
+            link: "/quick-cicd",
         },
         // {
         //     imageOrVideo: "/videos/project/lms.mp4",
