@@ -62,7 +62,7 @@ const data = [
         step: "1",
         tabs: [
             {
-                title: "Vite.js-(React)",
+                title: "React.js",
                 content:
                     "Make sure in vite.config.ts or vite.config.js file you have the following configuration:",
                 code: `// vite.config.ts or vite.config.js
@@ -90,7 +90,7 @@ export default defineConfig({
                 videoLink: Nest,
             },
             {
-                title: "PHP-Laravel",
+                title: "Laravel",
                 content:
                     "Full setup guide for PHP Laravel projects. This guide will help you set up a new PHP Laravel project and integrate Quick CI/CD for automated deployments.",
                 videoLink: Php,

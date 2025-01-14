@@ -178,8 +178,7 @@ export default function QuickCiCdDoc({ data, title }) {
 
             <div className="flex justify-end  space-x-4 p-4">
                 <Link
-                    target="_blank"
-                    href="https://www.npmjs.com/package/quick-cicd"
+                    href="/"
                     className="text-white text-right px-4 py-2 hover:bg-gray-700/50  text-lg font-bold hover:text-white border border-white"
                 >
                     Home
