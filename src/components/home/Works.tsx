@@ -39,7 +39,6 @@ const Works: FC<IWorks> = () => {
                                             className="text-center text-xs px-2 py-1 bg-blue-500 text-white rounded-md"
                                             href={_.link}
                                             rel="noopener noreferrer"
-                                            target="_blank"
                                         >
                                             More
                                         </Link>
