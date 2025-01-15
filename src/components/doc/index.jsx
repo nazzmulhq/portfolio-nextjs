@@ -171,22 +171,22 @@ export default function QuickCiCdDoc({ data, title }) {
         }
     };
     return (
-        <div>
-            <h1 className="text-4xl text-center text-white border border-white py-2">
+        <div className="w-full h-full p-4 space-y-4 border border-white">
+            <h1 className="text-4xl text-center text-white border border-white py-1">
                 {title}
             </h1>
 
             <div className="flex justify-end  space-x-4 p-4">
                 <Link
                     href="/"
-                    className="text-white text-right px-4 py-2 hover:bg-gray-700/50  text-lg font-bold hover:text-white border border-white"
+                    className="text-white text-right px-4 py-1 hover:bg-gray-700/50  text-lg font-bold hover:text-white border border-white"
                 >
                     Home
                 </Link>
                 <Link
                     target="_blank"
                     href="https://www.npmjs.com/package/quick-cicd"
-                    className="text-white text-right px-4 py-2 text-lg font-bold hover:bg-gray-700/50  hover:text-white border border-white"
+                    className="text-white text-right px-4 py-1 text-lg font-bold hover:bg-gray-700/50  hover:text-white border border-white"
                 >
                     Go to npm package
                 </Link>
