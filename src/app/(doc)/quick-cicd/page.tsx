@@ -8,7 +8,7 @@ import QuickCiCdDoc from "@src/components/doc";
 const data = [
     {
         type: "basic",
-        title: "Introduction to Dockerize Tool",
+        title: "Introduction",
         content: `
         Quick Dockerize Tool is a command-line interface that helps you set up Docker and CI/CD configuration files for your projects. It supports various project types, including React.js, Node.js, and more. The tool is designed to save time and reduce errors by automating the setup process.`,
         language: "bash",
