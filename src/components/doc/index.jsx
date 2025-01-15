@@ -171,7 +171,7 @@ export default function QuickCiCdDoc({ data, title }) {
         }
     };
     return (
-        <div className="w-full h-full p-4 space-y-4 border border-white">
+        <div className="w-full h-full  border-white">
             <h1 className="text-4xl text-center text-white border border-white py-1">
                 {title}
             </h1>
