@@ -8,12 +8,9 @@ import QuickCiCdDoc from "@src/components/doc";
 const data = [
     {
         type: "basic",
-        title: "Introduction to CI/CD with Bitbucket and Docker",
+        title: "Introduction to Dockerize Tool",
         content: `
-			Quick CI/CD With Bitbucket is a tool designed to simplify the setup of Continuous Integration and Continuous Deployment (CI/CD) pipelines for your projects using Bitbucket. This tool automates the creation of essential configuration files and scripts required for Docker-based deployments, making it easier to get your project up and running with CI/CD workflows.
-			
-			With Quick CI/CD, you can quickly integrate automated builds, tests, and deployments into your project, ensuring faster and more reliable releases while reducing the manual effort involved in setup.
-		`,
+        Quick Dockerize Tool is a command-line interface that helps you set up Docker and CI/CD configuration files for your projects. It supports various project types, including React.js, Node.js, and more. The tool is designed to save time and reduce errors by automating the setup process.`,
         language: "bash",
         code: "npx quick-cicd",
     },
@@ -22,24 +19,29 @@ const data = [
         title: "Features",
         list: [
             {
-                title: "Automated Setup:",
+                title: "Automated Setup",
                 content:
-                    "Quickly set up Docker and CI/CD configuration files, saving time and reducing errors.",
+                    "Quick Dockerize Tool automates the setup process for Docker and CI/CD configuration files.",
             },
             {
-                title: "Customizable:",
+                title: "Project Types",
                 content:
-                    "Supports various project types, including React.js, Node.js, and more. (PHP and Python support coming soon).",
+                    "The tool supports various project types, including React.js, Node.js, and more.",
             },
             {
-                title: "Ease of Use:",
+                title: "Time-Saving",
                 content:
-                    "Simple command-line interface to guide you through the setup process.",
+                    "By automating the setup process, the tool saves time and reduces errors.",
             },
             {
-                title: "Integration with Bitbucket:",
+                title: "Easy to Use",
                 content:
-                    "Seamlessly integrates with Bitbucket Pipelines for automated deployments, making it easy to push changes to production with minimal effort.",
+                    "The tool is easy to use and requires minimal configuration.",
+            },
+            {
+                title: "Customizable",
+                content:
+                    "The tool allows you to customize the setup process to suit your project requirements.",
             },
         ],
     },
@@ -97,70 +99,71 @@ export default defineConfig({
             },
         ],
     },
-    {
-        type: "list",
-        title: "Bitbucket Setup",
-        step: "2",
-        list: [
-            {
-                title: "Step 1:",
-                content:
-                    " Create a new repository on Bitbucket and push your project to it.",
-            },
-            {
-                title: "Step 2:",
-                content: " Go to the repository settings and enable Pipelines.",
-            },
-            {
-                title: "Step 3:",
-                content:
-                    "Go to the Pipelines section and click on the 'Set up a new pipeline' button.",
-            },
-            {
-                title: "Step 4:",
-                content: "Select the language and framework of your project.",
-            },
-            {
-                title: "Step 5:",
-                content:
-                    " On your server generate an SSH key Pair, run the following command:",
-                language: "bash",
-                code: 'ssh-keygen -t rsa -b 4096 -C "your_email@example.com"',
-            },
-            {
-                title: "Step 6:",
-                content:
-                    "Copy the public key (~/.ssh/id_rsa.pub) and add it to bitbucket under the SSH keys section in the settings.",
-                language: "bash",
-                code: "Go to the repository settings -> Access keys -> Add key -> Paste the public key.",
-            },
-            {
-                title: "Step 7:",
-                content:
-                    ' git status -> git add . -> git commit -m "Initial commit" -> git push origin branch-name.',
-            },
-            {
-                title: "Step 8:",
-                content: "Go to your server and run the following command:",
-                language: "bash",
-                code: "bash deploy.sh",
-            },
-            {
-                title: "Step 9:",
-                content: "Your project will be deployed to the server.",
-            },
-            {
-                title: "Step 10:",
-                content:
-                    "Now you have a fully automated CI/CD pipeline set up with Bitbucket Pipelines.",
-            },
-            {
-                title: "Step 11:",
-                content:
-                    "If push to the repository is detected, the pipeline will run and deploy your project to the server.",
-            },
-        ],
-    },
+
+    // {
+    //     type: "list",
+    //     title: "Bitbucket Setup",
+    //     step: "2",
+    //     list: [
+    //         {
+    //             title: "Step 1:",
+    //             content:
+    //                 " Create a new repository on Bitbucket and push your project to it.",
+    //         },
+    //         {
+    //             title: "Step 2:",
+    //             content: " Go to the repository settings and enable Pipelines.",
+    //         },
+    //         {
+    //             title: "Step 3:",
+    //             content:
+    //                 "Go to the Pipelines section and click on the 'Set up a new pipeline' button.",
+    //         },
+    //         {
+    //             title: "Step 4:",
+    //             content: "Select the language and framework of your project.",
+    //         },
+    //         {
+    //             title: "Step 5:",
+    //             content:
+    //                 " On your server generate an SSH key Pair, run the following command:",
+    //             language: "bash",
+    //             code: 'ssh-keygen -t rsa -b 4096 -C "your_email@example.com"',
+    //         },
+    //         {
+    //             title: "Step 6:",
+    //             content:
+    //                 "Copy the public key (~/.ssh/id_rsa.pub) and add it to bitbucket under the SSH keys section in the settings.",
+    //             language: "bash",
+    //             code: "Go to the repository settings -> Access keys -> Add key -> Paste the public key.",
+    //         },
+    //         {
+    //             title: "Step 7:",
+    //             content:
+    //                 ' git status -> git add . -> git commit -m "Initial commit" -> git push origin branch-name.',
+    //         },
+    //         {
+    //             title: "Step 8:",
+    //             content: "Go to your server and run the following command:",
+    //             language: "bash",
+    //             code: "bash deploy.sh",
+    //         },
+    //         {
+    //             title: "Step 9:",
+    //             content: "Your project will be deployed to the server.",
+    //         },
+    //         {
+    //             title: "Step 10:",
+    //             content:
+    //                 "Now you have a fully automated CI/CD pipeline set up with Bitbucket Pipelines.",
+    //         },
+    //         {
+    //             title: "Step 11:",
+    //             content:
+    //                 "If push to the repository is detected, the pipeline will run and deploy your project to the server.",
+    //         },
+    //     ],
+    // },
 ];
 
 export default function Page() {
