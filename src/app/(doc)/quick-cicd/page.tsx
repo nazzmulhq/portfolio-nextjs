@@ -61,7 +61,7 @@ const data = [
     },
     {
         type: "tabs",
-        step: "1",
+        // step: "1",
         tabs: [
             {
                 title: "React.js",
