@@ -15,6 +15,7 @@
         "@ant-design/cssinjs": "^1.22.1",
         "@ant-design/nextjs-registry": "^1.0.2",
         "@prisma/client": "^6.1.0",
+        "@tailwindcss/postcss": "^4.0.0",
         "antd": "^5.22.6",
         "clsx": "^2.1.1",
         "file-loader": "^6.2.0",
@@ -27,6 +28,7 @@
         "react-dom": "^19.0.0",
         "react-icons": "^5.4.0",
         "shaka-player": "^4.12.7",
+        "tailwindcss": "^4.0.0",
         "uuid": "^11.0.3",
         "zod": "^3.24.1"
     },
@@ -52,9 +54,8 @@
         "eslint-plugin-prettier": "^5.2.1",
         "eslint-plugin-react": "^7.37.2",
         "eslint-plugin-react-hooks": "^5.1.0",
-        "postcss": "^8.4.49",
+        "postcss": "^8.5.1",
         "prettier": "^3.4.2",
-        "tailwindcss": "^3.4.17",
         "typescript": "^5.7.2"
     }
 }
