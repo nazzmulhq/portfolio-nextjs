@@ -1,5 +1,23 @@
 @import "tailwindcss";
 
+@theme {
+    --color-primary: "black";
+    --color-secondary: "white";
+    --color-background: "black";
+    --color-text: "white";
+    --font-sans: "Inter", sans-serif;
+    --screens-xs: "480px";
+    --screens-sm: "640px";
+    --screens-md: "768px";
+    --screens-lg: "1024px";
+    --screens-xl: "1280px";
+    --screens-2xl: "1400px";
+    --screens-3xl: "1600px";
+    --screens-4xl: "1920px";
+    --screens-5xl: "2200px";
+    --screens-6xl: "2400px";
+}
+
 .bg-grid {
     background-color: #000000;
     background-image: url("../../public/sq.svg");
