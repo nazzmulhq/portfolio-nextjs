@@ -10,7 +10,6 @@ export default function ReactCodeBlocks({ code, language }) {
                 theme={dracula}
                 wrapLines={true}
                 codeBlock={true}
-                copied="true"
             />
         </div>
     );
