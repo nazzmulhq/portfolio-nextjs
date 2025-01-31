@@ -9,7 +9,7 @@ export default function ReactCodeBlocks({ code, language }) {
                 showLineNumbers={true}
                 theme={dracula}
                 wrapLines={true}
-                codeBlock
+                codeBlock={true}
             />
         </div>
     );
