@@ -152,23 +152,12 @@ const info = {
             title: "ESLint & Prettier Setup for Next.js",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
-                "Developed a CLI tool to quickly dockerize any Node.js or Php project",
-                "Automatically generates Dockerfile and docker-compose.yml files",
-                "Allows to choose between Node.js or Php and the version",
+                "Developed a CLI tool to quickly setup ESLint and Prettier for Next.js projects",
+                "Automatically installs required dependencies and configurations",
+                "Supports TypeScript and JavaScript projects",
             ],
-            link: "/quick-cicd",
+            link: "https://www.npmjs.com/package/nextjs-eslint-prettier-setup",
         },
-        // {
-        //     imageOrVideo: "/videos/project/lms.mp4",
-        //     title: "E-Learning Platform",
-        //     technologies: ["React.js", "Laravel", "TailwindCSS", "MySQL"],
-        //     description: [
-        //         "Figma design analysis and deviated the design into components",
-        //         "Developed the frontend using React.js",
-        //         "Use Redux for state management and RTK Query for API fetching and caching",
-        //     ],
-        //     link: null,
-        // },
     ],
 };
 
