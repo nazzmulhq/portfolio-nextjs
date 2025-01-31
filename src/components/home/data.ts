@@ -147,6 +147,17 @@ const info = {
             ],
             link: "/quick-cicd",
         },
+        {
+            imageOrVideo: "/images/eslint-prettier-nextjs.png",
+            title: "ESLint & Prettier Setup for Next.js",
+            technologies: ["JavaScript", "Node.js", "Shell Script"],
+            description: [
+                "Developed a CLI tool to quickly dockerize any Node.js or Php project",
+                "Automatically generates Dockerfile and docker-compose.yml files",
+                "Allows to choose between Node.js or Php and the version",
+            ],
+            link: "/quick-cicd",
+        },
         // {
         //     imageOrVideo: "/videos/project/lms.mp4",
         //     title: "E-Learning Platform",
