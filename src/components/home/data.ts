@@ -158,6 +158,17 @@ const info = {
             ],
             link: "https://www.npmjs.com/package/nextjs-eslint-prettier-setup",
         },
+        {
+            imageOrVideo: "/images/hq720.jpg",
+            title: "Quick UI - Ant Design",
+            technologies: ["Next.js", "Ant Design", "TypeScript"],
+            description: [
+                "Quick Design Web Application using Ant Design and Next.js",
+                "Create reusable components and layout for web application",
+                "Supports TypeScript and JavaScript projects",
+            ],
+            link: "https://www.npmjs.com/package/quiccui",
+        },
     ],
 };
 
