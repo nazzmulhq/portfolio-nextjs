@@ -15,7 +15,8 @@ const Works: FC<IWorks> = () => {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {works.map((_, i) => (
                         <div className=" border border-white" key={i}>
-                            {_.imageOrVideo.includes("png") ? (
+                            {_.imageOrVideo.includes("png") ||
+                            _.imageOrVideo.includes("jpg") ? (
                                 <img
                                     alt={_.title}
                                     className="object-cover w-full h-48 opacity-80"
