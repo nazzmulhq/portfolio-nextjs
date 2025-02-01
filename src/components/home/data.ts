@@ -148,7 +148,7 @@ const info = {
             link: "/quick-cicd",
         },
         {
-            imageOrVideo: "/images/eslint-prettier-nextjs.png",
+            imageOrVideo: "/images/eslint-prettier-nextjs.jpg",
             title: "ESLint & Prettier Setup for Next.js",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
@@ -159,8 +159,8 @@ const info = {
             link: "https://www.npmjs.com/package/nextjs-eslint-prettier-setup",
         },
         {
-            imageOrVideo: "/images/hq720.jpg",
-            title: "Quick UI - Ant Design",
+            imageOrVideo: "/images/quick-design-system.jpg",
+            title: "Quick Design System",
             technologies: ["Next.js", "Ant Design", "TypeScript"],
             description: [
                 "Quick Design Web Application using Ant Design and Next.js",
