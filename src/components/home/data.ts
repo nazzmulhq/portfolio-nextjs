@@ -160,14 +160,14 @@ const info = {
         },
         {
             imageOrVideo: "/images/quick-design-system.jpg",
-            title: "Quick Design System",
+            title: "Quick UI Design",
             technologies: ["Next.js", "Ant Design", "TypeScript"],
             description: [
-                "Quick Design Web Application using Ant Design and Next.js",
+                "Quick UI Design for Web Application using Ant Design and Next.js",
                 "Create reusable components and layout for web application",
                 "Supports TypeScript and JavaScript projects",
             ],
-            link: "https://www.npmjs.com/package/quiccui",
+            link: "https://www.npmjs.com/package/quick-ui-design",
         },
     ],
 };
