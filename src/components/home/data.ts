@@ -75,7 +75,7 @@ const info = {
             icon: "https://img.icons8.com/ios/50/000000/react-native.png",
             title: "Software Engineer (Frontend)",
             company: "mPower Social Enterprises Ltd.",
-            date: "Nov 2020 - Nov 2022",
+            date: "Nov 2021 - Nov 2022",
             address:
                 "Level 10 House 77, Nur Empori, Road 11 Banani Bridge, Dhaka 1213",
             description: [
@@ -100,7 +100,7 @@ const info = {
             title: "Associate Software Engineer",
             address: "Komlapur, Dhaka",
             company: "ROTech Ltd.",
-            date: "Jul 2020 - Nov 2020",
+            date: "Jul 2021 - Nov 2021",
             description: [
                 "Developed backend APIs using Python Django frameworks with RESTful architecture",
                 "Designed ERP Module and implemented & responsive frontend using HTML5, CSS3, and JavaScript",
