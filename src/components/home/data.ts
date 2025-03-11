@@ -1,7 +1,7 @@
 const info = {
     me: {
         name: "Nazmul Haque",
-        title: "Full Stack Developer",
+        title: "Full Stack Developer - (ERP)",
         email: "nazmul2018s@gmail.com",
         phone: "+8801917003822",
         experience: "4+ experience",
@@ -13,11 +13,11 @@ const info = {
     skills: [
         "JavaScript",
         "TypeScript",
+        "Python",
         "React.js",
-        "Node.js",
-        "Express.js",
         "Next.js",
         "Nest.js",
+        "Django",
         "Tailwind CSS",
         "Material UI",
         "Ant Design",
