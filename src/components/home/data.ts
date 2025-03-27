@@ -6,6 +6,7 @@ const info = {
         phone: "+8801917003822",
         experience: "4+ experience",
         image: "/images/person.png",
+        mysite: "https://nazmulhaque.netlify.app/",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
         resume: "https://drive.google.com/file/d/1JLesdboFsUrMNa906dXYMCWkuvS6wLTo/view",
@@ -18,11 +19,11 @@ const info = {
         "Next.js",
         "Nest.js",
         "Django",
-        "Tailwind CSS",
-        "Material UI",
+        "TailwindCSS",
         "Ant Design",
         "Docker",
         "Kubernetes",
+        "Microservices",
     ],
     experience: [
         {
@@ -37,6 +38,7 @@ const info = {
                 "Create complex state management solutions using Redux Toolkit",
                 "Set up automated CI/CD pipelines GitHub Actions for deployment using Docker",
             ],
+
             technologies: [
                 "Next.js 14",
                 "TypeScript",
@@ -60,6 +62,7 @@ const info = {
                 "Implemented responsive UI components using Ant Design and TailwindCSS",
                 "Designed and optimized PostgreSQL database schemas for ERP modules",
             ],
+
             technologies: [
                 "Next.js",
                 "NestJS",
@@ -84,6 +87,7 @@ const info = {
                 "Conducted requirement analysis and created detailed technical specifications",
                 "Designed RESTful API integrations and state management using Redux",
             ],
+
             technologies: [
                 "React.js",
                 "TypeScript",
@@ -100,7 +104,7 @@ const info = {
             title: "Associate Software Engineer",
             address: "Komlapur, Dhaka",
             company: "ROTech Ltd.",
-            date: "Jul 2021 - Nov 2021",
+            date: "Jul 2021 - Nov 2021 (Internship)",
             description: [
                 "Developed backend APIs using Python Django frameworks with RESTful architecture",
                 "Designed ERP Module and implemented & responsive frontend using HTML5, CSS3, and JavaScript",
@@ -121,17 +125,23 @@ const info = {
     education: [
         {
             title: "Daffodil International University",
+            for_pdf_title: "Daffodil International University",
             degree: "Bachelor of Science in Computer Science and Engineering",
+            for_pdf_degree: "B.Sc. in CSE",
             date: "2016 - 2020",
         },
         {
             title: "Meherpur College of Engineering & Technology",
-            degree: "Diploma-in-Computer Engineering",
+            for_pdf_title: "Meherpur College of Eng. & Tech.",
+            degree: "Diploma in Computer Engineering",
+            for_pdf_degree: "Diploma in Computer Engineering",
             date: "2012 - 2016",
         },
         {
             title: "Kobi Nazrul Shikkha Manzil",
+            for_pdf_title: "Kobi Nazrul Shikkha Manzil",
             degree: "Secondary School Certificate",
+            for_pdf_degree: "SSC",
             date: "2010 - 2012",
         },
     ],
