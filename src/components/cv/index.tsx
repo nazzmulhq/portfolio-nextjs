@@ -14,7 +14,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
 
     const reactToPrintFn = useReactToPrint({
         contentRef,
-        documentTitle: "Nazmul Haque CV",
+        documentTitle: "Nazmul_Haque_CV",
         onBeforePrint: () => {
             setIsPrint(true);
             return Promise.resolve();
