@@ -29,7 +29,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
     return (
         <>
             <button
-                className="text-white border border-white px-4 py-2 w-3/4 md:w-2/3 block text-center hover:bg-gray-700/50"
+                className="text-white border border-white px-4 py-2 w-60 block text-center hover:bg-gray-700/50"
                 disabled={isPrint}
                 onClick={() => reactToPrintFn()}
             >
@@ -150,6 +150,20 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                         </svg>
                                     </a>
                                 </div>
+                                <a
+                                    download="Nazmul Haque CV.pdf"
+                                    href={me.resume}
+                                    style={{
+                                        fontSize: "0.875rem",
+                                        color: "#60A5FA",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        cursor: "pointer",
+                                    }}
+                                >
+                                    Download Resume
+                                </a>
                             </div>
 
                             <div className="mb-4 ">

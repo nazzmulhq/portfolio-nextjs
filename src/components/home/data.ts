@@ -9,7 +9,7 @@ const info = {
         mysite: "https://nazmulhaque.netlify.app/",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
-        resume: "https://drive.google.com/file/d/1JLesdboFsUrMNa906dXYMCWkuvS6wLTo/view",
+        resume: "/Nazmul Haque CV.pdf",
     },
     skills: [
         "JavaScript",

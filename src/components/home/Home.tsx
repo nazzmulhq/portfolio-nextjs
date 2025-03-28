@@ -1,5 +1,5 @@
+"use client";
 import { FC } from "react";
-import CVBtn from "../cv";
 import info from "./data";
 
 export interface IHome {}
@@ -65,14 +65,18 @@ const Home: FC<IHome> = () => {
                     </a>
                 </div>
                 <div className="flex space-x-4 mt-4 justify-center ">
-                    {/* <a
+                    <button
                         className="text-white border border-white px-4 py-2 w-3/4 md:w-2/3 block text-center hover:bg-gray-700/50"
-                        href={me.resume}
-                        target="_blank"
+                        onClick={() => {
+                            const link = document.createElement("a");
+                            link.href = me.resume; // Assuming `me.resume` contains the resume PDF URL
+                            link.download = "Nazmul_Haque_CV.pdf";
+                            link.click();
+                            link.remove();
+                        }}
                     >
                         Resume
-                    </a> */}
-                    <CVBtn>Resume</CVBtn>
+                    </button>
                 </div>
             </div>
         </section>
