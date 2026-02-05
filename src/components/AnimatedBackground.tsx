@@ -1,14 +1,20 @@
 "use client";
 
+import { useMemo } from "react";
+
 export default function AnimatedBackground() {
-    // Generate particle positions for floating effect
-    const particles = Array.from({ length: 20 }, (_, i) => ({
-        id: i,
-        size: Math.random() * 4 + 2,
-        left: Math.random() * 100,
-        animationDelay: Math.random() * 20,
-        animationDuration: Math.random() * 10 + 20,
-    }));
+    // Generate particle positions for floating effect (memoized to prevent regeneration)
+    const particles = useMemo(
+        () =>
+            Array.from({ length: 20 }, (_, i) => ({
+                id: i,
+                size: Math.random() * 4 + 2,
+                left: Math.random() * 100,
+                animationDelay: Math.random() * 20,
+                animationDuration: Math.random() * 10 + 20,
+            })),
+        [],
+    );
 
     return (
         <div className="fixed inset-0 -z-10 overflow-hidden">
