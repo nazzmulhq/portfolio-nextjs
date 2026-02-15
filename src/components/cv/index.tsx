@@ -26,6 +26,70 @@ const CVBtn: FC<ICV> = ({ children }) => {
 
     const { me, skills, experience, education, works } = info;
 
+    const totalExperience = calculateExperienceYears(experience);
+
+    /**
+     * Calculates total experience from earliest career start to current date.
+     * Auto-updates every year (like copyright year) - no "Present" used.
+     * e.g. start 2019, year 2029 → 10+ yr; year 2030 → 11+ yr
+     */
+    function calculateExperienceYears(exp: Array<{ date: string }>): string {
+        const MONTHS: Record<string, number> = {
+            Jan: 0,
+            Feb: 1,
+            Mar: 2,
+            Apr: 3,
+            May: 4,
+            Jun: 5,
+            Jul: 6,
+            Aug: 7,
+            Sep: 8,
+            Oct: 9,
+            Nov: 10,
+            Dec: 11,
+        };
+
+        const parseStartDate = (part: string): Date | null => {
+            const trimmed = part.trim();
+            if (trimmed === "Present") {
+                return null;
+            }
+            const [monthStr, yearStr] = trimmed.split(/\s+/);
+            const month = MONTHS[monthStr as keyof typeof MONTHS] ?? 0;
+            const year = parseInt(yearStr || "0", 10);
+            if (Number.isNaN(year)) {
+                return null;
+            }
+            return new Date(year, month, 1);
+        };
+
+        let earliestStart: Date | null = null;
+
+        for (const { date } of exp) {
+            const clean = date.replace(/\s*\([^)]*\)/g, "").trim();
+            const [rangeStart] = clean.split(/\s*-\s*/);
+            if (!rangeStart) {
+                continue;
+            }
+            const start = parseStartDate(rangeStart);
+            if (start && (!earliestStart || start < earliestStart)) {
+                earliestStart = start;
+            }
+        }
+
+        if (!earliestStart) {
+            return "0 yr";
+        }
+
+        const now = new Date();
+        const totalMonths =
+            (now.getFullYear() - earliestStart.getFullYear()) * 12 +
+            (now.getMonth() - earliestStart.getMonth());
+
+        const years = Math.max(0, Math.floor(totalMonths / 12));
+        return `${years}+ yr`;
+    }
+
     return (
         <>
             <button
@@ -75,7 +139,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                     </svg>
                                     {me.mysite}
                                 </a>
-                                <div className="space-y-1">
+                                <div className="stotalExperiencepace-y-1">
                                     <p className="text-sm flex items-center justify-center">
                                         <svg
                                             className="w-4 h-4 mr-2"
@@ -114,7 +178,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
 
                                 <div className="mt-2">
                                     <span className="inline-block bg-gray-800 text-white px-3 py-1 rounded-full text-sm">
-                                        {me.experience}
+                                        {totalExperience}
                                     </span>
                                 </div>
 

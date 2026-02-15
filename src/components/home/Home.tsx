@@ -1,4 +1,6 @@
 "use client";
+
+import ScrollAnimate from "@src/components/ScrollAnimate";
 import { FC } from "react";
 import info from "./data";
 
@@ -9,6 +11,7 @@ const Home: FC<IHome> = () => {
 
     return (
         <section className="flex justify-center " id="home">
+            <ScrollAnimate direction="up">
             <div className="">
                 <div className="w-52 my-2 mx-auto rounded-lg overflow-hidden">
                     <img
@@ -79,6 +82,7 @@ const Home: FC<IHome> = () => {
                     </button>
                 </div>
             </div>
+            </ScrollAnimate>
         </section>
     );
 };

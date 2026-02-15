@@ -28,19 +28,20 @@ const info = {
     experience: [
         {
             icon: "https://img.icons8.com/ios/50/000000/react-native.png",
-            title: "Software Specialist (Fullstack)",
-            address: " 27, 1 New Eskaton Road, Dhaka 1000",
+            title: "Senior Software Specialist",
+            address: "Borak Zahir Tower, Kawran Bazar, Dhaka 1205",
             company: "SSL Wireless Ltd.",
-            date: "Oct 2023 - Present",
+            date: "Jan 2026 - Present",
             description: [
-                "Lead ERP frontend development using Next.js 14 and TypeScript",
-                "Design and implement modular ERP components with Ant Design and TailwindCSS",
-                "Create complex state management solutions using Redux Toolkit",
-                "Set up automated CI/CD pipelines GitHub Actions for deployment using Docker",
+                "Spearhead full-stack ERP development using Next.js 16, NestJS, and TypeScript.",
+                "Architect scalable frontend components with Ant Design and TailwindCSS.",
+                "Design NestJS backend APIs with RESTful integration and Redux Toolkit.",
+                "Establish CI/CD pipelines using GitHub Actions, Docker, and Kubernetes.",
             ],
 
             technologies: [
-                "Next.js 14",
+                "Next.js 16",
+                "NestJS",
                 "TypeScript",
                 "Ant Design",
                 "TailwindCSS",
@@ -52,15 +53,40 @@ const info = {
         },
         {
             icon: "https://img.icons8.com/ios/50/000000/react-native.png",
-            title: "Software Engineer (Fullstack)",
+            title: "Software Specialist",
+            address: "Borak Zahir Tower, Kawran Bazar, Dhaka 1205",
+            company: "SSL Wireless Ltd.",
+            date: "Oct 2023 - Dec 2025",
+            description: [
+                "Deliver full-stack ERP solutions using Next.js 14, NestJS, and TypeScript.",
+                "Design modular, reusable frontend components with Ant Design and TailwindCSS.",
+                "Develop NestJS backend APIs and integrate third-party services with Redux Toolkit.",
+                "Configure CI/CD pipelines with GitHub Actions and Docker for production deployment.",
+            ],
+
+            technologies: [
+                "Next.js 14",
+                "NestJS",
+                "TypeScript",
+                "Ant Design",
+                "TailwindCSS",
+                "Docker",
+                "Kubernetes",
+                "GitHub Actions",
+                "Redux Toolkit",
+            ],
+        },
+        {
+            icon: "https://img.icons8.com/ios/50/000000/react-native.png",
+            title: "Software Engineer",
             company: "APSIS Ltd.",
             date: "Nov 2022 - Oct 2023",
             address: "Ahmed Tower, 30 Kemal Ataturk Ave, Dhaka 1213",
             description: [
-                "Developed enterprise ERP system using Next.js and NestJS",
-                "Built scalable RESTful APIs using NestJS with Knex",
-                "Implemented responsive UI components using Ant Design and TailwindCSS",
-                "Designed and optimized PostgreSQL database schemas for ERP modules",
+                "Delivered full-stack enterprise ERP system with Next.js and NestJS.",
+                "Architected scalable RESTful APIs and microservices using NestJS with Knex ORM.",
+                "Implemented responsive UI components using Ant Design and TailwindCSS.",
+                "Designed and optimized PostgreSQL database schemas and queries for ERP modules.",
             ],
 
             technologies: [
@@ -76,20 +102,21 @@ const info = {
         },
         {
             icon: "https://img.icons8.com/ios/50/000000/react-native.png",
-            title: "Software Engineer (Frontend)",
+            title: "Software Engineer",
             company: "mPower Social Enterprises Ltd.",
             date: "Nov 2021 - Nov 2022",
             address:
                 "Level 10 House 77, Nur Empori, Road 11 Banani Bridge, Dhaka 1213",
             description: [
-                "Led frontend development using React.js and TypeScript for enterprise applications",
-                "Created reusable component libraries and established frontend architecture",
-                "Conducted requirement analysis and created detailed technical specifications",
-                "Designed RESTful API integrations and state management using Redux",
+                "Led full-stack development of enterprise applications using React.js and NestJS.",
+                "Developed NestJS backend APIs with RESTful integrations and Redux state management.",
+                "Established reusable component libraries and frontend architecture standards.",
+                "Conducted requirement analysis and produced detailed technical specifications.",
             ],
 
             technologies: [
                 "React.js",
+                "NestJS",
                 "TypeScript",
                 "Material-UI",
                 "Redux",
@@ -106,10 +133,10 @@ const info = {
             company: "ROTech Ltd.",
             date: "Jul 2021 - Nov 2021 (Internship)",
             description: [
-                "Developed backend APIs using Python Django frameworks with RESTful architecture",
-                "Designed ERP Module and implemented & responsive frontend using HTML5, CSS3, and JavaScript",
-                "Conducted requirement analysis and created detailed technical specifications",
-                "Designed and optimized PostgreSQL database schemas and queries",
+                "Delivered full-stack ERP modules using Python Django and JavaScript frontend.",
+                "Developed RESTful APIs using Python and Django REST framework.",
+                "Implemented responsive frontend with HTML5, CSS3, and JavaScript.",
+                "Designed and optimized PostgreSQL database schemas and performant queries.",
             ],
             technologies: [
                 "Python",
@@ -147,13 +174,31 @@ const info = {
     ],
     works: [
         {
+            imageOrVideo: "/images/quickdb.png",
+            title: "VS Code Extension — QuickDB",
+            technologies: [
+                "TypeScript",
+                "VS Code API",
+                "Node.js",
+                "SQL",
+                "MongoDB",
+                "Redis",
+            ],
+            description: [
+                "DataGrip-inspired database management extension for Visual Studio Code.",
+                "Browse tables, run queries, manage schemas, and visualize ERDs from the editor.",
+                "Supports SQLite, MySQL, PostgreSQL, MongoDB, and Redis with MCP server integration.",
+            ],
+            link: "https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb",
+        },
+        {
             imageOrVideo: "/images/quick-cicd.png",
             title: "Quick Dockerize Tool",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
-                "Developed a CLI tool to quickly dockerize any Node.js or Php project",
-                "Automatically generates Dockerfile and docker-compose.yml files",
-                "Allows to choose between Node.js or Php and the version",
+                "Developed CLI tool for rapid containerization of Node.js and PHP projects.",
+                "Automatically generates production-ready Dockerfile and docker-compose.yml.",
+                "Provides interactive selection of runtime (Node.js/PHP) and version management.",
             ],
             link: "/quick-cicd",
         },
@@ -162,9 +207,9 @@ const info = {
             title: "ESLint & Prettier Setup for Next.js",
             technologies: ["JavaScript", "Node.js", "Shell Script"],
             description: [
-                "Developed a CLI tool to quickly setup ESLint and Prettier for Next.js projects",
-                "Automatically installs required dependencies and configurations",
-                "Supports TypeScript and JavaScript projects",
+                "Published npm package for automated ESLint and Prettier configuration in Next.js.",
+                "Handles dependency installation and config generation with zero manual setup.",
+                "Supports both TypeScript and JavaScript project configurations.",
             ],
             link: "https://www.npmjs.com/package/nextjs-eslint-prettier-setup",
         },
@@ -173,9 +218,9 @@ const info = {
             title: "Quick UI Design",
             technologies: ["Next.js", "Ant Design", "TypeScript"],
             description: [
-                "Quick UI Design for Web Application using Ant Design and Next.js",
-                "Create reusable components and layout for web application",
-                "Supports TypeScript and JavaScript projects",
+                "Scaffolding tool for rapid web application UI development with Ant Design and Next.js.",
+                "Delivers reusable component libraries and responsive layout templates.",
+                "Supports TypeScript and JavaScript with configurable project structure.",
             ],
             link: "https://www.npmjs.com/package/quick-ui-design",
         },

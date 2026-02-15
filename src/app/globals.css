@@ -18,8 +18,196 @@
     --screens-6xl: "2400px";
 }
 
+/* Subtle grid */
 .bg-grid {
     background-color: #000000;
     background-image: url("../../public/sq.svg");
     background-size: 40px 40px;
+}
+
+/* Scroll-driven reveal animations */
+@keyframes scroll-reveal-up {
+    from {
+        opacity: 0;
+        transform: translateY(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scroll-reveal-down {
+    from {
+        opacity: 0;
+        transform: translateY(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes scroll-reveal-left {
+    from {
+        opacity: 0;
+        transform: translateX(40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scroll-reveal-right {
+    from {
+        opacity: 0;
+        transform: translateX(-40px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes scroll-reveal-none {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+/* Base: visible for browsers without scroll-timeline support */
+.scroll-animate-up,
+.scroll-animate-down,
+.scroll-animate-left,
+.scroll-animate-right,
+.scroll-animate-none {
+    opacity: 1;
+}
+
+@supports (animation-timeline: view()) {
+    .scroll-animate-up {
+        opacity: 0;
+        animation: scroll-reveal-up 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+    }
+
+    .scroll-animate-down {
+        opacity: 0;
+        animation: scroll-reveal-down 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+    }
+
+    .scroll-animate-left {
+        opacity: 0;
+        animation: scroll-reveal-left 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+    }
+
+    .scroll-animate-right {
+        opacity: 0;
+        animation: scroll-reveal-right 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+    }
+
+    .scroll-animate-none {
+        opacity: 0;
+        animation: scroll-reveal-none 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+        animation-timeline: view();
+        animation-range: entry 0% entry 55%;
+    }
+
+    .scroll-animate-delay-50 {
+        animation-range: entry 5% entry 65%;
+    }
+    .scroll-animate-delay-75 {
+        animation-range: entry 8% entry 68%;
+    }
+    .scroll-animate-delay-100 {
+        animation-range: entry 10% entry 70%;
+    }
+    .scroll-animate-delay-150 {
+        animation-range: entry 15% entry 75%;
+    }
+    .scroll-animate-delay-200 {
+        animation-range: entry 20% entry 80%;
+    }
+    .scroll-animate-delay-300 {
+        animation-range: entry 25% entry 85%;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .scroll-animate-up,
+    .scroll-animate-down,
+    .scroll-animate-left,
+    .scroll-animate-right,
+    .scroll-animate-none {
+        animation: none;
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Background: lines flow from start to end - Next.js style */
+@keyframes line-flow {
+    0% {
+        stroke-dashoffset: 500;
+    }
+    100% {
+        stroke-dashoffset: -500;
+    }
+}
+
+.line-flow {
+    stroke-dasharray: 8 12;
+    animation: line-flow 6s linear infinite;
+    will-change: stroke-dashoffset;
+}
+
+.line-flow-2 {
+    stroke-dasharray: 6 14;
+    animation: line-flow 8s linear infinite reverse;
+}
+
+.line-flow-3 {
+    stroke-dasharray: 10 10;
+    animation: line-flow 7s linear infinite;
+}
+
+.line-flow-4 {
+    stroke-dasharray: 12 8;
+    animation: line-flow 9s linear infinite reverse;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .line-flow,
+    .line-flow-2,
+    .line-flow-3,
+    .line-flow-4 {
+        animation: none;
+    }
+}
+
+/* Gradient text animation */
+@keyframes gradient-x {
+    0%,
+    100% {
+        background-position: 0% 50%;
+    }
+    50% {
+        background-position: 100% 50%;
+    }
+}
+
+.animate-gradient-x {
+    background-size: 200% 200%;
+    animation: gradient-x 3s ease infinite;
 }
