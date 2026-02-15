@@ -100,6 +100,9 @@ export default function QuickCiCdDoc({ data, title }) {
                                 {item.tabs.map((tab, index) => (
                                     <li key={index} className="text-white">
                                         <button
+                                            aria-selected={
+                                                activeTab.title === tab.title
+                                            }
                                             className={`
 												text-white font-semibold border border-gray px-2 py-1 hover:bg-blue-500 hover:border-transparent hover:text-white ${
                                                     activeTab.title ===
@@ -113,11 +116,7 @@ export default function QuickCiCdDoc({ data, title }) {
 
 												`}
                                             onClick={() => setActiveTab(tab)}
-                                            data-copied={
-                                                activeTab.title === tab.title
-                                                    ? "true"
-                                                    : "false"
-                                            }
+                                            type="button"
                                         >
                                             {tab.title}
                                         </button>

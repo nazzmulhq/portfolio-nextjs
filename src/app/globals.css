@@ -211,3 +211,66 @@
     background-size: 200% 200%;
     animation: gradient-x 3s ease infinite;
 }
+
+/* CV one-page print layout */
+@page {
+    size: A4;
+    margin: 0mm;
+}
+
+@media print {
+    body,
+    .cv-print-page,
+    .cv-print-page * {
+        print-color-adjust: exact !important;
+        -webkit-print-color-adjust: exact !important;
+    }
+    body {
+        background: #000 !important;
+    }
+    .cv-print-page {
+        height: auto !important;
+        min-height: 0 !important;
+        padding: 0.4rem !important;
+        background: #000 !important;
+        transform: scale(0.88);
+        transform-origin: top left;
+        width: 113.6%;
+    }
+    .cv-print-page img {
+        width: 5rem !important;
+        height: 5rem !important;
+    }
+    .cv-print-page h1 {
+        font-size: 1.25rem !important;
+    }
+    .cv-print-page h2 {
+        font-size: 0.9rem !important;
+    }
+    .cv-print-page h3 {
+        font-size: 0.8rem !important;
+    }
+    .cv-print-page p,
+    .cv-print-page span {
+        font-size: 0.7rem !important;
+    }
+    .cv-print-page a {
+        font-size: 0.7rem !important;
+        color: #93c5fd !important;
+    }
+    .cv-print-page .mb-2 {
+        margin-bottom: 0.3rem !important;
+    }
+    .cv-print-page .mb-4 {
+        margin-bottom: 0.4rem !important;
+    }
+    .cv-print-page .gap-2 {
+        gap: 0.3rem !important;
+    }
+    .cv-print-page .space-y-2 > * + * {
+        margin-top: 0.25rem !important;
+    }
+    .cv-print-page .space-y-3 > * + * {
+        margin-top: 0.3rem !important;
+    }
+}

@@ -1,10 +1,10 @@
 const info = {
     me: {
         name: "Nazmul Haque",
-        title: "Full Stack Developer - (ERP)",
+        title: "Senior Software Specialist",
         email: "nazmul2018s@gmail.com",
         phone: "+8801917003822",
-        experience: "4+ experience",
+        experience: "4+ years",
         image: "/images/person.png",
         mysite: "https://nazmulhaque.netlify.app/",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",

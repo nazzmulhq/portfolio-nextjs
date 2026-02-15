@@ -78,7 +78,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
         }
 
         if (!earliestStart) {
-            return "0 yr";
+            return "0 year";
         }
 
         const now = new Date();
@@ -87,7 +87,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
             (now.getMonth() - earliestStart.getMonth());
 
         const years = Math.max(0, Math.floor(totalMonths / 12));
-        return `${years}+ yr`;
+        return `${years}+ years`;
     }
 
     return (
@@ -110,7 +110,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
                             <div className="text-center mb-2">
                                 <img
                                     alt={me.name}
-                                    className="rounded-xl w-40 h-40 mx-auto border-2 border-white"
+                                    className="rounded-xl w-40 h-40 mx-auto border-2 border-white print:w-20 print:h-20"
                                     src={me.image}
                                 />
                                 <h1 className="text-2xl font-bold mt-2">
@@ -214,20 +214,6 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                         </svg>
                                     </a>
                                 </div>
-                                <a
-                                    download="Nazmul Haque CV.pdf"
-                                    href={me.resume}
-                                    style={{
-                                        fontSize: "0.875rem",
-                                        color: "#60A5FA",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        cursor: "pointer",
-                                    }}
-                                >
-                                    Download Resume
-                                </a>
                             </div>
 
                             <div className="mb-4 ">
@@ -377,7 +363,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                     Education
                                 </h2>
                                 <div className="space-y-3 pl-6">
-                                    {education.map((edu, index) => (
+                                    {education.slice(0, 1).map((edu, index) => (
                                         <div
                                             className="bg-gray-900 p-4 rounded-lg hover:bg-gray-800 transition-colors duration-300"
                                             key={index}
