@@ -1,6 +1,5 @@
 "use client";
 import { FC, useRef, useState } from "react";
-import { useReactToPrint } from "react-to-print";
 import info from "../home/data";
 
 export interface ICV {
@@ -12,17 +11,31 @@ const CVBtn: FC<ICV> = ({ children }) => {
 
     const contentRef = useRef<HTMLDivElement>(null);
 
-    const reactToPrintFn = useReactToPrint({
-        contentRef,
-        documentTitle: "Nazmul_Haque_CV",
-        onBeforePrint: () => {
-            setIsPrint(true);
-            return Promise.resolve();
-        },
-        onAfterPrint: () => {
+    const generatePDF = async () => {
+        if (!contentRef.current) return;
+        setIsPrint(true);
+        try {
+            const html2pdf = (await import("html2pdf.js")).default;
+            await html2pdf()
+                .set({
+                    margin: 5, // millimeters, matches jsPDF unit
+                    filename: "Nazmul_Haque_CV.pdf",
+                    image: { type: "jpeg", quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: {
+                        unit: "mm",
+                        format: "a4",
+                        orientation: "portrait",
+                    },
+                })
+                .from(contentRef.current)
+                .save();
+        } catch (error) {
+            console.error("PDF generation failed:", error);
+        } finally {
             setIsPrint(false);
-        },
-    });
+        }
+    };
 
     const { me, skills, experience, education, works } = info;
 
@@ -95,7 +108,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
             <button
                 className="text-white border border-white px-4 py-2 w-60 block text-center hover:bg-gray-700/50"
                 disabled={isPrint}
-                onClick={() => reactToPrintFn()}
+                onClick={generatePDF}
             >
                 {isPrint ? "Downloading..." : children}
             </button>
