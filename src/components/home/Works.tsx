@@ -8,8 +8,8 @@ export interface IWorks {}
 const Works: FC<IWorks> = () => {
     const { works } = info;
     return (
-        <section className="" id="works">
-            <ScrollAnimate direction="right">
+        <section className="pb-6" id="works">
+            <ScrollAnimate blur direction="right">
                 <h2 className="text-2xl font-bold border-b border-t pr-4 text-right border-white">
                     Works
                 </h2>
@@ -18,34 +18,35 @@ const Works: FC<IWorks> = () => {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
                     {works.map((work, i) => (
                         <ScrollAnimate
-                            delay={i * 100}
+                            delay={Math.min(i * 80, 320)}
                             direction="up"
                             key={work.title}
+                            scale
                         >
-                            <div className=" border border-white">
+                            <div className="border border-white flex flex-col h-full card-hover overflow-hidden">
                                 {work.imageOrVideo.includes("png") ||
                                 work.imageOrVideo.includes("jpg") ? (
                                     <img
                                         alt={work.title}
-                                        className="object-cover w-full h-48 opacity-80"
+                                        className="object-cover w-full h-44 sm:h-48 opacity-80"
                                         src={work.imageOrVideo}
                                     />
                                 ) : (
                                     <video
-                                        className="object-cover w-full h-48 opacity-80"
+                                        className="object-cover w-full h-44 sm:h-48 opacity-80"
                                         controls
                                     >
                                         <source src={work.imageOrVideo} />
                                     </video>
                                 )}
-                                <div className="p-4">
-                                    <div className="flex justify-between items-center">
-                                        <h3 className="text-sm lg:text-xl font-bold">
+                                <div className="p-3 sm:p-4 flex flex-col flex-1">
+                                    <div className="flex justify-between items-start gap-2 mb-2">
+                                        <h3 className="text-sm sm:text-base font-bold leading-tight">
                                             {work.title}
                                         </h3>
                                         {work.link && (
                                             <Link
-                                                className="text-center text-xs px-2 py-1 bg-blue-500 text-white rounded-md"
+                                                className="shrink-0 text-center text-xs px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors duration-200"
                                                 href={work.link}
                                                 rel="noopener noreferrer"
                                                 target="_blank"
@@ -54,7 +55,7 @@ const Works: FC<IWorks> = () => {
                                             </Link>
                                         )}
                                     </div>
-                                    <p className="text-xs lg:text-sm">
+                                    <p className="text-xs sm:text-sm text-gray-300 leading-relaxed flex-1">
                                         {work.description.join(". ")}.
                                     </p>
                                 </div>

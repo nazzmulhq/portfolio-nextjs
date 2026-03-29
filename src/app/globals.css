@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+/* Prevent horizontal scroll on mobile */
+html,
+body {
+    overflow-x: hidden;
+    max-width: 100vw;
+}
+
 @theme {
     --color-primary: "black";
     --color-secondary: "white";
@@ -210,6 +217,139 @@
 .animate-gradient-x {
     background-size: 200% 200%;
     animation: gradient-x 3s ease infinite;
+}
+
+/* Scale-in animation */
+@keyframes scale-in {
+    from {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+/* Blur-in animation */
+@keyframes blur-in {
+    from {
+        opacity: 0;
+        filter: blur(8px);
+        transform: translateY(20px);
+    }
+    to {
+        opacity: 1;
+        filter: blur(0);
+        transform: translateY(0);
+    }
+}
+
+/* Slide-up-scale animation */
+@keyframes slide-up-scale {
+    from {
+        opacity: 0;
+        transform: translateY(30px) scale(0.96);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+/* Rotate-in animation */
+@keyframes rotate-in {
+    from {
+        opacity: 0;
+        transform: rotate(-6deg) scale(0.9);
+    }
+    to {
+        opacity: 1;
+        transform: rotate(0deg) scale(1);
+    }
+}
+
+/* Glow pulse for profile image */
+@keyframes glow-pulse {
+    0%,
+    100% {
+        box-shadow: 0 0 0px 0px rgba(99, 102, 241, 0);
+    }
+    50% {
+        box-shadow: 0 0 18px 4px rgba(99, 102, 241, 0.45);
+    }
+}
+
+.animate-scale-in {
+    animation: scale-in 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-blur-in {
+    animation: blur-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-slide-up-scale {
+    animation: slide-up-scale 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-rotate-in {
+    animation: rotate-in 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.animate-glow-pulse {
+    animation: glow-pulse 2.5s ease-in-out infinite;
+}
+
+/* Stagger animation delays */
+.animate-delay-50 {
+    animation-delay: 50ms;
+}
+.animate-delay-100 {
+    animation-delay: 100ms;
+}
+.animate-delay-150 {
+    animation-delay: 150ms;
+}
+.animate-delay-200 {
+    animation-delay: 200ms;
+}
+.animate-delay-250 {
+    animation-delay: 250ms;
+}
+.animate-delay-300 {
+    animation-delay: 300ms;
+}
+.animate-delay-400 {
+    animation-delay: 400ms;
+}
+.animate-delay-500 {
+    animation-delay: 500ms;
+}
+
+/* Card hover effects */
+.card-hover {
+    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    will-change: transform, box-shadow;
+}
+
+.card-hover:hover {
+    transform: translateY(-4px) scale(1.02);
+    box-shadow: 0 8px 24px rgba(99, 102, 241, 0.2);
+    border-color: rgba(99, 102, 241, 0.6);
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .card-hover:hover {
+        transform: none;
+    }
+
+    .animate-glow-pulse,
+    .animate-scale-in,
+    .animate-blur-in,
+    .animate-slide-up-scale,
+    .animate-rotate-in {
+        animation: none;
+    }
 }
 
 /* CV one-page print layout */
