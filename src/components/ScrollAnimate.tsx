@@ -7,6 +7,8 @@ interface ScrollAnimateProps {
     className?: string;
     delay?: number;
     direction?: "auto" | "down" | "left" | "none" | "right" | "up";
+    scale?: boolean;
+    blur?: boolean;
 }
 
 const TRANSLATE_MAP = {
@@ -22,6 +24,8 @@ const ScrollAnimate: FC<ScrollAnimateProps> = ({
     className = "",
     delay = 0,
     direction = "auto",
+    scale = false,
+    blur = false,
 }) => {
     const ref = useRef<HTMLDivElement>(null);
     const [visible, setVisible] = useState(false);
@@ -76,15 +80,28 @@ const ScrollAnimate: FC<ScrollAnimateProps> = ({
 
     const effectiveDirection = direction === "auto" ? animateDirection : direction;
 
+    const getTransform = () => {
+        if (visible) {
+            return scale ? "translate(0) scale(1)" : "translate(0)";
+        }
+        const base = TRANSLATE_MAP[effectiveDirection];
+        if (scale) {
+            return base === "none" ? "scale(0.92)" : `${base} scale(0.92)`;
+        }
+        return base;
+    };
+
     return (
         <div
             className={className.trim() || undefined}
             ref={ref}
             style={{
+                filter: blur ? (visible ? "blur(0px)" : "blur(6px)") : undefined,
                 opacity: visible ? 1 : 0,
-                transform: visible ? "translate(0)" : TRANSLATE_MAP[effectiveDirection],
-                transition: "opacity 0.6s ease-out, transform 0.6s ease-out",
+                transform: getTransform(),
+                transition: `opacity 0.6s ease-out, transform 0.65s cubic-bezier(0.22, 1, 0.36, 1)${blur ? ", filter 0.6s ease-out" : ""}`,
                 transitionDelay: `${delay}ms`,
+                willChange: visible ? "auto" : "transform, opacity",
             }}
         >
             {children}
