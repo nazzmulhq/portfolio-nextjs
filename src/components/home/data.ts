@@ -108,9 +108,9 @@ const info = {
             address:
                 "Level 10 House 77, Nur Empori, Road 11 Banani Bridge, Dhaka 1213",
             description: [
-                "Led full-stack development of enterprise applications using React.js and NestJS.",
-                "Developed NestJS backend APIs with RESTful integrations and Redux state management.",
-                "Established reusable component libraries and frontend architecture standards.",
+                "Led frontend development of enterprise applications using React.js and TypeScript.",
+                "Built and maintained reusable component libraries with Material-UI and custom design systems.",
+                "Established frontend architecture standards and Redux state management patterns.",
                 "Conducted requirement analysis and produced detailed technical specifications.",
             ],
 

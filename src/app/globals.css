@@ -8,21 +8,21 @@ body {
 }
 
 @theme {
-    --color-primary: "black";
-    --color-secondary: "white";
-    --color-background: "black";
-    --color-text: "white";
+    --color-primary: #000000;
+    --color-secondary: #ffffff;
+    --color-background: #000000;
+    --color-text: #ffffff;
     --font-sans: "Inter", sans-serif;
-    --screens-xs: "480px";
-    --screens-sm: "640px";
-    --screens-md: "768px";
-    --screens-lg: "1024px";
-    --screens-xl: "1280px";
-    --screens-2xl: "1400px";
-    --screens-3xl: "1600px";
-    --screens-4xl: "1920px";
-    --screens-5xl: "2200px";
-    --screens-6xl: "2400px";
+    --breakpoint-xs: 480px;
+    --breakpoint-sm: 640px;
+    --breakpoint-md: 768px;
+    --breakpoint-lg: 1024px;
+    --breakpoint-xl: 1280px;
+    --breakpoint-2xl: 1400px;
+    --breakpoint-3xl: 1600px;
+    --breakpoint-4xl: 1920px;
+    --breakpoint-5xl: 2200px;
+    --breakpoint-6xl: 2400px;
 }
 
 /* Subtle grid */
@@ -328,7 +328,10 @@ body {
 
 /* Card hover effects */
 .card-hover {
-    transition: transform 0.25s ease, box-shadow 0.25s ease, border-color 0.25s ease;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        border-color 0.25s ease;
     will-change: transform, box-shadow;
 }
 
@@ -349,68 +352,40 @@ body {
     .animate-slide-up-scale,
     .animate-rotate-in {
         animation: none;
+        opacity: 1;
+        transform: none;
+        filter: none;
     }
 }
-
-/* CV one-page print layout */
+/* ── CV Print Layout ── */
 @page {
-    size: A4;
-    margin: 0mm;
+    size: A4 portrait;
+    margin: 0 !important;
 }
 
 @media print {
-    body,
-    .cv-print-page,
-    .cv-print-page * {
-        print-color-adjust: exact !important;
+    * {
         -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        color-adjust: exact !important;
     }
-    body {
-        background: #000 !important;
+
+    html, body {
+        margin: 0 !important;
+        padding: 0 !important;
+        width: 210mm !important;
+        height: 297mm !important;
+        overflow: hidden !important;
+        background: #0a0f1a !important;
     }
-    .cv-print-page {
-        height: auto !important;
-        min-height: 0 !important;
-        padding: 0.4rem !important;
-        background: #000 !important;
-        transform: scale(0.88);
-        transform-origin: top left;
-        width: 113.6%;
-    }
-    .cv-print-page img {
-        width: 5rem !important;
-        height: 5rem !important;
-    }
-    .cv-print-page h1 {
-        font-size: 1.25rem !important;
-    }
-    .cv-print-page h2 {
-        font-size: 0.9rem !important;
-    }
-    .cv-print-page h3 {
-        font-size: 0.8rem !important;
-    }
-    .cv-print-page p,
-    .cv-print-page span {
-        font-size: 0.7rem !important;
-    }
-    .cv-print-page a {
-        font-size: 0.7rem !important;
-        color: #93c5fd !important;
-    }
-    .cv-print-page .mb-2 {
-        margin-bottom: 0.3rem !important;
-    }
-    .cv-print-page .mb-4 {
-        margin-bottom: 0.4rem !important;
-    }
-    .cv-print-page .gap-2 {
-        gap: 0.3rem !important;
-    }
-    .cv-print-page .space-y-2 > * + * {
-        margin-top: 0.25rem !important;
-    }
-    .cv-print-page .space-y-3 > * + * {
-        margin-top: 0.3rem !important;
+
+    #cv-print-area {
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        position: absolute !important;
+        top: 0 !important;
+        left: 0 !important;
     }
 }
