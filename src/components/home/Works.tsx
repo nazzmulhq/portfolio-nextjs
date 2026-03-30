@@ -8,14 +8,16 @@ export interface IWorks {}
 const Works: FC<IWorks> = () => {
     const { works } = info;
     return (
-        <section className="pb-6" id="works">
+        <section className="mb-0 overflow-hidden" id="works">
             <ScrollAnimate blur direction="right">
-                <h2 className="text-2xl font-bold border-b border-t pr-4 text-right border-white">
-                    Works
-                </h2>
+                <div className="flex justify-end">
+                    <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-l border-white/10 bg-black/40 py-3 px-8 text-neutral-400">
+                        Works
+                    </h2>
+                </div>
             </ScrollAnimate>
-            <div className="w-full px-4 pb-4 mt-4">
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+            <div className="w-full px-6 py-8">
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
                     {works.map((work, i) => (
                         <ScrollAnimate
                             delay={Math.min(i * 80, 320)}
@@ -23,39 +25,39 @@ const Works: FC<IWorks> = () => {
                             key={work.title}
                             scale
                         >
-                            <div className="border border-white flex flex-col h-full card-hover overflow-hidden">
+                            <div className="card-nextjs spotlight-glow flex flex-col h-full rounded-xl overflow-hidden shadow-lg group">
                                 {work.imageOrVideo.includes("png") ||
                                 work.imageOrVideo.includes("jpg") ? (
                                     <img
                                         alt={work.title}
-                                        className="object-cover w-full h-44 sm:h-48 opacity-80"
+                                        className="object-cover w-full h-44 sm:h-48 opacity-80 group-hover:opacity-100 transition-opacity duration-300 border-b border-white/10"
                                         src={work.imageOrVideo}
                                     />
                                 ) : (
                                     <video
-                                        className="object-cover w-full h-44 sm:h-48 opacity-80"
+                                        className="object-cover w-full h-44 sm:h-48 opacity-80 group-hover:opacity-100 transition-opacity duration-300 border-b border-white/10"
                                         controls
                                     >
                                         <source src={work.imageOrVideo} />
                                     </video>
                                 )}
-                                <div className="p-3 sm:p-4 flex flex-col flex-1">
-                                    <div className="flex justify-between items-start gap-2 mb-2">
-                                        <h3 className="text-sm sm:text-base font-bold leading-tight">
+                                <div className="p-5 flex flex-col flex-1">
+                                    <div className="flex justify-between items-start gap-3">
+                                        <h3 className="text-base sm:text-lg font-bold leading-tight text-white">
                                             {work.title}
                                         </h3>
                                         {work.link && (
                                             <Link
-                                                className="shrink-0 text-center text-xs px-2.5 py-1 bg-blue-600 hover:bg-blue-500 text-white rounded-md transition-colors duration-200"
+                                                className="shrink-0 text-center text-xs px-3 py-1.5 bg-white text-black hover:bg-neutral-200 rounded-md font-medium transition-colors duration-200 shadow-sm"
                                                 href={work.link}
                                                 rel="noopener noreferrer"
                                                 target="_blank"
                                             >
-                                                More
+                                                View
                                             </Link>
                                         )}
                                     </div>
-                                    <p className="text-xs sm:text-sm text-gray-300 leading-relaxed flex-1">
+                                    <p className="text-sm text-neutral-400 leading-relaxed flex-1 mt-3 font-light">
                                         {work.description.join(". ")}.
                                     </p>
                                 </div>

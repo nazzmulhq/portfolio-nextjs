@@ -7,22 +7,22 @@ export interface ISkills {}
 const Skills: FC<ISkills> = () => {
     const { skills } = info;
     return (
-        <section className="my-6" id="skills">
+        <section className="mb-0 overflow-hidden" id="skills">
             <ScrollAnimate blur direction="left">
-                <h2 className="text-2xl font-bold border-b border-t pl-4 border-white">
+                <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-white/10 bg-black/40 py-3 pl-8 text-neutral-400">
                     Skills
                 </h2>
             </ScrollAnimate>
-            <div className="my-6">
-                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 px-4">
+            <div className="py-8">
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 px-6">
                     {skills.map((skill, index) => (
                         <ScrollAnimate
-                            delay={Math.min(index * 40, 400)}
+                            delay={Math.min(index * 30, 300)}
                             direction="up"
                             key={index}
                             scale
                         >
-                            <div className="h-10 flex items-center justify-center px-2 border rounded text-center bg-gray-700/50 text-sm card-hover select-none">
+                            <div className="card-nextjs h-11 flex items-center justify-center px-4 rounded-lg text-center text-sm font-medium text-neutral-300 select-none hover:text-white transition-colors duration-300">
                                 {skill}
                             </div>
                         </ScrollAnimate>

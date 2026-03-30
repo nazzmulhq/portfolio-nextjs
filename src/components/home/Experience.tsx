@@ -7,13 +7,15 @@ export interface IExperience {}
 const Experience: FC<IExperience> = () => {
     const { experience } = info;
     return (
-        <section className="mt-6 mb-4" id="experience">
+        <section className="mb-0 overflow-hidden" id="experience">
             <ScrollAnimate blur direction="right">
-                <h2 className="text-2xl font-bold border-b border-t pr-4 text-right border-white">
-                    Experience
-                </h2>
+                <div className="flex justify-end">
+                    <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-l border-white/10 bg-black/40 py-3 px-8 text-neutral-400">
+                        Experience
+                    </h2>
+                </div>
             </ScrollAnimate>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 sm:items-stretch mt-4 px-4">
+            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch py-8 px-6">
                 {experience.map((exp, index) => (
                     <ScrollAnimate
                         className={`h-full ${experience.length % 2 === 1 && index === experience.length - 1 ? "sm:col-span-2" : ""}`}
@@ -22,13 +24,13 @@ const Experience: FC<IExperience> = () => {
                         key={index}
                         scale
                     >
-                        <div className="border p-3 h-full flex flex-col min-h-44 card-hover">
-                            <h3 className="text-base sm:text-lg font-bold leading-tight">{exp.title}</h3>
-                            <h4 className="text-sm sm:text-base font-semibold text-gray-300 mt-0.5">
+                        <div className="card-nextjs spotlight-glow p-6 h-full flex flex-col min-h-48 rounded-xl shadow-lg">
+                            <h3 className="text-base sm:text-lg font-bold leading-tight text-white mb-1">{exp.title}</h3>
+                            <h4 className="text-sm sm:text-base font-medium text-neutral-400">
                                 {exp.company}
                             </h4>
-                            <p className="text-xs sm:text-sm font-medium text-gray-400 mt-0.5">{exp.date}</p>
-                            <p className="text-xs sm:text-sm flex-1 mt-2 text-gray-200 leading-relaxed">
+                            <p className="text-xs font-mono tracking-wider text-neutral-500 mt-2 uppercase">{exp.date}</p>
+                            <p className="text-sm sm:text-base flex-1 mt-4 text-neutral-300 leading-relaxed font-light">
                                 {exp.description.join(". ")}
                             </p>
                         </div>
