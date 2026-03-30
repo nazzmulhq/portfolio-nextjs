@@ -9,11 +9,9 @@ const Experience: FC<IExperience> = () => {
     return (
         <section className="mb-0 overflow-hidden" id="experience">
             <ScrollAnimate blur direction="right">
-                <div className="flex justify-end">
-                    <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-l border-white/10 bg-black/40 py-3 px-8 text-neutral-400">
-                        Experience
-                    </h2>
-                </div>
+                <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-t border-white/10 bg-black/40 py-3 pr-8 text-neutral-400 w-full block text-right">
+                    Experience
+                </h2>
             </ScrollAnimate>
             <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 sm:items-stretch py-8 px-6">
                 {experience.map((exp, index) => (

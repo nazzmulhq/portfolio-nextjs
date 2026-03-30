@@ -17,7 +17,7 @@ export const NavBarMobile: FC<INavBar> = () => {
                 elementPosition + window.pageYOffset - offset;
 
             window.scrollTo({
-                top: sectionId === "Home" ? 0 : offsetPosition,
+                top: sectionId === "home" ? 0 : offsetPosition,
                 behavior: "smooth",
             });
         }
@@ -25,45 +25,28 @@ export const NavBarMobile: FC<INavBar> = () => {
 
     return (
         <div className="block md:hidden">
-            <div className="fixed bottom-3 right-4 z-10 bg-black/70 rounded">
-                <div className="border border-white rounded">
-                    <button
-                        className={`block px-1 text-xs w-full py-1 ${isActive === "home" ? "bg-white text-black" : ""}`}
-                        onClick={() => scrollToSection("home")}
-                    >
-                        Home
-                    </button>
-                    <button
-                        className={`block px-1 text-xs w-full py-1 ${isActive === "skills" ? "bg-white text-black" : ""}`}
-                        onClick={() => scrollToSection("skills")}
-                    >
-                        Skills
-                    </button>
-                    <button
-                        className={`block px-1 text-xs w-full py-1 ${isActive === "experience" ? "bg-white text-black" : ""}`}
-                        onClick={() => scrollToSection("experience")}
-                    >
-                        Experience
-                    </button>
-                    <button
-                        className={`block px-1 text-xs w-full py-1 ${isActive === "education" ? "bg-white text-black" : ""}`}
-                        onClick={() => scrollToSection("education")}
-                    >
-                        Education
-                    </button>
-                    <button
-                        className={`block px-1 text-xs w-full py-1 ${isActive === "works" ? "bg-white text-black" : ""}`}
-                        onClick={() => scrollToSection("works")}
-                    >
-                        Works
-                    </button>
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
+                <div className="flex items-center gap-1 border border-white/10 rounded-full bg-black/60 backdrop-blur-xl p-1.5 shadow-2xl">
+                    {["home", "skills", "experience", "education", "works"].map(
+                        (item) => (
+                            <button
+                                key={item}
+                                className={`px-3 py-2 text-xs font-medium rounded-full transition-all duration-300 capitalize ${
+                                    isActive === item
+                                        ? "bg-white text-black shadow-md"
+                                        : "text-neutral-400 hover:text-white hover:bg-white/10"
+                                }`}
+                                onClick={() => scrollToSection(item)}
+                            >
+                                {item === "experience" ? "Exp" : item === "education" ? "Edu" : item}
+                            </button>
+                        ),
+                    )}
                 </div>
             </div>
         </div>
     );
 };
-
-export interface INavBar {}
 
 export const NavBar: FC<INavBar> = () => {
     const [isActive, setIsActive] = useState("Home");
@@ -71,7 +54,7 @@ export const NavBar: FC<INavBar> = () => {
     const handleClick = (sectionId: string) => {
         setIsActive(sectionId);
         const element = document.getElementById(sectionId.toLowerCase());
-        const offset = 42;
+        const offset = 60; // Increased offset slightly for the beautiful new layout
 
         if (element) {
             const elementPosition = element.getBoundingClientRect().top;
@@ -86,39 +69,24 @@ export const NavBar: FC<INavBar> = () => {
     };
 
     return (
-        <div className="flex md:visible invisible justify-between items-center mb-8 fixed top-2 left-0 right-0 z-10 ">
-            <div className="mx-auto border  rounded border-white bg-black">
-                <div className="flex">
-                    <button
-                        className={`${isActive === "Home" ? "bg-white text-black" : ""} py-1 px-4 cursor-pointer`}
-                        onClick={() => handleClick("Home")}
-                    >
-                        Home
-                    </button>
-                    <button
-                        className={`${isActive === "Skills" ? "bg-white text-black" : ""} py-1 px-4 cursor-pointer`}
-                        onClick={() => handleClick("Skills")}
-                    >
-                        Skills
-                    </button>
-                    <button
-                        className={`${isActive === "Experience" ? "bg-white text-black" : ""} py-1 px-4 cursor-pointer`}
-                        onClick={() => handleClick("Experience")}
-                    >
-                        Experience
-                    </button>
-                    <button
-                        className={`${isActive === "Education" ? "bg-white text-black" : ""} py-1 px-4 cursor-pointer`}
-                        onClick={() => handleClick("Education")}
-                    >
-                        Education
-                    </button>
-                    <button
-                        className={`${isActive === "Works" ? "bg-white text-black" : ""} py-1 px-4 cursor-pointer`}
-                        onClick={() => handleClick("Works")}
-                    >
-                        Works
-                    </button>
+        <div className="hidden md:flex justify-center items-center mb-8 fixed top-6 left-0 right-0 z-50 transition-all duration-500">
+            <div className="border border-white/10 rounded-full bg-black/50 backdrop-blur-xl shadow-2xl p-1.5">
+                <div className="flex items-center gap-1">
+                    {["Home", "Skills", "Experience", "Education", "Works"].map(
+                        (item) => (
+                            <button
+                                key={item}
+                                className={`py-1.5 px-5 text-sm font-medium tracking-wide rounded-full transition-all duration-300 ${
+                                    isActive === item
+                                        ? "bg-white text-black shadow-lg shadow-white/10"
+                                        : "text-neutral-400 hover:text-white hover:bg-white/10"
+                                }`}
+                                onClick={() => handleClick(item)}
+                            >
+                                {item}
+                            </button>
+                        ),
+                    )}
                 </div>
             </div>
         </div>

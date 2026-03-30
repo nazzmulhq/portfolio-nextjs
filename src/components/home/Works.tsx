@@ -10,11 +10,9 @@ const Works: FC<IWorks> = () => {
     return (
         <section className="mb-0 overflow-hidden" id="works">
             <ScrollAnimate blur direction="right">
-                <div className="flex justify-end">
-                    <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-l border-white/10 bg-black/40 py-3 px-8 text-neutral-400">
-                        Works
-                    </h2>
-                </div>
+                <h2 className="text-sm font-semibold tracking-[0.2em] uppercase border-b border-t border-white/10 bg-black/40 py-3 pr-8 text-neutral-400 w-full block text-right">
+                    Works
+                </h2>
             </ScrollAnimate>
             <div className="w-full px-6 py-8">
                 <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">

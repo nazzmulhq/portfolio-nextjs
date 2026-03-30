@@ -74,7 +74,7 @@ const Home: FC<IHome> = () => {
                 <ScrollAnimate delay={380} direction="up" scale>
                     <div className="flex mt-5 justify-center">
                         <button
-                            className="text-black bg-white hover:bg-neutral-200 px-8 py-2.5 w-3/4 sm:w-2/3 block text-center active:scale-95 transition-all duration-300 rounded-lg font-semibold tracking-wide border border-transparent shadow-lg"
+                            className="text-black bg-white hover:bg-neutral-200 px-8 py-2.5 w-3/4 sm:w-2/3 block text-center cursor-pointer active:scale-95 transition-all duration-300 rounded-lg font-semibold tracking-wide border border-transparent shadow-lg"
                             onClick={() => {
                                 const link = document.createElement("a");
                                 link.href = me.resume;

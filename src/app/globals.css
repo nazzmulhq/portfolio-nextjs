@@ -373,12 +373,14 @@ body {
     position: relative;
     background: rgba(10, 10, 10, 0.8);
     border: 1px solid rgba(255, 255, 255, 0.1);
-    transition: background 0.2s ease, border-color 0.2s ease;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
 }
 
 .card-nextjs:hover {
     background: rgba(20, 20, 20, 0.9);
     border-color: rgba(255, 255, 255, 0.2);
+    transform: translateY(-2px);
 }
 
 .spotlight-glow {
