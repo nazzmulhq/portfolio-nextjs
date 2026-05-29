@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { NextResponse } from "next/server";
 
 // eslint-disable-next-line @typescript-eslint/no-unused-vars
 export async function proxy(req: NextRequest) {
@@ -7,5 +7,5 @@ export async function proxy(req: NextRequest) {
 }
 
 export const config = {
-    matcher: ["/((?!_next/static|favicon.ico|images/.*|videos/.*|doc/.*).*)"],
+    matcher: ["/((?!_next/static|favicon.ico|images/.*|gifs/.*|videos/.*|doc/.*).*)"],
 };
