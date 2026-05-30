@@ -1,7 +1,7 @@
-import React from "react";
 import Link from "next/link";
-import Image from "next/image";
 import ScrollAnimate from "../../../components/ScrollAnimate";
+
+export const dynamic = "force-static";
 
 export default function QuickDBPage() {
     return (
@@ -34,18 +34,31 @@ export default function QuickDBPage() {
                     </ScrollAnimate>
                     <ScrollAnimate direction="up" delay={500} blur>
                         <div className="flex flex-wrap gap-6 justify-center">
-                            <Link href="https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb" target="_blank" className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.7)] hover:-translate-y-1 flex items-center gap-2 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
-                                <span className="relative z-10">VS Code</span>
-                                <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <Link href="https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb" target="_blank" className="px-8 py-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-500 hover:to-indigo-500 text-white font-bold rounded-xl transition-all shadow-[0_0_30px_rgba(37,99,235,0.4)] hover:shadow-[0_0_50px_rgba(37,99,235,0.7)] hover:-translate-y-1 flex items-center gap-3 relative overflow-hidden group border border-blue-400/30">
+                                <div className="absolute top-0 left-[-100%] w-[120%] h-full group-hover:left-[100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-1000 ease-in-out skew-x-12 z-0"></div>
+                                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0"></div>
+                                <svg className="w-6 h-6 relative z-10" viewBox="0 0 24 24" fill="currentColor">
+                                    <path d="M17.653 2.193L5.438 10.957 2.025 8.441 1.05 9.406l4.636 4.316-4.636 4.318.974.965 3.413-2.515 12.215 8.764c.266.191.637.202.915.028.278-.173.447-.478.447-.803V2.418c0-.325-.17-.631-.447-.804-.278-.174-.649-.163-.915.028zm-2.02 14.869l-6.728-4.82 6.728-4.818v9.638z"/>
+                                </svg>
+                                <span className="relative z-10 text-lg">VS Code</span>
+                                <svg className="w-5 h-5 relative z-10 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </Link>
-                            <Link href="https://open-vsx.org/extension/quickdb/quickdb" target="_blank" className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_rgba(16,185,129,0.7)] hover:-translate-y-1 flex items-center gap-2 relative overflow-hidden group">
-                                <div className="absolute inset-0 bg-white/20 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out"></div>
-                                <span className="relative z-10">Open VSX</span>
-                                <svg className="w-5 h-5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <Link href="https://open-vsx.org/extension/quickdb/quickdb" target="_blank" className="px-8 py-4 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold rounded-xl transition-all shadow-[0_0_30px_rgba(16,185,129,0.4)] hover:shadow-[0_0_50px_rgba(16,185,129,0.7)] hover:-translate-y-1 flex items-center gap-3 relative overflow-hidden group border border-emerald-400/30">
+                                <div className="absolute top-0 left-[-100%] w-[120%] h-full group-hover:left-[100%] bg-gradient-to-r from-transparent via-white/20 to-transparent transition-all duration-1000 ease-in-out skew-x-12 z-0"></div>
+                                <div className="absolute inset-0 bg-white/10 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0"></div>
+                                <svg className="w-6 h-6 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+                                </svg>
+                                <span className="relative z-10 text-lg">Antigravity</span>
+                                <svg className="w-5 h-5 relative z-10 group-hover:translate-y-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                             </Link>
-                            <Link href="/" className="px-8 py-4 bg-slate-800/80 hover:bg-slate-700 text-white font-bold rounded-xl transition-all border border-slate-700 hover:border-slate-500 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:-translate-y-1 backdrop-blur-md">
-                                Back to Portfolio
+                            <Link href="/" className="px-8 py-4 bg-slate-800/80 hover:bg-slate-700 text-slate-200 hover:text-white font-bold rounded-xl transition-all border border-slate-700 hover:border-slate-500 hover:shadow-[0_0_30px_rgba(255,255,255,0.1)] hover:-translate-y-1 backdrop-blur-md flex items-center gap-2 relative overflow-hidden group">
+                                <div className="absolute top-0 left-[-100%] w-[120%] h-full group-hover:left-[100%] bg-gradient-to-r from-transparent via-white/10 to-transparent transition-all duration-1000 ease-in-out skew-x-12 z-0"></div>
+                                <div className="absolute inset-0 bg-white/5 translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-in-out z-0"></div>
+                                <svg className="w-5 h-5 relative z-10 group-hover:-translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                                </svg>
+                                <span className="relative z-10 text-lg">Back to Portfolio</span>
                             </Link>
                         </div>
                     </ScrollAnimate>
