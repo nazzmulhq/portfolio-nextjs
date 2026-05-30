@@ -26,18 +26,23 @@ const Works: FC<IWorks> = () => {
                             <div className="card-nextjs spotlight-glow flex flex-col h-full rounded-xl overflow-hidden shadow-lg group">
                                 {work.imageOrVideo.includes("png") ||
                                 work.imageOrVideo.includes("jpg") ? (
-                                    <img
-                                        alt={work.title}
-                                        className="object-cover w-full h-44 sm:h-48 opacity-80 group-hover:opacity-100 transition-opacity duration-300 border-b border-white/10"
-                                        src={work.imageOrVideo}
-                                    />
+                                    <div className="w-full h-44 sm:h-48 bg-slate-900/80 border-b border-white/10 overflow-hidden relative">
+                                        <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent pointer-events-none z-20"></div>
+                                        <img
+                                            alt={work.title}
+                                            className="object-cover w-full h-full opacity-80 group-hover:opacity-100 group-hover:scale-110 transition-transform duration-700 relative z-10"
+                                            src={work.imageOrVideo}
+                                        />
+                                    </div>
                                 ) : (
-                                    <video
-                                        className="object-cover w-full h-44 sm:h-48 opacity-80 group-hover:opacity-100 transition-opacity duration-300 border-b border-white/10"
-                                        controls
-                                    >
-                                        <source src={work.imageOrVideo} />
-                                    </video>
+                                    <div className="w-full h-44 sm:h-48 bg-slate-900/80 border-b border-white/10 overflow-hidden">
+                                        <video
+                                            className="object-cover w-full h-full opacity-80 group-hover:opacity-100 transition-opacity duration-300"
+                                            controls
+                                        >
+                                            <source src={work.imageOrVideo} />
+                                        </video>
+                                    </div>
                                 )}
                                 <div className="p-5 flex flex-col flex-1">
                                     <div className="flex justify-between items-start gap-3">

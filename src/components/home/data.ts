@@ -189,7 +189,7 @@ const info = {
                 "Browse tables, run queries, manage schemas, and visualize ERDs from the editor.",
                 "Supports SQLite, MySQL, PostgreSQL, MongoDB, and Redis with MCP server integration.",
             ],
-            link: "https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb",
+            link: "/quickdb",
         },
         {
             imageOrVideo: "/images/quick-cicd.png",
