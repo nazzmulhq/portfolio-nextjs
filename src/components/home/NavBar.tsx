@@ -25,15 +25,15 @@ export const NavBarMobile: FC<INavBar> = () => {
 
     return (
         <div className="block md:hidden">
-            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50">
-                <div className="flex items-center gap-1 border border-white/10 rounded-full bg-black/60 backdrop-blur-xl p-1.5 shadow-2xl">
+            <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 w-[95%] max-w-sm flex justify-center">
+                <div className="flex items-center gap-0.5 sm:gap-1 border border-white/10 rounded-full bg-black/60 backdrop-blur-xl p-1 sm:p-1.5 shadow-2xl">
                     {["home", "skills", "experience", "education", "works"].map(
                         (item) => (
                             <button
                                 key={item}
-                                className={`px-3 py-2 text-xs font-medium rounded-full transition-all duration-300 capitalize ${
+                                className={`px-2 sm:px-3 py-1.5 sm:py-2 text-[9px] sm:text-xs font-medium rounded-full transition-all duration-300 capitalize whitespace-nowrap ${
                                     isActive === item
-                                        ? "bg-white text-black shadow-md"
+                                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_10px_rgba(16,185,129,0.4)]"
                                         : "text-neutral-400 hover:text-white hover:bg-white/10"
                                 }`}
                                 onClick={() => scrollToSection(item)}
@@ -78,7 +78,7 @@ export const NavBar: FC<INavBar> = () => {
                                 key={item}
                                 className={`py-1.5 px-5 text-sm font-medium tracking-wide rounded-full transition-all duration-300 ${
                                     isActive === item
-                                        ? "bg-white text-black shadow-lg shadow-white/10"
+                                        ? "bg-gradient-to-r from-emerald-600 to-teal-600 text-white shadow-[0_0_15px_rgba(16,185,129,0.4)]"
                                         : "text-neutral-400 hover:text-white hover:bg-white/10"
                                 }`}
                                 onClick={() => handleClick(item)}

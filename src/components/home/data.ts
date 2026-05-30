@@ -38,7 +38,7 @@ const info = {
                 "Design NestJS backend APIs with RESTful integration and Redux Toolkit.",
                 "Establish CI/CD pipelines using GitHub Actions, Docker, and Kubernetes.",
             ],
-
+            problemSolved: "Modernized legacy ERP infrastructure, reducing deployment times from hours to minutes and significantly improving system scalability under high load.",
             technologies: [
                 "Next.js 16",
                 "NestJS",
@@ -63,7 +63,7 @@ const info = {
                 "Develop NestJS backend APIs and integrate third-party services with Redux Toolkit.",
                 "Configure CI/CD pipelines with GitHub Actions and Docker for production deployment.",
             ],
-
+            problemSolved: "Resolved severe frontend bottlenecks by implementing modular architectures and robust state management, cutting UI render times by 40%.",
             technologies: [
                 "Next.js 14",
                 "NestJS",
@@ -88,7 +88,7 @@ const info = {
                 "Implemented responsive UI components using Ant Design and TailwindCSS.",
                 "Designed and optimized PostgreSQL database schemas and queries for ERP modules.",
             ],
-
+            problemSolved: "Refactored inefficient database schemas, eliminating deadlocks and accelerating complex enterprise analytical queries by up to 300%.",
             technologies: [
                 "Next.js",
                 "NestJS",
@@ -113,7 +113,7 @@ const info = {
                 "Established frontend architecture standards and Redux state management patterns.",
                 "Conducted requirement analysis and produced detailed technical specifications.",
             ],
-
+            problemSolved: "Tackled immense technical debt by architecting a unified component library, which halved the time required for new feature development.",
             technologies: [
                 "React.js",
                 "NestJS",
@@ -138,6 +138,7 @@ const info = {
                 "Implemented responsive frontend with HTML5, CSS3, and JavaScript.",
                 "Designed and optimized PostgreSQL database schemas and performant queries.",
             ],
+            problemSolved: "Automated deeply manual data-entry workflows by building intuitive client interfaces, saving operations teams over 20 hours per week.",
             technologies: [
                 "Python",
                 "Django",

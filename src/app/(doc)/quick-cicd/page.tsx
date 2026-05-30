@@ -166,10 +166,14 @@ export default defineConfig({
     // },
 ];
 
+export const dynamic = "force-static";
+
 export default function Page() {
     return (
-        <section className="container relative p-4 text-white min-h-screen mx-auto sm:w-full md:w-3/4 lg:w-2/3 xl:w-1/2 2xl:w-2/3">
+        <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-emerald-500/30 font-sans overflow-hidden">
+            {/* Ambient Background Grid */}
+            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
             <QuickCiCdDoc data={data} title="Quick Dockerize Tool" />
-        </section>
+        </div>
     );
 }

@@ -72,9 +72,9 @@ const Home: FC<IHome> = () => {
                 </ScrollAnimate>
 
                 <ScrollAnimate delay={380} direction="up" scale>
-                    <div className="flex mt-5 justify-center">
+                    <div className="flex mt-8 justify-center">
                         <button
-                            className="text-black bg-white hover:bg-neutral-200 px-8 py-2.5 w-3/4 sm:w-2/3 block text-center cursor-pointer active:scale-95 transition-all duration-300 rounded-lg font-semibold tracking-wide border border-transparent shadow-lg"
+                            className="group relative w-3/4 sm:w-2/3 flex justify-center items-center gap-3 px-8 py-3.5 bg-transparent hover:bg-emerald-500/10 text-emerald-400 hover:text-emerald-300 font-bold rounded-xl border border-emerald-500/30 hover:border-emerald-500/60 shadow-[0_0_15px_rgba(16,185,129,0.05)] hover:shadow-[0_0_30px_rgba(16,185,129,0.25)] overflow-hidden transition-all duration-300 hover:-translate-y-1.5 active:scale-95 select-none"
                             onClick={() => {
                                 const link = document.createElement("a");
                                 link.href = me.resume;
@@ -83,7 +83,9 @@ const Home: FC<IHome> = () => {
                                 link.remove();
                             }}
                         >
-                            Resume
+                            <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1500ms] ease-in-out bg-gradient-to-r from-transparent via-white/40 to-transparent skew-x-12 pointer-events-none z-0"></div>
+                            <span className="relative z-10 tracking-wider">Resume</span>
+                            <svg className="w-5 h-5 relative z-10 transition-transform duration-300 group-hover:translate-y-1 animate-bounce" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
                         </button>
                     </div>
                 </ScrollAnimate>

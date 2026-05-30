@@ -101,11 +101,19 @@ const CVBtn: FC<ICV> = ({ children }) => {
     return (
         <>
             <button
-                className="text-white border border-white px-6 py-3 w-72 block text-center hover:bg-gray-700/50 disabled:opacity-50 disabled:cursor-not-allowed ml-auto"
+                className="group relative w-72 flex justify-center items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-400 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] border border-emerald-400/50 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 select-none"
                 disabled={isPrint}
                 onClick={() => reactToPrintFn()}
             >
-                {isPrint ? "Preparing..." : children}
+                <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1500ms] ease-in-out bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none z-0"></div>
+                <span className="relative z-10 tracking-wider">
+                    {isPrint ? "Preparing..." : children}
+                </span>
+                {!isPrint && (
+                    <svg className="w-5 h-5 relative z-10 transition-transform duration-300 group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                )}
             </button>
 
             {showContent && (

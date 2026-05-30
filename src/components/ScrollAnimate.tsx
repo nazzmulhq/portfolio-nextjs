@@ -50,22 +50,35 @@ const ScrollAnimate: FC<ScrollAnimateProps> = ({
 
         const observer = new IntersectionObserver(
             ([entry]) => {
+                const current = window.scrollY;
+                const prev = scrollYRef.current;
+                const isScrollingDown = current > prev;
+
                 if (entry.isIntersecting) {
-                    const current = window.scrollY;
-                    const prev = scrollYRef.current;
                     if (direction === "auto") {
-                        setAnimateDirection(current >= prev ? "up" : "down");
+                        setAnimateDirection(isScrollingDown ? "up" : "down");
                     } else {
                         setAnimateDirection(direction);
                     }
-                    scrollYRef.current = current;
                     setVisible(true);
+                } else {
+                    // Smart exit: when leaving, move in the direction of scroll
+                    if (direction === "none") {
+                        setAnimateDirection("none");
+                    } else if (direction === "left" || direction === "right") {
+                        setAnimateDirection(direction); // keep horizontal exits the same
+                    } else {
+                        // Vertical exit
+                        setAnimateDirection(isScrollingDown ? "down" : "up");
+                    }
+                    setVisible(false);
                 }
+                scrollYRef.current = current;
             },
             {
                 root: null,
-                rootMargin: "0px 0px -10% 0px",
-                threshold: 0,
+                rootMargin: "0px",
+                threshold: 0.05,
             },
         );
 
@@ -78,7 +91,8 @@ const ScrollAnimate: FC<ScrollAnimateProps> = ({
         };
     }, [direction]);
 
-    const effectiveDirection = direction === "auto" ? animateDirection : direction;
+    // Use animateDirection for the hidden state so smart exit works
+    const effectiveDirection = animateDirection;
 
     const getTransform = () => {
         if (visible) {
@@ -86,7 +100,7 @@ const ScrollAnimate: FC<ScrollAnimateProps> = ({
         }
         const base = TRANSLATE_MAP[effectiveDirection];
         if (scale) {
-            return base === "none" ? "scale(0.92)" : `${base} scale(0.92)`;
+            return base === "none" ? "scale(0.85)" : `${base} scale(0.85)`;
         }
         return base;
     };

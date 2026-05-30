@@ -456,6 +456,37 @@ body {
     100% { transform: translateY(80px) translateX(-40px) scale(0.85); }
 }
 
+@keyframes slide-diagonal-300 {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 300px 300px; }
+}
+@keyframes slide-diagonal-400 {
+    0% { background-position: 0px 0px; }
+    100% { background-position: -400px 400px; }
+}
+@keyframes slide-diagonal-500 {
+    0% { background-position: 0px 0px; }
+    100% { background-position: 500px -500px; }
+}
+
+.bg-organic-dots-1 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Ccircle cx='45' cy='12' r='1' fill='rgba(255,255,255,0.6)'/%3E%3Ccircle cx='130' cy='85' r='1.5' fill='rgba(255,255,255,0.8)'/%3E%3Ccircle cx='210' cy='35' r='0.8' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='280' cy='110' r='1.2' fill='rgba(255,255,255,0.7)'/%3E%3Ccircle cx='15' cy='160' r='1' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='95' cy='230' r='1.5' fill='rgba(255,255,255,0.9)'/%3E%3Ccircle cx='180' cy='175' r='1' fill='rgba(255,255,255,0.4)'/%3E%3Ccircle cx='250' cy='250' r='1.2' fill='rgba(255,255,255,0.6)'/%3E%3Ccircle cx='60' cy='280' r='0.8' fill='rgba(255,255,255,0.3)'/%3E%3Ccircle cx='145' cy='295' r='1' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='230' cy='80' r='1.5' fill='rgba(255,255,255,0.7)'/%3E%3Ccircle cx='290' cy='200' r='1' fill='rgba(255,255,255,0.5)'/%3E%3C/svg%3E");
+    background-size: 300px 300px;
+    animation: slide-diagonal-300 20s linear infinite;
+}
+
+.bg-organic-dots-2 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Ccircle cx='80' cy='40' r='2' fill='rgba(147,197,253,0.5)'/%3E%3Ccircle cx='220' cy='110' r='1.5' fill='rgba(255,255,255,0.6)'/%3E%3Ccircle cx='350' cy='70' r='2.5' fill='rgba(147,197,253,0.4)'/%3E%3Ccircle cx='50' cy='210' r='1.8' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='180' cy='280' r='2' fill='rgba(147,197,253,0.6)'/%3E%3Ccircle cx='310' cy='190' r='1.5' fill='rgba(255,255,255,0.7)'/%3E%3Ccircle cx='25' cy='340' r='2.2' fill='rgba(147,197,253,0.5)'/%3E%3Ccircle cx='150' cy='380' r='1.5' fill='rgba(255,255,255,0.6)'/%3E%3Ccircle cx='280' cy='320' r='2' fill='rgba(147,197,253,0.4)'/%3E%3Ccircle cx='370' cy='360' r='1.8' fill='rgba(255,255,255,0.5)'/%3E%3C/svg%3E");
+    background-size: 400px 400px;
+    animation: slide-diagonal-400 30s linear infinite;
+}
+
+.bg-organic-dots-3 {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='500' height='500'%3E%3Ccircle cx='120' cy='80' r='3' fill='rgba(147,197,253,0.4)'/%3E%3Ccircle cx='400' cy='150' r='2.5' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='250' cy='250' r='4' fill='rgba(147,197,253,0.3)'/%3E%3Ccircle cx='80' cy='350' r='2' fill='rgba(255,255,255,0.45)'/%3E%3Ccircle cx='350' cy='420' r='3.5' fill='rgba(147,197,253,0.4)'/%3E%3Ccircle cx='450' cy='300' r='2' fill='rgba(255,255,255,0.5)'/%3E%3Ccircle cx='50' cy='180' r='3' fill='rgba(147,197,253,0.3)'/%3E%3Ccircle cx='200' cy='450' r='2.5' fill='rgba(255,255,255,0.4)'/%3E%3C/svg%3E");
+    background-size: 500px 500px;
+    animation: slide-diagonal-500 45s linear infinite;
+}
+
 /* ── CV Print Layout ── */
 @page {
     size: A4 portrait;
