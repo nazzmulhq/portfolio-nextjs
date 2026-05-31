@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Education from "@src/components/home/Education";
 import Experience from "@src/components/home/Experience";
 import Home from "@src/components/home/Home";
@@ -6,11 +7,147 @@ import { NavBar, NavBarMobile } from "@src/components/home/NavBar";
 import Skills from "@src/components/home/Skills";
 import Works from "@src/components/home/Works";
 
+export const metadata: Metadata = {
+    title: {
+        absolute: "Nazmul Haque | Senior Software Specialist",
+    },
+    description: "Portfolio of Nazmul Haque, a Senior Software Specialist specializing in Next.js, NestJS, React, and full-stack enterprise development.",
+    alternates: {
+        canonical: "/",
+    },
+};
+
 export const dynamic = "force-static";
 
 export default function Page() {
+    const personSchema = {
+        "@context": "https://schema.org",
+        "@type": "Person",
+        "name": "Nazmul Haque",
+        "url": "https://nazmulhaque.netlify.app",
+        "image": "https://nazmulhaque.netlify.app/images/person.png",
+        "sameAs": [
+            "https://www.github.com/nazzmulhq",
+            "https://www.linkedin.com/in/nazzmulhq/"
+        ],
+        "jobTitle": "Senior Software Specialist",
+        "worksFor": {
+            "@type": "Organization",
+            "name": "SSL Wireless Ltd."
+        },
+        "description": "Portfolio of Nazmul Haque, a Senior Software Specialist specializing in Next.js, NestJS, React, and full-stack enterprise development.",
+        "gender": "Male",
+        "knowsLanguage": ["English", "Bengali"],
+        "nationality": {
+            "@type": "Country",
+            "name": "Bangladesh"
+        },
+        "address": {
+            "@type": "PostalAddress",
+            "addressLocality": "Dhaka",
+            "addressCountry": "Bangladesh"
+        },
+        "alumniOf": [
+            {
+                "@type": "EducationalOrganization",
+                "name": "Daffodil International University"
+            }
+        ],
+        "knowsAbout": [
+            "JavaScript",
+            "TypeScript",
+            "Python",
+            "React.js",
+            "Next.js",
+            "NestJS",
+            "Django",
+            "Docker",
+            "Kubernetes",
+            "Microservices"
+        ]
+    };
+
+    const quickdbSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "QuickDB",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "DataGrip-inspired database manager for VS Code. Browse tables, run SQL/NoSQL queries, and integrate with AI assistants like Cursor/Claude via built-in MCP server.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Nazmul Haque"
+        }
+    };
+
+    const quickCicdSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Quick Dockerize Tool",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "Command-line interface to containerize projects (Docker) and generate CI/CD configuration files (GitHub Actions, Bitbucket, etc.) automatically.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Nazmul Haque"
+        }
+    };
+
+    const eslintSetupSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "ESLint & Prettier Setup for Next.js",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "Published npm package for automated ESLint and Prettier configuration in Next.js projects.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Nazmul Haque"
+        }
+    };
+
+    const quickUiSchema = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Quick UI Design",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "Scaffolding tool for rapid web application UI development with Ant Design and Next.js.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        },
+        "author": {
+            "@type": "Person",
+            "name": "Nazmul Haque"
+        }
+    };
+
+    const jsonLd = [personSchema, quickdbSchema, quickCicdSchema, eslintSetupSchema, quickUiSchema];
+
     return (
         <div className="relative p-0 sm:p-4 md:py-24 text-white min-h-screen w-full max-w-5xl mx-auto pb-28 md:pb-12 flex flex-col justify-center">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             <NavBar />
 
             {/* Ambient Background Grid & Image */}

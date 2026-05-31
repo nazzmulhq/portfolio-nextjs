@@ -1,15 +1,64 @@
+import type { Metadata } from "next";
 import CVBtn from "@src/components/cv";
 import Link from "next/link";
 import { FC } from "react";
 import ScrollAnimate from "../../../components/ScrollAnimate";
+
+export const metadata: Metadata = {
+    title: "Curriculum Vitae",
+    description: "Professional CV of Nazmul Haque, Senior Software Specialist. Review and download a PDF/print version of my software engineering experience and skills.",
+    alternates: {
+        canonical: "/cv",
+    },
+    openGraph: {
+        title: "Curriculum Vitae (CV) | Nazmul Haque",
+        description: "Professional CV of Nazmul Haque, Senior Software Specialist. Review and download a PDF/print version of my software engineering experience and skills.",
+        url: "/cv",
+        images: [
+            {
+                url: "/images/person.png",
+                width: 800,
+                height: 800,
+                alt: "Nazmul Haque - Curriculum Vitae",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Curriculum Vitae (CV) | Nazmul Haque",
+        description: "Professional CV of Nazmul Haque, Senior Software Specialist.",
+        images: ["/images/person.png"],
+    },
+};
 
 export interface IPage {}
 
 export const dynamic = "force-static";
 
 const Page: FC<IPage> = () => {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "ProfilePage",
+        "mainEntity": {
+            "@type": "Person",
+            "name": "Nazmul Haque",
+            "jobTitle": "Senior Software Specialist",
+            "description": "Professional CV of Nazmul Haque, Senior Software Specialist. Review and download a PDF/print version of my software engineering experience and skills.",
+            "image": "https://nazmulhaque.netlify.app/images/person.png",
+            "worksFor": {
+                "@type": "Organization",
+                "name": "SSL Wireless Ltd."
+            }
+        }
+    };
+
     return (
         <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-emerald-500/30 font-sans overflow-hidden flex flex-col justify-between">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             {/* Ambient Background Grid */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
             

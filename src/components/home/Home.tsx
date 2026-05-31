@@ -13,12 +13,20 @@ const Home: FC<IHome> = () => {
         <section className="flex justify-center py-8 px-4" id="home">
             <div className="w-full max-w-sm">
                 <ScrollAnimate blur direction="none" scale>
-                    <div className="w-40 sm:w-48 my-2 mx-auto rounded-full overflow-hidden relative shadow-2xl shadow-white/5 border border-white/10 group">
+                    <div className="w-40 h-40 sm:w-48 sm:h-48 my-2 mx-auto rounded-3xl overflow-hidden relative shadow-2xl shadow-white/5 border border-white/10 group bg-slate-950/80">
+                        {/* Blurred background image to fill the container */}
+                        <img
+                            alt=""
+                            className="absolute inset-0 w-full h-full object-cover blur-md opacity-40 scale-110 pointer-events-none z-0"
+                            src={`${me.image}`}
+                        />
+                        {/* Full sharp foreground image */}
                         <img
                             alt="Nazmul"
-                            className="rounded-full w-full h-auto relative z-10 transition-transform duration-500 group-hover:scale-105"
+                            className="w-full h-full object-contain relative z-10 transition-transform duration-500 group-hover:scale-105"
                             src={`${me.image}`}
                             width={192}
+                            height={192}
                         />
                     </div>
                 </ScrollAnimate>

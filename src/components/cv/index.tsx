@@ -160,19 +160,48 @@ const CVBtn: FC<ICV> = ({ children }) => {
                             >
                                 {/* Profile */}
                                 <div style={{ textAlign: "center" }}>
+                                <div
+                                    style={{
+                                        width: "100px",
+                                        height: "100px",
+                                        borderRadius: "14px",
+                                        border: "2px solid #334155",
+                                        margin: "0 auto 8px",
+                                        position: "relative",
+                                        overflow: "hidden",
+                                        background: "#020617",
+                                    }}
+                                >
+                                    {/* Blurred background image */}
+                                    <img
+                                        alt=""
+                                        src={me.image}
+                                        style={{
+                                            position: "absolute",
+                                            inset: 0,
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "cover",
+                                            filter: "blur(6px)",
+                                            opacity: 0.4,
+                                            transform: "scale(1.1)",
+                                            pointerEvents: "none",
+                                        }}
+                                    />
+                                    {/* Full sharp foreground image */}
                                     <img
                                         alt={me.name}
                                         src={me.image}
                                         style={{
-                                            width: "100px",
-                                            height: "100px",
-                                            borderRadius: "14px",
-                                            border: "2px solid #334155",
-                                            margin: "0 auto 8px",
-                                            objectFit: "cover",
+                                            width: "100%",
+                                            height: "100%",
+                                            objectFit: "contain",
+                                            position: "relative",
+                                            zIndex: 10,
                                             display: "block",
                                         }}
                                     />
+                                </div>
                                     <h1
                                         style={{
                                             fontSize: "22px",

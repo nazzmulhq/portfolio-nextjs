@@ -1,11 +1,58 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import ScrollAnimate from "../../../components/ScrollAnimate";
+
+export const metadata: Metadata = {
+    title: "QuickDB - VS Code Database Client & AI MCP Server",
+    description: "DataGrip-inspired database manager for VS Code. Browse tables, run SQL/NoSQL queries, and integrate with AI assistants like Cursor/Claude via built-in MCP server.",
+    alternates: {
+        canonical: "/quickdb",
+    },
+    openGraph: {
+        title: "QuickDB - Database Client & AI MCP Server for VS Code",
+        description: "DataGrip-inspired database manager for VS Code. Universal support for SQLite, PostgreSQL, MySQL, MongoDB, and Redis with AI integration.",
+        url: "/quickdb",
+        images: [
+            {
+                url: "/images/quickdb-icon.png",
+                width: 1200,
+                height: 630,
+                alt: "QuickDB - VS Code Extension and MCP Server",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "QuickDB - VS Code Database Client & AI MCP Server",
+        description: "Universal database support (SQL/NoSQL) and AI MCP server integration in VS Code.",
+        images: ["/images/quickdb.png"],
+    },
+};
 
 export const dynamic = "force-static";
 
 export default function QuickDBPage() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "QuickDB",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "DataGrip-inspired database manager for VS Code. Browse tables, run SQL/NoSQL queries, and integrate with AI assistants like Cursor/Claude via built-in MCP server.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    };
+
     return (
         <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-blue-500/30 font-sans overflow-hidden">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             {/* Ambient Background Grid */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#3b82f6 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
             {/* Header / Hero Section */}

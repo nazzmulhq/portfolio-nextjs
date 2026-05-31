@@ -1,9 +1,37 @@
+import type { Metadata } from "next";
+import QuickCiCdDoc from "@src/components/doc";
+
+export const metadata: Metadata = {
+    title: "Quick Dockerize Tool - Automated CI/CD Setup CLI",
+    description: "Command-line interface to containerize projects (Docker) and generate CI/CD configuration files (GitHub Actions, Bitbucket, etc.) automatically.",
+    alternates: {
+        canonical: "/quick-cicd",
+    },
+    openGraph: {
+        title: "Quick Dockerize Tool - Automated CI/CD Setup CLI",
+        description: "Generate production-ready Dockerfile, docker-compose, and deployment pipelines for React, Next.js, NestJS, and Laravel instantly.",
+        url: "/quick-cicd",
+        images: [
+            {
+                url: "/images/quick-cicd.png",
+                width: 1200,
+                height: 630,
+                alt: "Quick Dockerize Tool CLI Output",
+            },
+        ],
+    },
+    twitter: {
+        card: "summary_large_image",
+        title: "Quick Dockerize Tool - Automated CI/CD Setup CLI",
+        description: "Generate production-ready Dockerfiles & deployment pipelines in seconds using npx quick-cicd.",
+        images: ["/images/quick-cicd.png"],
+    },
+};
+
 const Nest = "/videos/quick-cicd/nest.mp4";
 const Next = "/videos/quick-cicd/next.mp4";
 const Php = "/videos/quick-cicd/php.mp4";
 const Vite = "/videos/quick-cicd/vite.mp4";
-
-import QuickCiCdDoc from "@src/components/doc";
 
 const data = [
     {
@@ -169,8 +197,27 @@ export default defineConfig({
 export const dynamic = "force-static";
 
 export default function Page() {
+    const jsonLd = {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Quick Dockerize Tool",
+        "operatingSystem": "Windows, macOS, Linux",
+        "applicationCategory": "DeveloperApplication",
+        "description": "Command-line interface to containerize projects (Docker) and generate CI/CD configuration files (GitHub Actions, Bitbucket, etc.) automatically.",
+        "offers": {
+            "@type": "Offer",
+            "price": "0",
+            "priceCurrency": "USD"
+        }
+    };
+
     return (
         <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-emerald-500/30 font-sans overflow-hidden">
+            {/* JSON-LD Structured Data */}
+            <script
+                type="application/ld+json"
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+            />
             {/* Ambient Background Grid */}
             <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
             <QuickCiCdDoc data={data} title="Quick Dockerize Tool" />
