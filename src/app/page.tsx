@@ -26,17 +26,17 @@ export default function Page() {
                 <div className="ambient-blob blob-3 mix-blend-screen opacity-60"></div>
 
                 {/* Layer 1: Dense, fast, twinkling */}
-                <div className="absolute inset-0 animate-[pulse_3s_ease-in-out_infinite]">
+                <div className="absolute inset-0 animate-[pulse_3s_ease-in-out_infinite] hidden sm:block">
                     <div className="absolute inset-0 bg-organic-dots-1 opacity-90 mix-blend-screen" style={{ filter: 'drop-shadow(0 0 5px rgba(255,255,255,1))' }}></div>
                 </div>
                 
                 {/* Layer 2: Medium, slower */}
-                <div className="absolute inset-0 animate-[pulse_5s_ease-in-out_infinite]">
+                <div className="absolute inset-0 animate-[pulse_5s_ease-in-out_infinite] hidden sm:block">
                     <div className="absolute inset-0 bg-organic-dots-2 opacity-80 mix-blend-screen" style={{ filter: 'drop-shadow(0 0 6px rgba(110,231,183,0.8))' }}></div>
                 </div>
                 
                 {/* Layer 3: Sparse, largest, glowing */}
-                <div className="absolute inset-0 animate-[pulse_7s_ease-in-out_infinite]">
+                <div className="absolute inset-0 animate-[pulse_7s_ease-in-out_infinite] hidden sm:block">
                     <div className="absolute inset-0 bg-organic-dots-3 opacity-100 mix-blend-screen" style={{ filter: 'drop-shadow(0 0 8px rgba(110,231,183,1)) drop-shadow(0 0 15px rgba(255,255,255,0.5))' }}></div>
                 </div>
 
