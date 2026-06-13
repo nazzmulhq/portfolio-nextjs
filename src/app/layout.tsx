@@ -1,23 +1,40 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import ScrollReveal from "@src/components/ScrollReveal";
 import "./globals.css";
 
 export const viewport: Viewport = {
     width: "device-width",
     initialScale: 1,
-    maximumScale: 1,
-    themeColor: "#020617",
+    maximumScale: 5,
+    themeColor: [
+        { media: "(prefers-color-scheme: dark)", color: "#07080d" },
+        { media: "(prefers-color-scheme: light)", color: "#f4f6fa" },
+    ],
 };
 
 const geistSans = Geist({
     variable: "--font-geist-sans",
     subsets: ["latin"],
+    display: "swap",
 });
 
 const geistMono = Geist_Mono({
     variable: "--font-geist-mono",
     subsets: ["latin"],
+    display: "swap",
 });
+
+const bricolage = Bricolage_Grotesque({
+    variable: "--font-bricolage",
+    subsets: ["latin"],
+    display: "swap",
+    weight: ["400", "500", "600", "700", "800"],
+});
+
+// Runs before paint: applies saved theme (no flash) and arms the reveal
+// system so elements start hidden before the observer animates them in.
+const themeInit = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}document.documentElement.classList.add('js-reveal');})();`;
 
 export const metadata: Metadata = {
     metadataBase: new URL("https://nazmulhaque.netlify.app"),
@@ -113,10 +130,15 @@ export default function RootLayout({
     children: React.ReactNode;
 }>) {
     return (
-        <html lang="en">
+        <html lang="en" suppressHydrationWarning>
+            <head>
+                <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+            </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} antialiased bg-grid overflow-x-hidden`}
+                className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased overflow-x-hidden`}
             >
+                <div aria-hidden className="scroll-progress" />
+                <ScrollReveal />
                 {children}
             </body>
         </html>

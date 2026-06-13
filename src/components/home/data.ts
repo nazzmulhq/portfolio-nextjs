@@ -38,7 +38,7 @@ const info = {
                 "Design NestJS backend APIs with RESTful integration and Redux Toolkit.",
                 "Establish CI/CD pipelines using GitHub Actions, Docker, and Kubernetes.",
             ],
-            problemSolved: "Modernized legacy ERP infrastructure, reducing deployment times from hours to minutes and significantly improving system scalability under high load.",
+            problemSolved: "Modernized legacy ERP infrastructure, reducing deployment times from hours to minutes and significantly improving system scalability under high load. Architected a configurable E-commerce Builder that lets non-technical teams launch and customize online storefronts without writing code.",
             technologies: [
                 "Next.js 16",
                 "NestJS",

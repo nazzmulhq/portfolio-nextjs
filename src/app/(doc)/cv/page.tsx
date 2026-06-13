@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import CVBtn from "@src/components/cv";
+import DocThemeToggle from "@src/components/DocThemeToggle";
 import Link from "next/link";
 import { FC } from "react";
-import ScrollAnimate from "../../../components/ScrollAnimate";
 
 export const metadata: Metadata = {
     title: "Curriculum Vitae",
@@ -53,67 +53,56 @@ const Page: FC<IPage> = () => {
     };
 
     return (
-        <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-emerald-500/30 font-sans overflow-hidden flex flex-col justify-between">
+        <div className="relative flex min-h-screen flex-col justify-between overflow-hidden font-sans text-fg">
             {/* JSON-LD Structured Data */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            {/* Ambient Background Grid */}
-            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
-            
-            {/* Glowing Accent Blobs */}
-            <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-72 h-72 sm:w-[500px] sm:h-[500px] bg-emerald-500/10 rounded-full blur-[80px] sm:blur-[120px] pointer-events-none -z-10" />
-            <div className="absolute bottom-1/4 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-[80px] pointer-events-none -z-10" />
+            {/* Themed ambient background */}
+            <div aria-hidden className="aurora">
+                <div className="aurora-grid" />
+            </div>
+            <DocThemeToggle />
 
-            {/* Back Button Container */}
-            <div className="container mx-auto max-w-xl px-6 pt-10 sm:pt-16 relative z-10 flex justify-start">
-                <ScrollAnimate direction="up" delay={50} blur>
-                    <Link
-                        href="/"
-                        className="inline-flex items-center gap-2 px-4 py-2 bg-slate-900/60 hover:bg-slate-800 text-slate-300 hover:text-white font-semibold rounded-xl transition-all border border-slate-800 hover:border-slate-700 backdrop-blur-md text-sm group"
-                    >
-                        <svg className="w-4 h-4 transition-transform duration-300 group-hover:-translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-                        </svg>
-                        Back to Portfolio
-                    </Link>
-                </ScrollAnimate>
+            {/* Back Button */}
+            <div className="container relative z-10 mx-auto flex max-w-xl justify-start px-6 pt-10 sm:pt-16">
+                <Link href="/" className="btn-ghost sheen reveal text-sm">
+                    <svg className="relative z-10 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
+                    <span className="relative z-10">Back to Portfolio</span>
+                </Link>
             </div>
 
-            {/* Main Content Card Container */}
-            <main className="container mx-auto max-w-xl px-6 py-12 relative z-10 flex-1 flex flex-col justify-center items-center">
-                <ScrollAnimate direction="up" delay={150} scale blur className="w-full">
-                    <div className="w-full rounded-3xl bg-slate-900/40 backdrop-blur-xl border border-slate-800/80 p-8 sm:p-10 shadow-[0_8px_32px_rgba(0,0,0,0.5)] hover:border-emerald-500/30 transition-all duration-500 text-center flex flex-col items-center group">
-                        
-                        {/* Glowing Document Icon */}
-                        <div className="mb-8 p-5 rounded-3xl bg-slate-950/60 border border-slate-800 shadow-[0_0_30px_rgba(16,185,129,0.15)] group-hover:shadow-[0_0_50px_rgba(16,185,129,0.3)] transition-all duration-500">
-                            <div className="w-16 h-16 bg-gradient-to-br from-emerald-500/20 to-teal-500/5 rounded-2xl flex items-center justify-center text-emerald-400 group-hover:scale-105 transition-transform duration-500">
-                                <svg className="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* Text Content */}
-                        <h1 className="text-2xl sm:text-3xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 via-teal-400 to-cyan-400 mb-4 tracking-tight">
-                            Curriculum Vitae
-                        </h1>
-                        
-                        <p className="text-slate-400 text-sm sm:text-base font-light leading-relaxed mb-8 max-w-sm">
-                            Download or print a clean, high-fidelity PDF of Nazmul Haque's professional software engineering experience, skills, and qualifications.
-                        </p>
-
-                        {/* Interactive CV Download Button */}
-                        <div className="w-full flex justify-center">
-                            <CVBtn>Download PDF CV</CVBtn>
+            {/* Main Card */}
+            <main className="container relative z-10 mx-auto flex max-w-xl flex-1 flex-col items-center justify-center px-6 py-12">
+                <div className="group glass-card reveal-scale flex w-full flex-col items-center p-8 text-center sm:p-10">
+                    <div className="mb-8 rounded-3xl border border-line bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] p-5 shadow-[0_0_40px_-12px_var(--glow)]">
+                        <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-[var(--accent-soft)] text-accent transition-transform duration-500 group-hover:scale-105">
+                            <svg className="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                            </svg>
                         </div>
                     </div>
-                </ScrollAnimate>
+
+                    <h1 className="font-display mb-4 text-2xl font-extrabold tracking-tight sm:text-3xl">
+                        <span className="text-gradient">Curriculum Vitae</span>
+                    </h1>
+
+                    <p className="mb-8 max-w-sm text-sm font-light leading-relaxed text-muted sm:text-base">
+                        Download or print a clean, high-fidelity PDF of Nazmul Haque&apos;s professional
+                        software engineering experience, skills, and qualifications.
+                    </p>
+
+                    <div className="flex w-full justify-center">
+                        <CVBtn>Download PDF CV</CVBtn>
+                    </div>
+                </div>
             </main>
 
             {/* Footer */}
-            <footer className="w-full border-t border-slate-900/60 bg-slate-950/20 py-8 text-center text-slate-500 text-xs relative z-10">
+            <footer className="relative z-10 w-full border-t border-line py-8 text-center text-xs text-faint">
                 <p>&copy; {new Date().getFullYear()} Nazmul Haque. All rights reserved.</p>
             </footer>
         </div>

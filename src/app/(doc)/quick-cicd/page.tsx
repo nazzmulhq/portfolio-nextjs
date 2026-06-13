@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import QuickCiCdDoc from "@src/components/doc";
+import DocThemeToggle from "@src/components/DocThemeToggle";
 
 export const metadata: Metadata = {
     title: "Quick Dockerize Tool - Automated CI/CD Setup CLI",
@@ -212,14 +213,17 @@ export default function Page() {
     };
 
     return (
-        <div className="relative min-h-screen bg-[#020617] text-slate-200 selection:bg-emerald-500/30 font-sans overflow-hidden">
+        <div className="relative min-h-screen overflow-hidden font-sans text-fg">
             {/* JSON-LD Structured Data */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
-            {/* Ambient Background Grid */}
-            <div className="absolute inset-0 z-0 opacity-20 pointer-events-none" style={{ backgroundImage: 'radial-gradient(#10b981 1px, transparent 1px)', backgroundSize: '32px 32px' }}></div>
+            {/* Themed ambient background */}
+            <div aria-hidden className="aurora">
+                <div className="aurora-grid" />
+            </div>
+            <DocThemeToggle />
             <QuickCiCdDoc data={data} title="Quick Dockerize Tool" />
         </div>
     );
