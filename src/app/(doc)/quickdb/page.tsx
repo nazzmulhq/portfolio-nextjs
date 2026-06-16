@@ -1,7 +1,89 @@
 import type { Metadata } from "next";
+import DbChip from "@src/components/DbChip";
 import DocThemeToggle from "@src/components/DocThemeToggle";
 import ZoomOnScroll from "@src/components/ZoomOnScroll";
 import Link from "next/link";
+
+// Brand-logo slugs (simpleicons.org). Engines not listed fall back to a
+// generic database glyph in <DbChip>.
+const DB_SLUG: Record<string, string> = {
+    // MySQL-compatible
+    MySQL: "mysql",
+    MariaDB: "mariadb",
+    TiDB: "tidb",
+    SingleStore: "singlestore",
+    // PostgreSQL-compatible
+    PostgreSQL: "postgresql",
+    CockroachDB: "cockroachlabs",
+    Timescale: "timescale",
+    "Amazon Redshift": "amazonredshift",
+    Greenplum: "greenplum",
+    QuestDB: "questdb",
+    YugabyteDB: "yugabyte",
+    PGlite: "postgresql",
+    // SQL Server-compatible
+    "SQL Server": "microsoftsqlserver",
+    "Azure SQL": "microsoftazure",
+    "Azure Synapse": "microsoftazure",
+    "Microsoft Fabric": "microsoftazure",
+    "SAP ASE (Sybase)": "sap",
+    // SQLite-compatible
+    SQLite: "sqlite",
+    "libSQL (Turso)": "turso",
+    "Cloudflare D1": "cloudflare",
+    // other relational
+    Oracle: "oracle",
+    "IBM DB2": "ibm",
+    "IBM i": "ibm",
+    Firebird: "firebird",
+    // analytical / OLAP
+    ClickHouse: "clickhouse",
+    DuckDB: "duckdb",
+    MotherDuck: "duckdb",
+    DuckLake: "duckdb",
+    Snowflake: "snowflake",
+    BigQuery: "googlebigquery",
+    Databricks: "databricks",
+    Trino: "trino",
+    "Amazon Athena": "amazonwebservices",
+    "Apache Druid": "apachedruid",
+    "Apache Hive": "apachehive",
+    // document
+    MongoDB: "mongodb",
+    "Apache CouchDB": "apachecouchdb",
+    Couchbase: "couchbase",
+    "Firebase Firestore": "firebase",
+    // key-value / cache
+    Redis: "redis",
+    Memcached: "memcached",
+    "Amazon DynamoDB": "amazondynamodb",
+    // wide-column
+    Cassandra: "apachecassandra",
+    ScyllaDB: "scylladb",
+    "Google Spanner": "googlecloud",
+    // graph
+    Neo4j: "neo4j",
+    Memgraph: "memgraph",
+    // search
+    Elasticsearch: "elasticsearch",
+    OpenSearch: "opensearch",
+    // time-series
+    InfluxDB: "influxdb",
+    // multi-model
+    SurrealDB: "surrealdb",
+    // vector
+    Qdrant: "qdrant",
+    Milvus: "milvus",
+    Pinecone: "pinecone",
+    Weaviate: "weaviate",
+    // streaming / messaging
+    "Apache Kafka": "apachekafka",
+    RabbitMQ: "rabbitmq",
+    // file formats
+    Excel: "microsoftexcel",
+    Parquet: "apacheparquet",
+    "Apache Iceberg": "apacheiceberg",
+};
 
 export const metadata: Metadata = {
     title: "QuickDB - VS Code Database Client & AI MCP Server",
@@ -84,15 +166,55 @@ const SHOWCASES = [
         gif: "https://nazmulhaque.netlify.app/gifs/quickdb/external-client-setup.gif",
         reverse: false,
     },
+    {
+        title: "Query Console",
+        body: "Run SQL and NoSQL queries in a fast, IntelliSense-powered console—then inspect, sort, and export the results inline.",
+        gif: "/gifs/quickdb/queryconsole.gif",
+        reverse: true,
+    },
+    {
+        title: "AI-Generated Charts via MCP",
+        body: "Ask your AI assistant to visualize data—QuickDB's MCP server turns a natural-language prompt into a ready-to-export chart.",
+        gif: "/gifs/quickdb/use-mcp-to-make-chart.gif",
+        reverse: false,
+    },
 ];
 
-const DATABASES = [
-    { name: "SQLite", type: "SQL", port: "N/A", note: "File-based, supports :memory:" },
-    { name: "MySQL", type: "SQL", port: "3306", note: "Full INFORMATION_SCHEMA support" },
-    { name: "PostgreSQL", type: "SQL", port: "5432", note: "SSL/TLS supported" },
-    { name: "MongoDB", type: "NoSQL", port: "27017", note: "Connection string or host/port" },
-    { name: "Redis", type: "NoSQL", port: "6379", note: "All data types supported" },
+const ICON = {
+    db: "M20.25 6.375c0 2.278-3.694 4.125-8.25 4.125S3.75 8.653 3.75 6.375m16.5 0c0-2.278-3.694-4.125-8.25-4.125S3.75 4.097 3.75 6.375m16.5 0v11.25c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125V6.375m16.5 5.625c0 2.278-3.694 4.125-8.25 4.125s-8.25-1.847-8.25-4.125",
+    chart: "M3 13.125C3 12.504 3.504 12 4.125 12h2.25c.621 0 1.125.504 1.125 1.125v6.75C7.5 20.496 6.996 21 6.375 21h-2.25A1.125 1.125 0 013 19.875v-6.75zM9.75 8.625c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125v11.25c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V8.625zM16.5 4.125c0-.621.504-1.125 1.125-1.125h2.25C20.496 3 21 3.504 21 4.125v15.75c0 .621-.504 1.125-1.125 1.125h-2.25a1.125 1.125 0 01-1.125-1.125V4.125z",
+    document: "M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z",
+    key: "M15.75 5.25a3 3 0 013 3m3 0a6 6 0 01-7.029 5.912c-.563-.097-1.159.026-1.563.43L10.5 17.25H8.25v2.25H6v2.25H2.25v-2.818c0-.597.237-1.17.659-1.591l6.499-6.499c.404-.404.527-1 .43-1.563A6 6 0 1121.75 8.25z",
+    columns: "M3.75 3v18m6-18v18m6-18v18M2.25 3.75h19.5",
+    graph: "M7.217 10.907a2.25 2.25 0 100 2.186m0-2.186c.18.324.283.696.283 1.093s-.103.77-.283 1.093m0-2.186l9.566-5.314m-9.566 7.5l9.566 5.314m0 0a2.25 2.25 0 103.935 2.186 2.25 2.25 0 00-3.935-2.186zm0-12.814a2.25 2.25 0 103.933-2.185 2.25 2.25 0 00-3.933 2.185z",
+    search: "M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z",
+    clock: "M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z",
+    layers: "M6.429 9.75L2.25 12l4.179 2.25m0-4.5l5.571 3 5.571-3m-11.142 0L2.25 7.5 12 2.25l9.75 5.25-4.179 2.25m0 0L21.75 12l-4.179 2.25m0 0l4.179 2.25L12 21.75 2.25 16.5l4.179-2.25m11.142 0l-5.571 3-5.571-3",
+    sparkles: "M9.813 15.904L9 18.75l-.813-2.846a4.5 4.5 0 00-3.09-3.09L2.25 12l2.846-.813a4.5 4.5 0 003.09-3.09L9 5.25l.813 2.846a4.5 4.5 0 003.09 3.09L15.75 12l-2.846.813a4.5 4.5 0 00-3.09 3.09zM18.259 8.715L18 9.75l-.259-1.035a3.375 3.375 0 00-2.455-2.456L14.25 6l1.036-.259a3.375 3.375 0 002.455-2.456L18 2.25l.259 1.035a3.375 3.375 0 002.456 2.456L21.75 6l-1.035.259a3.375 3.375 0 00-2.456 2.456z",
+    arrows: "M7.5 21L3 16.5m0 0L7.5 12M3 16.5h13.5m0-13.5L21 7.5m0 0L16.5 12M21 7.5H7.5",
+    file: "M3.75 9.776c.112-.017.227-.026.344-.026h15.812c.117 0 .232.009.344.026m-16.5 0a2.25 2.25 0 00-1.883 2.542l.857 6a2.25 2.25 0 002.227 1.932H19.05a2.25 2.25 0 002.227-1.932l.857-6a2.25 2.25 0 00-1.883-2.542m-16.5 0V6a2.25 2.25 0 012.25-2.25h3.879a1.5 1.5 0 011.06.44l2.122 2.12a1.5 1.5 0 001.06.44h5.379a2.25 2.25 0 012.25 2.25v.776",
+};
+
+const DB_CATEGORIES = [
+    { label: "Relational — MySQL-compatible", icon: ICON.db, items: ["MySQL", "MariaDB", "TiDB", "SingleStore", "StarRocks", "Apache Doris"] },
+    { label: "Relational — PostgreSQL-compatible", icon: ICON.db, items: ["PostgreSQL", "CockroachDB", "Timescale", "Amazon Redshift", "Greenplum", "QuestDB", "RisingWave", "YugabyteDB", "KingbaseES", "Netezza", "PGlite"] },
+    { label: "Relational — SQL Server-compatible", icon: ICON.db, items: ["SQL Server", "Azure SQL", "Azure Synapse", "SAP ASE (Sybase)", "Microsoft Fabric"] },
+    { label: "Relational — SQLite-compatible", icon: ICON.db, items: ["SQLite", "libSQL (Turso)", "Cloudflare D1"] },
+    { label: "Relational — other", icon: ICON.db, items: ["Oracle", "IBM DB2", "IBM i", "Vertica", "Firebird", "Dameng", "Exasol", "H2", "Apache Derby", "Microsoft Access"] },
+    { label: "Analytical / Warehouse / OLAP", icon: ICON.chart, items: ["ClickHouse", "DuckDB", "MotherDuck", "DuckLake", "Snowflake", "BigQuery", "Databricks", "Trino", "Amazon Athena", "Apache Druid", "Apache Pinot", "Apache Hive", "Apache Impala"] },
+    { label: "Document", icon: ICON.document, items: ["MongoDB", "Apache CouchDB", "Couchbase", "RavenDB", "Firebase Firestore", "Dataverse"] },
+    { label: "Key-value / Cache", icon: ICON.key, items: ["Redis", "Memcached", "Aerospike", "Amazon DynamoDB"] },
+    { label: "Wide-column", icon: ICON.columns, items: ["Cassandra", "ScyllaDB", "Google Spanner"] },
+    { label: "Graph", icon: ICON.graph, items: ["Neo4j", "Memgraph", "TypeDB"] },
+    { label: "Search", icon: ICON.search, items: ["Elasticsearch", "OpenSearch"] },
+    { label: "Time-series", icon: ICON.clock, items: ["InfluxDB"] },
+    { label: "Multi-model", icon: ICON.layers, items: ["SurrealDB"] },
+    { label: "Vector", icon: ICON.sparkles, items: ["Qdrant", "Milvus", "Pinecone", "Weaviate", "ChromaDB", "LanceDB"] },
+    { label: "Streaming / Messaging", icon: ICON.arrows, items: ["Apache Kafka", "RabbitMQ"] },
+    { label: "File formats", icon: ICON.file, items: ["CSV", "Excel", "Parquet", "Avro", "Apache Iceberg"] },
 ];
+
+const DB_COUNT = DB_CATEGORIES.reduce((n, c) => n + c.items.length, 0);
 
 export default function QuickDBPage() {
     const jsonLd = {
@@ -133,10 +255,15 @@ export default function QuickDBPage() {
                         complex queries, manage schemas, and supercharge your workflow with a built-in MCP
                         server for AI tools.
                     </p>
-                    <div className="reveal mx-auto flex w-full max-w-xs flex-col gap-4 sm:max-w-none sm:flex-row sm:justify-center">
-                        <Link href="https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb" className="btn-accent sheen" target="_blank">
+                    <div className="reveal mx-auto flex w-full max-w-xs flex-col flex-wrap gap-4 sm:max-w-none sm:flex-row sm:justify-center">
+                        {/* Opens VS Code directly and jumps to the extension */}
+                        <a href="vscode:extension/QuickDB.quickdb" className="btn-accent sheen">
+                            <svg className="relative z-10 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
+                            <span className="relative z-10">Install in VS Code</span>
+                        </a>
+                        <Link href="https://marketplace.visualstudio.com/items?itemName=QuickDB.quickdb" className="btn-ghost sheen" target="_blank">
                             <svg className="relative z-10 h-5 w-5" viewBox="0 0 24 24" fill="currentColor"><path d="M17.653 2.193L5.438 10.957 2.025 8.441 1.05 9.406l4.636 4.316-4.636 4.318.974.965 3.413-2.515 12.215 8.764c.266.191.637.202.915.028.278-.173.447-.478.447-.803V2.418c0-.325-.17-.631-.447-.804-.278-.174-.649-.163-.915.028zm-2.02 14.869l-6.728-4.82 6.728-4.818v9.638z" /></svg>
-                            <span className="relative z-10">Get on VS Code</span>
+                            <span className="relative z-10">Marketplace</span>
                         </Link>
                         <Link href="https://open-vsx.org/extension/quickdb/quickdb" className="btn-ghost sheen" target="_blank">
                             <svg className="relative z-10 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" /></svg>
@@ -188,17 +315,13 @@ export default function QuickDBPage() {
                     </h2>
                     <div className="space-y-16 sm:space-y-28">
                         {SHOWCASES.map((s) => (
-                            <div key={s.title} className="grid grid-cols-1 items-center gap-6 sm:gap-16 lg:grid-cols-2">
-                                <div className={s.reverse ? "lg:order-2" : ""}>
-                                    <div className={s.reverse ? "reveal-right" : "reveal-left"}>
-                                        <h3 className="font-display mb-3 text-2xl font-bold leading-tight text-fg sm:text-3xl">{s.title}</h3>
-                                        <p className="text-sm leading-relaxed text-muted sm:text-lg">{s.body}</p>
-                                    </div>
+                            <div key={s.title}>
+                                <div className="reveal mx-auto mb-6 max-w-3xl text-center sm:mb-8">
+                                    <h3 className="font-display mb-3 text-2xl font-bold leading-tight text-fg sm:text-3xl">{s.title}</h3>
+                                    <p className="text-sm leading-relaxed text-muted sm:text-lg">{s.body}</p>
                                 </div>
-                                <div className={s.reverse ? "lg:order-1" : ""}>
-                                    <div className={`${s.reverse ? "reveal-left" : "reveal-right"} overflow-hidden rounded-2xl border border-line shadow-[0_24px_60px_-30px_var(--glow)]`}>
-                                        <img src={s.gif} alt={s.title} className="w-full" />
-                                    </div>
+                                <div className="reveal-scale overflow-hidden rounded-2xl border border-line shadow-[0_24px_60px_-30px_var(--glow)]">
+                                    <img src={s.gif} alt={s.title} className="block w-full" />
                                 </div>
                             </div>
                         ))}
@@ -207,35 +330,33 @@ export default function QuickDBPage() {
             </section>
 
             {/* Supported databases */}
-            <section className="container relative z-10 mx-auto border-t border-line px-4 py-10 sm:px-6 sm:py-16 md:py-24">
-                <div className="reveal mx-auto max-w-4xl">
-                    <h2 className="font-display mb-10 text-center text-2xl font-extrabold sm:text-3xl">Supported Databases</h2>
-                    <div className="w-full overflow-x-auto rounded-2xl border border-line glass">
-                        <table className="w-full min-w-[600px] border-collapse text-left">
-                            <thead>
-                                <tr className="border-b border-line text-faint">
-                                    {["Database", "Type", "Port", "Notes"].map((h) => (
-                                        <th key={h} className="p-4 text-xs font-semibold uppercase tracking-wider sm:p-5">{h}</th>
-                                    ))}
-                                </tr>
-                            </thead>
-                            <tbody className="text-muted">
-                                {DATABASES.map((db) => (
-                                    <tr key={db.name} className="group border-b border-line transition-colors last:border-0 hover:bg-[var(--surface-2)]">
-                                        <td className="flex items-center gap-3 p-4 font-medium text-fg sm:p-5">
-                                            <span className="h-2 w-2 rounded-full bg-[var(--accent)] transition-transform group-hover:scale-150" />
-                                            {db.name}
-                                        </td>
-                                        <td className="p-4 sm:p-5">
-                                            <span className="rounded-full border border-[color-mix(in_srgb,var(--accent)_25%,transparent)] bg-[var(--accent-soft)] px-3 py-1 text-[10px] font-bold text-accent sm:text-xs">{db.type}</span>
-                                        </td>
-                                        <td className="p-4 font-mono text-xs sm:p-5 sm:text-sm">{db.port}</td>
-                                        <td className="p-4 text-xs sm:p-5 sm:text-sm">{db.note}</td>
-                                    </tr>
+            <section className="container relative z-10 mx-auto border-t border-line px-4 py-12 sm:px-6 sm:py-16 md:py-24">
+                <div className="reveal mb-10 text-center sm:mb-14">
+                    <h2 className="font-display text-2xl font-extrabold sm:text-3xl">Supported Databases</h2>
+                    <p className="mt-3 text-base text-muted sm:text-lg">
+                        One client for{" "}
+                        <span className="font-semibold text-accent">{DB_COUNT}+</span> engines &amp; formats —
+                        relational, analytical, NoSQL, vector, streaming, and more.
+                    </p>
+                </div>
+                <div className="reveal-scale glass-card mx-auto max-w-5xl divide-y divide-[var(--line)] p-6 sm:p-8">
+                    {DB_CATEGORIES.map((cat) => (
+                        <div key={cat.label} className="flex flex-col gap-3 py-5 first:pt-0 last:pb-0 sm:flex-row sm:gap-6">
+                            <div className="flex items-center gap-3 sm:w-64 sm:shrink-0">
+                                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-accent">
+                                    <svg className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth={1.6} viewBox="0 0 24 24">
+                                        <path strokeLinecap="round" strokeLinejoin="round" d={cat.icon} />
+                                    </svg>
+                                </span>
+                                <h3 className="font-display text-sm font-bold text-fg">{cat.label}</h3>
+                            </div>
+                            <div className="flex flex-1 flex-wrap content-start gap-1.5">
+                                {cat.items.map((db) => (
+                                    <DbChip key={db} name={db} slug={DB_SLUG[db]} />
                                 ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            </div>
+                        </div>
+                    ))}
                 </div>
             </section>
 
