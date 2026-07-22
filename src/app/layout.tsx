@@ -142,9 +142,7 @@ export default function RootLayout({
                 <ScrollReveal />
                 {children}
             </body>
-            {process.env.NEXT_PUBLIC_GA_ID ? (
-                <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
-            ) : null}
+            <GoogleAnalytics gaId="G-X18XQGB0NX" />
         </html>
     );
 }
