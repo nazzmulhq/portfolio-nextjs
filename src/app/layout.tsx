@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { GoogleAnalytics } from "@next/third-parties/google";
 import ScrollReveal from "@src/components/ScrollReveal";
 import "./globals.css";
 
@@ -141,6 +142,9 @@ export default function RootLayout({
                 <ScrollReveal />
                 {children}
             </body>
+            {process.env.NEXT_PUBLIC_GA_ID ? (
+                <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_ID} />
+            ) : null}
         </html>
     );
 }
