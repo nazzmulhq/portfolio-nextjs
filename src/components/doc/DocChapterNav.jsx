@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 
-export default function DocToc({ items }) {
+export default function DocChapterNav({ items }) {
     const [active, setActive] = useState(items[0]?.id);
 
     useEffect(() => {
@@ -11,7 +11,7 @@ export default function DocToc({ items }) {
             let current = ids[0];
             for (const id of ids) {
                 const el = document.getElementById(id);
-                if (el && el.getBoundingClientRect().top - 120 <= 0) current = id;
+                if (el && el.getBoundingClientRect().top - 140 <= 0) current = id;
             }
             setActive(current);
         };
@@ -24,25 +24,24 @@ export default function DocToc({ items }) {
         e.preventDefault();
         const el = document.getElementById(id);
         if (!el) return;
-        const top = el.getBoundingClientRect().top + window.pageYOffset - 96;
+        const top = el.getBoundingClientRect().top + window.pageYOffset - 100;
         window.scrollTo({ top, behavior: "smooth" });
     };
 
     return (
-        <nav aria-label="On this page" className="hidden lg:block">
-            <div className="sticky top-24 max-h-[calc(100vh-7rem)] overflow-y-auto pr-2">
-                <p className="mb-3 px-3 text-xs font-bold uppercase tracking-[0.2em] text-faint">On this page</p>
-                <ul className="space-y-0.5 border-l border-line">
+        <nav aria-label="Documentation chapters" className="sticky top-0 z-40 border-b border-line bg-[color-mix(in_srgb,var(--canvas)_78%,transparent)] backdrop-blur-xl">
+            <div className="container mx-auto overflow-x-auto px-4 sm:px-6">
+                <ul className="flex w-max min-w-full items-center gap-1.5 py-3">
                     {items.map((item) => (
                         <li key={item.id}>
                             <a
+                                className={`inline-flex items-center gap-2 whitespace-nowrap rounded-full px-4 py-2 text-sm font-semibold transition-all duration-300 ${
+                                    active === item.id
+                                        ? "bg-[linear-gradient(120deg,var(--accent-strong),var(--accent-2))] text-[var(--accent-contrast)] shadow-[0_0_16px_-3px_var(--glow)]"
+                                        : "text-muted hover:bg-[var(--surface-2)] hover:text-fg"
+                                }`}
                                 href={`#${item.id}`}
                                 onClick={(e) => go(e, item.id)}
-                                className={`-ml-px block border-l-2 py-1.5 pl-4 text-sm transition-colors ${
-                                    active === item.id
-                                        ? "border-[var(--accent)] font-semibold text-accent"
-                                        : "border-transparent text-muted hover:border-line-strong hover:text-fg"
-                                }`}
                             >
                                 {item.label}
                             </a>

@@ -65,7 +65,10 @@ export const NavBarMobile: FC<INavBar> = () => {
     const active = useScrollSpy(52);
 
     return (
-        <div className="fixed bottom-6 left-1/2 z-50 flex w-[95%] max-w-sm -translate-x-1/2 justify-center md:hidden">
+        <div
+            className="fixed left-1/2 z-50 flex w-[95%] max-w-sm -translate-x-1/2 justify-center md:hidden"
+            style={{ bottom: "max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+        >
             <nav className="glass flex items-center gap-0.5 rounded-full p-1 shadow-[0_18px_50px_-24px_var(--shadow)] sm:gap-1 sm:p-1.5">
                 {SECTIONS.map((item) => (
                     <button
