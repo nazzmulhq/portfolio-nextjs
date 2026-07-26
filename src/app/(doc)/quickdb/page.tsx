@@ -1,12 +1,12 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
-import type { Metadata } from "next";
 import DocThemeToggle from "@src/components/DocThemeToggle";
 import ZoomOnScroll from "@src/components/ZoomOnScroll";
-import MarkdownDoc from "@src/components/doc/MarkdownDoc";
 import DocChapterNav from "@src/components/doc/DocChapterNav";
 import FeatureWalkthroughs from "@src/components/doc/FeatureWalkthroughs";
+import MarkdownDoc from "@src/components/doc/MarkdownDoc";
+import type { Metadata } from "next";
 import Link from "next/link";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 
 export const metadata: Metadata = {
     title: "QuickDB - Universal Database Client, Desktop App & AI MCP Server",
@@ -99,9 +99,9 @@ export default function QuickDBPage() {
             {/* Hero */}
             <header className="relative overflow-hidden border-b border-line px-4 pb-12 pt-24 text-center sm:pb-16 sm:pt-32">
                 <div className="container relative z-10 mx-auto flex flex-col items-center">
-                    <div className="reveal-scale mb-6 rounded-3xl border border-line bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] p-5 shadow-[0_0_50px_-12px_var(--glow)] backdrop-blur-sm">
-                        <img src="/images/quickdb-icon.png" alt="QuickDB Logo" className="h-20 w-20 rounded-2xl" />
-                    </div>
+                    <div className="reveal-scale mb-6 rounded-3xl border border-line !bg-white p-2 shadow-[0_0_50px_-12px_var(--glow)] backdrop-blur-sm">
+                        <img src="/images/quickdb-icon.png" alt="QuickDB Logo" className="h-32 w-32 rounded-2xl" />
+                    </div>          
                     <span className="eyebrow reveal mb-5">VS Code Extension · Desktop App · MCP Server</span>
                     <h1 className="font-display reveal mb-5 text-4xl font-extrabold tracking-tight sm:text-6xl md:text-7xl">
                         <span className="text-gradient">QuickDB</span>
