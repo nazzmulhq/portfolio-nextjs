@@ -758,9 +758,9 @@ body {
 /* ════════════════════════════════════════════════════════════════
    SKILLS — capability matrix
    A periodic-table style grid: every tool is one tile carrying its
-   index, a two-letter symbol and its discipline tag. Replaces the
-   sliding panel track, which needed five wide cards to say what this
-   says at a glance, and left the short disciplines mostly empty.
+   index, its brand mark and its discipline tag. Replaces the sliding
+   panel track, which needed five wide cards to say what this says at a
+   glance, and left the short disciplines mostly empty.
    ════════════════════════════════════════════════════════════════ */
 
 .matrix {
@@ -842,18 +842,17 @@ body {
     color: color-mix(in srgb, var(--accent) calc(45% + var(--g, 0) * 11%), transparent);
 }
 
-.tile-sym {
+.tile-icon {
     margin-top: auto;
-    font-family: var(--font-display);
-    font-weight: 800;
-    font-size: 1.75rem;
-    line-height: 1;
-    letter-spacing: -0.04em;
-    color: var(--fg);
+    width: 1.75rem;
+    height: 1.75rem;
+    /* Monochrome at rest so eighteen brand palettes don't compete with the
+       single accent; --brand is revealed on hover. */
+    color: var(--muted);
     transition: color 0.35s ease;
 }
-.tile:hover .tile-sym {
-    color: var(--accent);
+.tile:hover .tile-icon {
+    color: var(--brand, var(--accent));
 }
 
 .tile-name {
@@ -871,6 +870,12 @@ body {
 .tile:hover .tile-name,
 .tile:hover .tile-idx {
     color: var(--fg);
+}
+
+/* Slightly taller than square: the icon needs vertical room above the name
+   that a 1:1 tile doesn't leave at these widths. */
+.tile {
+    aspect-ratio: 1 / 1.06;
 }
 
 /* Scan line swept down the matrix on scroll. */
@@ -1001,8 +1006,156 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   EDUCATION — pinned record journey
+   One record at a time: enters from the right, settles centre, zooms
+   in, zooms back out, then exits LEFT as the next arrives.
+   ════════════════════════════════════════════════════════════════ */
+
+.edu-stage {
+    position: relative;
+}
+.edu-deck {
+    position: relative;
+    display: grid;
+    gap: 1.25rem;
+}
+.edu-panel {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    padding: 1.75rem;
+    border: 1px solid var(--line);
+    border-radius: 0.25rem;
+    background: color-mix(in srgb, var(--surface) 82%, transparent);
+    overflow: hidden;
+}
+.edu-year {
+    position: absolute;
+    top: -1.5rem;
+    right: -0.5rem;
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 8rem;
+    line-height: 1;
+    letter-spacing: -0.05em;
+    color: var(--fg);
+    opacity: 0.04;
+    pointer-events: none;
+}
+
+.edu-nodes {
+    display: none;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+@media (min-width: 640px) {
+    .edu-panel {
+        padding: 2.25rem;
+    }
+    .edu-year {
+        font-size: 11rem;
+    }
+}
+
+@media (min-width: 1024px) {
+    .edu-stage[data-edu-ready] {
+        /* Top-aligned rather than centred, for the same reason as the
+           experience deck: centring makes the card's offset depend on the
+           pin-spacer's height and pushes its base off the bottom edge. */
+        min-height: 100svh;
+        padding-top: 5.5rem;
+    }
+    .edu-stage[data-edu-ready] .edu-nodes {
+        display: flex;
+    }
+    .edu-stage[data-edu-ready] .edu-deck {
+        display: block;
+        width: 100%;
+        height: 22rem;
+    }
+    .edu-stage[data-edu-ready] .edu-card {
+        position: absolute;
+        inset: 0;
+        /* Cards travel sideways past the stage edges; clipping them to the
+           deck would cut the movement short. */
+        will-change: transform;
+    }
+    .edu-stage[data-edu-ready] .edu-panel {
+        /* Deliberately NOT height: 100%. These records are three lines long;
+           stretching them to the deck leaves a hollow middle, and it makes
+           scrollHeight circular with the deck height that fitDeck measures
+           from it. */
+        height: auto;
+        /* Records overlap mid-transition, so the surface must be opaque or
+           the outgoing one reads straight through the incoming one. */
+        background: var(--surface);
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════
    WORKS
    ════════════════════════════════════════════════════════════════ */
+
+/* Each entry is a two-column row whose media sticks while the copy beside
+   it scrolls. The stacking effect is pure CSS `position: sticky` — no pin,
+   no JS, and it degrades to a plain stacked card on narrow screens. */
+.work-entry {
+    display: grid;
+    gap: 2rem;
+    padding-bottom: 5rem;
+}
+
+@media (min-width: 1024px) {
+    .work-entry {
+        grid-template-columns: minmax(0, 1.05fr) minmax(0, 1fr);
+        gap: 4rem;
+        padding-bottom: 6rem;
+        /* The sticky shot only travels for (entry height - shot height). Without
+           a floor here the entry is barely taller than the image itself, the
+           shot unsticks almost immediately, and the effect never reads. */
+        min-height: 88svh;
+        align-items: start;
+    }
+    .work-shot {
+        position: sticky;
+        /* Clears the fixed nav. */
+        top: 7rem;
+        align-self: start;
+    }
+    /* Nudged down so the heading lines up with the image's upper third
+       rather than its very top edge. */
+    .work-copy {
+        padding-top: 2.5rem;
+    }
+}
+
+/* Bracket ticks on the media frame, matching .hud. */
+.work-brackets > span {
+    position: absolute;
+    z-index: 4;
+    width: 18px;
+    height: 18px;
+    pointer-events: none;
+    border-color: var(--accent);
+    opacity: 0;
+    transition: opacity 0.4s ease;
+}
+.work-brackets > span:nth-child(1) {
+    top: 8px;
+    left: 8px;
+    border-top: 1px solid;
+    border-left: 1px solid;
+}
+.work-brackets > span:nth-child(2) {
+    right: 8px;
+    bottom: 8px;
+    border-right: 1px solid;
+    border-bottom: 1px solid;
+}
+.group:hover .work-brackets > span {
+    opacity: 1;
+}
 
 .work-card {
     position: relative;

@@ -92,9 +92,10 @@ const splitChars = (el: HTMLElement) => {
  *               with a scan line sweeping down it
  *   experience  pinned deck; roles are drawn on with a top-down blind wipe
  *               while a node rail tracks position
- *   education   scrubbed: enter right → centre → zoom → exit right
- *   works       media and copy columns parallax against each other, with a
- *               scan sweep crossing the image as it unmasks
+ *   education   pinned; one record at a time enters from the right, zooms
+ *               in, zooms back out, then exits left
+ *   works       media sticks while its copy scrolls past it, unmasking
+ *               sideways with a scan sweep on arrival
  *   footer      the address rises on its own
  */
 const HomeMotion = ({ children }: { children: ReactNode }) => {
@@ -388,67 +389,126 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 });
             }
 
-            /* ── EDUCATION — enter right → centre → zoom → exit ──── */
+            /* ── EDUCATION — one record at a time, exits left ────── */
+            const eduStage = scope.querySelector<HTMLElement>("[data-edu-stage]");
             const eduCards = q<HTMLElement>("[data-edu-card]");
-            eduCards.forEach((card, i) => {
-                // Scrubbed, so the whole journey is driven by scroll position
-                // rather than firing once. Each card is nudged slightly later
-                // than the last so they arrive as a cascade.
-                const tl = gsap.timeline({
-                    defaults: { ease: "none" },
-                    scrollTrigger: {
-                        trigger: "#education",
-                        start: "top bottom",
-                        end: "bottom top",
-                        scrub: 0.6,
-                    },
+            const eduNodes = q<HTMLElement>("[data-edu-node]");
+
+            if (eduStage && eduCards.length) {
+                mm.add("(min-width: 1024px)", () => {
+                    eduStage.setAttribute("data-edu-ready", "");
+
+                    const deckEl = scope.querySelector<HTMLElement>("[data-edu-deck]");
+                    const fitDeck = () => {
+                        if (!deckEl) return;
+                        const tallest = eduCards.reduce((max, card) => {
+                            const panel = card.querySelector<HTMLElement>(".edu-panel");
+                            return Math.max(max, panel?.scrollHeight ?? 0);
+                        }, 0);
+                        if (!tallest) return;
+                        // Measured from the deck's own offset in the stage — the
+                        // deck is the last child, so this doesn't depend on the
+                        // height we're about to set.
+                        const offset =
+                            deckEl.getBoundingClientRect().top -
+                            eduStage.getBoundingClientRect().top;
+                        const available = window.innerHeight - offset - 32;
+                        deckEl.style.height = `${Math.ceil(Math.max(240, Math.min(tallest, available)))}px`;
+                    };
+                    fitDeck();
+                    ScrollTrigger.addEventListener("refreshInit", fitDeck);
+
+                    // Everything starts off-stage to the right.
+                    gsap.set(eduCards, { xPercent: 120, autoAlpha: 0, scale: 0.9 });
+
+                    const journey = gsap.timeline({
+                        defaults: { ease: "none" },
+                        scrollTrigger: {
+                            trigger: eduStage,
+                            start: "top top",
+                            end: () => `+=${eduCards.length * window.innerHeight * 0.95}`,
+                            pin: true,
+                            scrub: 0.6,
+                            anticipatePin: 1,
+                            invalidateOnRefresh: true,
+                            onUpdate: (self) => {
+                                const lit = Math.min(
+                                    eduCards.length - 1,
+                                    Math.floor(self.progress * eduCards.length),
+                                );
+                                eduNodes.forEach((n, i) => {
+                                    if (i <= lit) n.setAttribute("data-on", "");
+                                    else n.removeAttribute("data-on");
+                                });
+                            },
+                        },
+                    });
+
+                    // Each record gets its own slice of the timeline, so they
+                    // arrive strictly one by one rather than overlapping:
+                    // in from the right, zoom in, zoom back out, exit left.
+                    eduCards.forEach((card, i) => {
+                        const at = i * 6;
+                        journey
+                            .to(
+                                card,
+                                { xPercent: 0, autoAlpha: 1, scale: 1, duration: 2 },
+                                at,
+                            )
+                            .to(card, { scale: 1.12, duration: 1.2 }, at + 2)
+                            .to(card, { scale: 1, duration: 1.2 }, at + 3.2)
+                            .to(
+                                card,
+                                { xPercent: -120, autoAlpha: 0, scale: 0.9, duration: 2 },
+                                at + 4.4,
+                            );
+                    });
+
+                    return () => {
+                        ScrollTrigger.removeEventListener("refreshInit", fitDeck);
+                        eduStage.removeAttribute("data-edu-ready");
+                        if (deckEl) deckEl.style.height = "";
+                        gsap.set(eduCards, { clearProps: "all" });
+                    };
                 });
 
-                tl.fromTo(
-                    card,
-                    { xPercent: 130, autoAlpha: 0, scale: 0.9 },
-                    { xPercent: 0, autoAlpha: 1, scale: 1, duration: 3 },
-                    i * 0.35,
-                )
-                    .to(card, { scale: 1.09, duration: 1.2 })
-                    .to(card, { scale: 1, duration: 1.2 })
-                    .to(card, { xPercent: 130, autoAlpha: 0, duration: 3 });
-            });
+                // Below the pin breakpoint the records are a plain stacked list.
+                mm.add("(max-width: 1023px)", () => {
+                    const tweens = eduCards.map((card) =>
+                        onceIn(
+                            gsap.fromTo(
+                                card,
+                                { y: 30, autoAlpha: 0 },
+                                {
+                                    y: 0,
+                                    autoAlpha: 1,
+                                    duration: 0.7,
+                                    ease: "power3.out",
+                                    scrollTrigger: { trigger: card, start: "top 90%", once: true },
+                                },
+                            ),
+                        ),
+                    );
+                    return () => {
+                        tweens.forEach((t) => t.scrollTrigger?.kill());
+                        gsap.set(eduCards, { clearProps: "all" });
+                    };
+                });
+            }
 
-            /* ── WORKS — opposing columns + scan sweep unmask ────── */
+            /* ── WORKS — sticky media, copy rises alongside ──────── */
             q("[data-work-row]").forEach((row) => {
                 const media = row.querySelector<HTMLElement>("[data-work-media]");
                 const copy = row.querySelector<HTMLElement>("[data-work-copy]");
                 const sweep = row.querySelector<HTMLElement>("[data-work-sweep]");
                 const img = row.querySelector<HTMLElement>("[data-parallax]");
 
-                // The two columns travel in opposite directions for the whole
-                // pass — the row reads as two planes at different depths.
+                // Unmask scrubbed, not toggled. A toggleActions version stalled
+                // a fraction of a frame in and never resumed, leaving every
+                // project image permanently masked; a scrubbed value is a pure
+                // function of scroll position, so there is no play/pause state
+                // that can get stuck.
                 if (media) {
-                    gsap.fromTo(
-                        media,
-                        { yPercent: 7 },
-                        {
-                            yPercent: -7,
-                            ease: "none",
-                            scrollTrigger: {
-                                trigger: row,
-                                start: "top bottom",
-                                end: "bottom top",
-                                scrub: 0.5,
-                            },
-                        },
-                    );
-
-                    // Unmask animates clipPath only — a second transform tween
-                    // here would fight the parallax above.
-                    //
-                    // Scrubbed, not toggled. A toggleActions version stalled a
-                    // fraction of a frame in and never resumed, leaving every
-                    // project image permanently masked; a scrubbed value is a
-                    // pure function of scroll position, so there is no play/
-                    // pause state that can get stuck. It also re-masks on the
-                    // way back up, which is the behaviour we want anyway.
                     gsap.fromTo(
                         media,
                         { clipPath: "inset(0% 0% 0% 100%)" },
@@ -458,52 +518,58 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                             scrollTrigger: {
                                 trigger: row,
                                 start: "top 92%",
-                                end: "top 45%",
+                                end: "top 50%",
                                 scrub: 0.6,
                             },
                         },
                     );
                 }
 
+                // The copy column rises against the stuck image. No transform on
+                // the media itself: it is `position: sticky`, and a transform
+                // would make it its own containing block and break the stick.
                 if (copy) {
                     gsap.fromTo(
                         copy,
-                        { yPercent: -5 },
+                        { y: 60 },
                         {
-                            yPercent: 5,
+                            y: -60,
                             ease: "none",
                             scrollTrigger: {
                                 trigger: row,
                                 start: "top bottom",
                                 end: "bottom top",
-                                scrub: 0.5,
+                                scrub: 0.6,
                             },
                         },
                     );
                 }
 
                 if (sweep) {
-                    gsap.fromTo(
-                        sweep,
-                        { top: "-30%", autoAlpha: 0 },
-                        {
-                            top: "100%",
-                            autoAlpha: 1,
-                            duration: 1.2,
-                            ease: "power2.inOut",
-                            scrollTrigger: { trigger: row, start: "top 80%", once: true },
-                            onComplete: () => gsap.set(sweep, { autoAlpha: 0 }),
-                        },
+                    onceIn(
+                        gsap.fromTo(
+                            sweep,
+                            { top: "-30%", autoAlpha: 0 },
+                            {
+                                top: "100%",
+                                autoAlpha: 1,
+                                duration: 1.2,
+                                ease: "power2.inOut",
+                                scrollTrigger: { trigger: row, start: "top 75%", once: true },
+                                onComplete: () => gsap.set(sweep, { autoAlpha: 0 }),
+                            },
+                        ),
                     );
                 }
 
-                // Slow inner drift so the image isn't locked to its frame.
+                // Slow drift inside the frame so the shot isn't locked to it.
                 if (img) {
                     gsap.fromTo(
                         img,
-                        { yPercent: -5 },
+                        { yPercent: -4, scale: 1.06 },
                         {
-                            yPercent: 5,
+                            yPercent: 4,
+                            scale: 1,
                             ease: "none",
                             scrollTrigger: {
                                 trigger: row,

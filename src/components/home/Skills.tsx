@@ -1,40 +1,32 @@
 import { FC } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
+import { iconFor } from "./techIcons";
 
 export interface ISkills {}
 
-/**
- * Two-letter symbols, periodic-table style. Derived by hand rather than
- * generated: an automatic rule collides (React/REST both give "Re") and
- * produces unreadable pairs for names like CI/CD or Kubernetes.
- */
-const SYMBOLS: Record<string, string> = {
-    "TypeScript": "Ts",
-    "JavaScript": "Js",
-    "Python": "Py",
-    "React.js": "Re",
-    "Next.js": "Nx",
-    "Redux Toolkit": "Rx",
-    "TailwindCSS": "Tw",
-    "Ant Design": "An",
-    "Nest.js": "Ns",
-    "FastAPI": "Fa",
-    "Django": "Dj",
-    "REST APIs": "Ra",
-    "Microservices": "Ms",
-    "PostgreSQL": "Pg",
-    "MySQL": "My",
-    "MongoDB": "Mg",
-    "Redis": "Rd",
-    "Docker": "Dk",
-    "Kubernetes": "K8",
-    "GitHub Actions": "Ga",
-    "CI/CD": "Ci",
-};
+const TechMark: FC<{ name: string }> = ({ name }) => {
+    const icon = iconFor(name);
+    if (!icon) return null;
 
-const symbolFor = (name: string) =>
-    SYMBOLS[name] ?? (name[0] + (name[1] ?? "")).replace(/^./, (c) => c.toUpperCase());
+    return (
+        <svg
+            aria-hidden
+            className="tile-icon"
+            fill={icon.stroke ? "none" : "currentColor"}
+            role="presentation"
+            stroke={icon.stroke ? "currentColor" : undefined}
+            strokeLinecap={icon.stroke ? "round" : undefined}
+            strokeLinejoin={icon.stroke ? "round" : undefined}
+            strokeWidth={icon.stroke ? 1.6 : undefined}
+            viewBox="0 0 24 24"
+        >
+            {icon.paths.map((d) => (
+                <path d={d} key={d} />
+            ))}
+        </svg>
+    );
+};
 
 const Skills: FC<ISkills> = () => {
     const { skillGroups } = info;
@@ -47,6 +39,7 @@ const Skills: FC<ISkills> = () => {
             group: group.label,
             tag: group.label.slice(0, 3).toUpperCase(),
             groupIndex: gi,
+            hex: iconFor(item)?.hex,
         })),
     );
 
@@ -61,7 +54,7 @@ const Skills: FC<ISkills> = () => {
 
             {/* Legend — maps each three-letter tag back to its discipline. */}
             <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2" data-skill-legend>
-                {skillGroups.map((group, i) => (
+                {skillGroups.map((group) => (
                     <span className="flex items-baseline gap-2" key={group.label}>
                         <span className="digit text-[0.6rem] text-accent">
                             {group.label.slice(0, 3).toUpperCase()}
@@ -83,12 +76,20 @@ const Skills: FC<ISkills> = () => {
                         className="tile"
                         data-skill-tile
                         key={cell.name}
-                        style={{ "--g": cell.groupIndex } as React.CSSProperties}
-                        title={`${cell.name} · ${cell.group}`}
+                        // --brand drives the hover colour. Icons sit monochrome by
+                        // default: eighteen brand palettes at once would drown the
+                        // single-accent scheme, so the real colour is the reward
+                        // for pointing at one.
+                        style={
+                            {
+                                "--g": cell.groupIndex,
+                                "--brand": cell.hex ?? "var(--accent)",
+                            } as React.CSSProperties
+                        }
                     >
                         <span className="tile-idx">{String(i + 1).padStart(2, "0")}</span>
                         <span className="tile-tag">{cell.tag}</span>
-                        <span className="tile-sym">{symbolFor(cell.name)}</span>
+                        <TechMark name={cell.name} />
                         <span className="tile-name">{cell.name}</span>
                     </article>
                 ))}
