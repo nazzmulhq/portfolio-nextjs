@@ -1,108 +1,183 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useState } from "react";
 import info from "./data";
+
+import MagneticButton from "./MagneticButton";
 
 export interface IHome {}
 
+const STATS = [
+    { value: "4+", label: "Years Experience" },
+    { value: "5+", label: "Enterprise Apps" },
+    { value: "10+", label: "OSS & Dev Tools" },
+    { value: "300%", label: "Max Query Boost" },
+];
+
+const FLOATING_TAGS = [
+    { name: "Next.js 16", style: "top-2 -left-6 sm:-left-10" },
+    { name: "NestJS", style: "bottom-12 -left-8 sm:-left-12" },
+    { name: "TypeScript", style: "top-10 -right-6 sm:-right-10" },
+    { name: "Python", style: "bottom-6 -right-6 sm:-right-8" },
+];
+
 const Home: FC<IHome> = () => {
     const { me } = info;
+    const [copied, setCopied] = useState(false);
+
+    const handleCopyEmail = () => {
+        navigator.clipboard.writeText(me.email);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
     return (
-        <section className="relative px-4 py-14 sm:py-20 lg:py-24" id="home">
-            {/* local glow */}
-            <div
-                aria-hidden
-                className="pointer-events-none absolute left-1/2 top-10 h-64 w-64 -translate-x-1/2 rounded-full opacity-60 blur-[90px] lg:left-1/3"
-                style={{ background: "var(--glow)" }}
-            />
+        <section
+            className="relative flex min-h-svh flex-col items-center justify-center px-5 pt-20 pb-16 sm:px-8 sm:pt-24 sm:pb-20"
+            id="home"
+        >
+            <div className="mx-auto w-full max-w-6xl">
+                <div className="grid grid-cols-1 items-center gap-12 lg:grid-cols-[1fr_auto] lg:gap-16">
+                    {/* Text side */}
+                    <div className="min-w-0">
+                        <div className="hero-line flex flex-wrap items-center gap-3" data-hero>
+                            <p className="label flex items-center gap-2 rounded-full border border-line bg-surface/60 px-3 py-1.5 backdrop-blur-md">
+                                <span className="relative flex h-2 w-2">
+                                    <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-[var(--accent)] opacity-75" />
+                                    <span className="relative inline-flex h-2 w-2 rounded-full bg-[var(--accent)]" />
+                                </span>
+                                Available for new work
+                            </p>
 
-            <div className="relative mx-auto flex w-full max-w-md flex-col items-center text-center lg:max-w-4xl lg:flex-row-reverse lg:items-center lg:justify-between lg:gap-12 lg:text-left">
-                {/* Visual — static, no per-image motion */}
-                <div className="reveal-scale relative shrink-0">
-                    <div className="relative isolate h-40 w-40 overflow-hidden rounded-[2rem] border border-line bg-[var(--surface)] shadow-[0_20px_50px_-20px_var(--shadow)] sm:h-48 sm:w-48 lg:h-64 lg:w-64">
-                        <img
-                            alt=""
-                            aria-hidden
-                            className="pointer-events-none absolute inset-0 z-0 h-full w-full scale-110 object-cover opacity-40 blur-md"
-                            src={me.image}
-                        />
-                        <img
-                            alt="Nazmul Haque"
-                            className="relative z-10 h-full w-full object-contain"
-                            height={256}
-                            src={me.image}
-                            width={256}
-                        />
+                            <button
+                                onClick={handleCopyEmail}
+                                className="label flex items-center gap-1.5 rounded-full border border-line bg-surface/40 px-3 py-1.5 text-muted transition-all hover:border-[var(--accent)]/50 hover:text-fg"
+                                type="button"
+                                title="Copy Email"
+                            >
+                                <svg className="h-3.5 w-3.5" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    {copied ? (
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                                    ) : (
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                    )}
+                                </svg>
+                                {copied ? "Copied!" : me.email}
+                            </button>
+                        </div>
+
+                        <h1 className="display mt-6 text-[clamp(3.5rem,13vw,9.5rem)] text-fg">
+                            <span className="line-mask">
+                                <span className="block" data-hero>
+                                    Nazmul
+                                </span>
+                            </span>
+                            <span className="line-mask">
+                                <span className="block text-gradient" data-hero>
+                                    Haque
+                                </span>
+                            </span>
+                        </h1>
+
+                        <p
+                            className="hero-line mt-6 max-w-xl text-lg leading-relaxed text-muted sm:text-xl"
+                            data-hero
+                        >
+                            Senior Software Specialist crafting high-scale enterprise platforms — ERP, banking, and production systems — plus open-source developer tooling.
+                        </p>
+
+                        <div className="hero-line mt-8 flex flex-wrap items-center gap-3" data-hero>
+                            <MagneticButton
+                                className="btn-accent"
+                                onClick={() => {
+                                    const link = document.createElement("a");
+                                    link.href = me.resume;
+                                    link.download = "Nazmul_Haque_CV.pdf";
+                                    link.click();
+                                    link.remove();
+                                }}
+                            >
+                                Download CV
+                                <svg className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4v12m0 0l-4-4m4 4l4-4M4 20h16" />
+                                </svg>
+                            </MagneticButton>
+                            <MagneticButton
+                                className="btn-ghost"
+                                href={me.github}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                                    <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z" />
+                                </svg>
+                                GitHub
+                            </MagneticButton>
+                            <MagneticButton
+                                className="btn-ghost"
+                                href={me.linkedin}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                            >
+                                <svg className="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                                    <path d="M19 0h-14c-2.761 0-5 2.239-5 5v14c0 2.761 2.239 5 5 5h14c2.762 0 5-2.239 5-5v-14c0-2.761-2.238-5-5-5zm-11 19h-3v-11h3v11zm-1.5-12.268c-.966 0-1.75-.79-1.75-1.764s.784-1.764 1.75-1.764 1.75.79 1.75 1.764-.783 1.764-1.75 1.764zm13.5 12.268h-3v-5.604c0-3.368-4-3.113-4 0v5.604h-3v-11h3v1.765c1.396-2.586 7-2.777 7 2.476v6.759z" />
+                                </svg>
+                                LinkedIn
+                            </MagneticButton>
+                        </div>
                     </div>
-                    {/* Corner stat badge */}
-                    <div className="glass absolute -bottom-4 -right-4 z-10 flex flex-col items-center rounded-2xl px-4 py-2.5 text-center shadow-[0_12px_30px_-12px_var(--shadow)] lg:-right-6">
-                        <span className="font-display text-xl font-extrabold text-accent">{me.experience}</span>
-                        <span className="text-[10px] uppercase tracking-wider text-faint">Experience</span>
-                    </div>
+
+                    {/* Portrait with glow & floating tech badges */}
+                    <figure className="hero-line order-first flex flex-col items-center lg:order-none" data-hero>
+                        <div className="hero-glow relative">
+                            {/* Floating Tech Badges */}
+                            {FLOATING_TAGS.map((tag, idx) => (
+                                <span
+                                    key={tag.name}
+                                    className={`absolute z-10 hidden sm:inline-flex items-center gap-1.5 rounded-full border border-line-strong bg-surface/80 px-3 py-1 text-xs font-mono text-fg shadow-lg backdrop-blur-xl animate-float ${tag.style}`}
+                                    style={{ animationDelay: `${idx * 0.7}s` }}
+                                >
+                                    <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
+                                    {tag.name}
+                                </span>
+                            ))}
+
+                            <div className="plate aspect-[3/4] w-60 sm:w-72 lg:w-88 xl:w-96 shadow-2xl">
+                                <img
+                                    alt="Nazmul Haque"
+                                    className="object-top"
+                                    height={640}
+                                    src={me.image}
+                                    width={480}
+                                />
+                            </div>
+                        </div>
+
+                        <figcaption className="label mt-4 flex w-full items-center justify-between px-1 sm:w-72 lg:w-88 xl:w-96">
+                            <span className="text-accent font-semibold">{me.experience}</span>
+                            <span>Since 2021</span>
+                        </figcaption>
+                    </figure>
                 </div>
 
-                {/* Content */}
-                <div className="mt-10 flex flex-1 flex-col items-center lg:mt-0 lg:items-start">
-                    <p className="reveal font-mono text-xs uppercase tracking-[0.35em] text-accent">
-                        Hello, I&apos;m
-                    </p>
+                {/* Stats bar */}
+                <div className="hero-line mt-14 grid grid-cols-2 gap-3 sm:mt-16 sm:grid-cols-4 sm:gap-4" data-hero>
+                    {STATS.map((stat) => (
+                        <div className="stat-block glass-card group/stat h-full" key={stat.label}>
+                            <p className="stat-value text-gradient" data-counter={stat.value}>
+                                {stat.value}
+                            </p>
+                            <p className="stat-label">{stat.label}</p>
+                        </div>
+                    ))}
+                </div>
+            </div>
 
-                    <h1 className="reveal font-display mt-2 text-4xl font-extrabold leading-[1.05] tracking-tight sm:text-5xl md:text-6xl lg:text-7xl">
-                        <span className="text-gradient">{me.name}</span>
-                    </h1>
-
-                    <p className="reveal mt-3 text-base font-light tracking-wide text-muted sm:text-xl">
-                        {me.title}
-                    </p>
-
-                    <p className="reveal mt-4 max-w-md text-sm font-light leading-relaxed text-faint lg:text-base">
-                        Building performant, enterprise-grade web platforms with Next.js, NestJS &amp;
-                        TypeScript — backed by Python, FastAPI &amp; Django.
-                    </p>
-
-                    <div className="reveal mt-5 flex flex-col items-center gap-1.5 text-sm text-faint lg:items-start">
-                        <span>{me.email}</span>
-                        <span>{me.phone}</span>
-                    </div>
-
-                    <div className="reveal mt-6 flex justify-center gap-3 lg:justify-start">
-                        <a
-                            aria-label="GitHub"
-                            className="glass flex h-11 w-11 items-center justify-center rounded-full text-muted transition-all duration-300 hover:-translate-y-1 hover:text-fg"
-                            href={me.github}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                        >
-                            <svg className="h-5 w-5 fill-current" viewBox="0 0 496 512" xmlns="http://www.w3.org/2000/svg"><path d="M165.9 397.4c0 2-2.3 3.6-5.2 3.6-3.3.3-5.6-1.3-5.6-3.6 0-2 2.3-3.6 5.2-3.6 3-.3 5.6 1.3 5.6 3.6zm-31.1-4.5c-.7 2 1.3 4.3 4.3 4.9 2.6 1 5.6 0 6.2-2s-1.3-4.3-4.3-5.2c-2.6-.7-5.5.3-6.2 2.3zm44.2-1.7c-2.9.7-4.9 2.6-4.6 4.9.3 2 2.9 3.3 5.9 2.6 2.9-.7 4.9-2.6 4.6-4.6-.3-1.9-3-3.2-5.9-2.9zM244.8 8C106.1 8 0 113.3 0 252c0 110.9 69.8 205.8 169.5 239.2 12.8 2.3 17.3-5.6 17.3-12.1 0-6.2-.3-40.4-.3-61.4 0 0-70 15-84.7-29.8 0 0-11.4-29.1-27.8-36.6 0 0-22.9-15.7 1.6-15.4 0 0 24.9 2 38.6 25.8 21.9 38.6 58.6 27.5 72.9 20.9 2.3-16 8.8-27.1 16-33.7-55.9-6.2-112.3-14.3-112.3-110.5 0-27.5 7.6-41.3 23.6-58.9-2.6-6.5-11.1-33.3 2.6-67.9 20.9-6.5 69 27 69 27 20-5.6 41.5-8.5 62.8-8.5s42.8 2.9 62.8 8.5c0 0 48.1-33.6 69-27 13.7 34.7 5.2 61.4 2.6 67.9 16 17.7 25.8 31.5 25.8 58.9 0 96.5-58.9 104.2-114.8 110.5 9.2 7.9 17 22.9 17 46.4 0 33.7-.3 75.4-.3 83.6 0 6.5 4.6 14.4 17.3 12.1C428.2 457.8 496 362.9 496 252 496 113.3 383.5 8 244.8 8z" /></svg>
-                        </a>
-                        <a
-                            aria-label="LinkedIn"
-                            className="glass flex h-11 w-11 items-center justify-center rounded-full text-muted transition-all duration-300 hover:-translate-y-1 hover:text-fg"
-                            href={me.linkedin}
-                            rel="noopener noreferrer"
-                            target="_blank"
-                        >
-                            <svg className="h-5 w-5 fill-current" viewBox="0 0 448 512" xmlns="http://www.w3.org/2000/svg"><path d="M100.28 448H7.4V148.9h92.88zM53.79 108.1C24.09 108.1 0 83.5 0 53.8a53.79 53.79 0 0 1 107.58 0c0 29.7-24.1 54.3-53.79 54.3zM447.9 448h-92.68V302.4c0-34.7-.7-79.2-48.29-79.2-48.29 0-55.69 37.7-55.69 76.7V448h-92.78V148.9h89.08v40.8h1.3c12.4-23.5 42.69-48.3 87.88-48.3 94 0 111.28 61.9 111.28 142.3V448z" /></svg>
-                        </a>
-                    </div>
-
-                    <div className="reveal mt-8 flex w-full justify-center gap-3 sm:w-auto lg:justify-start">
-                        <button
-                            className="btn-accent sheen w-3/4 sm:w-auto"
-                            onClick={() => {
-                                const link = document.createElement("a");
-                                link.href = me.resume;
-                                link.download = "Nazmul_Haque_CV.pdf";
-                                link.click();
-                                link.remove();
-                            }}
-                            type="button"
-                        >
-                            <span className="relative z-10 tracking-wider">Download Resume</span>
-                            <svg className="relative z-10 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" /></svg>
-                        </button>
-                    </div>
+            {/* Scroll down indicator */}
+            <div className="mt-12 hidden sm:block" data-hero>
+                <div className="scroll-indicator">
+                    <span className="label text-[0.6rem]">Scroll Down</span>
+                    <div className="scroll-indicator-line" />
                 </div>
             </div>
         </section>

@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Education from "@src/components/home/Education";
 import Experience from "@src/components/home/Experience";
 import Home from "@src/components/home/Home";
-import InfiniteCounter from "@src/components/home/InfiniteCounter";
+import HomeMotion from "@src/components/home/HomeMotion";
 import { NavBar, NavBarMobile } from "@src/components/home/NavBar";
 import Skills from "@src/components/home/Skills";
 import Works from "@src/components/home/Works";
@@ -143,65 +143,48 @@ export default function Page() {
     const jsonLd = [personSchema, quickdbSchema, quickCicdSchema, eslintSetupSchema, quickUiSchema];
 
     return (
-        <div className="relative min-h-screen w-full max-w-5xl mx-auto px-0 sm:px-4 md:py-24 pb-28 md:pb-12 flex flex-col justify-center text-fg">
+        <div className="relative text-fg">
             {/* JSON-LD Structured Data */}
             <script
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
 
-            {/* Themed ambient background */}
-            <div aria-hidden className="aurora">
-                <div className="aurora-grid" />
+            {/* Atmosphere — ambient aurora glows + dot grid */}
+            <div aria-hidden className="atmosphere">
+                <div className="atmosphere-grid" />
+            </div>
+
+            <div className="fixed right-5 top-4 z-50 sm:right-8 sm:top-5">
+                <ThemeToggle />
             </div>
 
             <NavBar />
 
-            <div className="w-full relative z-10">
-                {/* Sleek glass terminal frame */}
-                <div className="group/frame relative w-full overflow-hidden rounded-none sm:rounded-3xl glass shadow-[0_30px_80px_-30px_var(--shadow)]">
-                    {/* Animated top edge light */}
-                    <div className="absolute top-0 left-[-100%] z-20 h-px w-[150%] bg-gradient-to-r from-transparent via-[var(--accent)] to-transparent transition-[left] duration-[2200ms] ease-in-out group-hover/frame:left-[100%]" />
+            <HomeMotion>
+                <Home />
+                <Skills />
+                <Experience />
+                <Education />
+                <Works />
 
-                    {/* Title bar */}
-                    <div className="relative z-10 flex h-12 w-full items-center justify-between border-b border-line bg-[color-mix(in_srgb,var(--surface-2)_55%,transparent)] px-3 backdrop-blur-md sm:px-5">
-                        <div className="flex w-[30%] items-center gap-1.5 sm:w-1/3 sm:gap-2.5">
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#ef4444]/70 sm:h-3 sm:w-3" />
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#eab308]/70 sm:h-3 sm:w-3" />
-                            <span className="h-2.5 w-2.5 rounded-full bg-[#22c55e]/70 sm:h-3 sm:w-3" />
-                        </div>
-                        <div className="flex w-[40%] flex-1 justify-center font-mono text-[10px] tracking-widest text-faint sm:w-1/3 sm:text-xs">
-                            ~/nazmul-haque
-                        </div>
-                        <div className="flex w-[30%] items-center justify-end gap-2 sm:w-1/3">
-                            <span className="hidden items-center gap-2 rounded-md border border-line bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] px-2.5 py-1 font-mono text-[10px] text-muted sm:flex sm:text-xs">
-                                <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-[var(--accent)] shadow-[0_0_8px_var(--accent)]" />
-                                <InfiniteCounter direction="up" speed={1000} />
-                            </span>
-                            <ThemeToggle />
+                <footer className="mx-auto w-full max-w-6xl px-5 pb-32 pt-16 sm:px-8 sm:pb-24 sm:pt-20">
+                    <div className="reveal border-t border-line pt-10">
+                        <p className="label">Get in touch</p>
+                        <a
+                            className="display link-wipe mt-5 inline-block text-[clamp(1.75rem,5vw,3.25rem)] text-fg"
+                            href="mailto:nazmul2018s@gmail.com"
+                        >
+                            nazmul2018s@gmail.com
+                        </a>
+                        <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
+                            <p className="label">Dhaka, Bangladesh</p>
+                            <p className="label">© {new Date().getFullYear()} Nazmul Haque</p>
                         </div>
                     </div>
+                </footer>
+            </HomeMotion>
 
-                    {/* Main content */}
-                    <div className="relative z-0 w-full">
-                        <Home />
-                        <Skills />
-                        <Experience />
-                        <Education />
-                        <Works />
-                    </div>
-
-                    {/* Status bar */}
-                    <div className="relative z-10 flex h-10 w-full items-center justify-between border-t border-line bg-[color-mix(in_srgb,var(--surface-2)_55%,transparent)] px-5 font-mono text-xs text-faint backdrop-blur-md">
-                        <span className="flex items-center gap-1.5">
-                            <span className="h-1.5 w-1.5 rounded-full bg-[var(--accent)]" /> SYSTEM ONLINE
-                        </span>
-                        <span className="flex items-center gap-2 rounded-md border border-line bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] px-3 py-1 text-muted">
-                            <InfiniteCounter direction="down" speed={1000} />
-                        </span>
-                    </div>
-                </div>
-            </div>
             <NavBarMobile />
         </div>
     );

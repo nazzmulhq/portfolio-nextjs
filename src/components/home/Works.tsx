@@ -5,65 +5,91 @@ import SectionHeading from "./SectionHeading";
 
 export interface IWorks {}
 
-const isImage = (src: string) => /\.(png|jpg|jpeg|webp|gif)$/i.test(src);
-
 const Works: FC<IWorks> = () => {
     const { works } = info;
+
     return (
-        <section className="relative px-4 pb-12 sm:px-6" id="works">
-            <SectionHeading label="Works" />
-            <div
-                className="mx-auto mt-8 grid max-w-4xl grid-cols-1 gap-6 py-6 sm:grid-cols-2"
-                data-stagger
-            >
-                {works.map((work, index) => (
-                    <div
-                        key={work.title}
-                        style={{ ["--i" as string]: index }}
-                        className="group glass-card rail flex h-full flex-col overflow-hidden"
-                    >
-                        <div className="relative h-36 w-full overflow-hidden border-b border-line bg-[var(--surface-2)] sm:h-48">
-                            <div className="pointer-events-none absolute inset-0 z-20 bg-gradient-to-t from-[var(--surface)] to-transparent opacity-70" />
-                            {isImage(work.imageOrVideo) ? (
-                                <img
-                                    alt={work.title}
-                                    className="relative z-10 h-full w-full object-cover opacity-90"
-                                    src={work.imageOrVideo}
-                                />
-                            ) : (
-                                <video className="relative z-10 h-full w-full object-cover" controls>
-                                    <source src={work.imageOrVideo} />
-                                </video>
-                            )}
-                        </div>
-                        <div className="flex flex-1 flex-col p-5 sm:p-6">
-                            <h3 className="font-display text-lg font-bold leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:text-xl">
-                                {work.title}
-                            </h3>
-                            <p className="mt-2 flex-1 text-sm font-light leading-relaxed text-muted">
-                                {work.description.join(". ")}.
-                            </p>
-                            <div className="mt-3 flex flex-wrap gap-1.5">
-                                {work.technologies.slice(0, 4).map((tech) => (
-                                    <span key={tech} className="chip">
-                                        {tech}
-                                    </span>
-                                ))}
-                            </div>
-                            {work.link && (
-                                <Link
-                                    className="btn-ghost sheen mt-5 w-full text-sm"
-                                    href={work.link}
-                                    rel="noopener noreferrer"
-                                    target={work.link.startsWith("/") ? undefined : "_blank"}
-                                >
-                                    <span className="relative z-10">View Project</span>
-                                    <svg className="relative z-10 h-4 w-4 transition-transform duration-300 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                ))}
+        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="works">
+            <SectionHeading
+                label="Selected work"
+                note={`${works.length} projects · open source`}
+                title="Things I've shipped"
+            />
+
+            <div className="mt-14">
+                {works.map((work, i) => {
+                    const external = !work.link?.startsWith("/");
+                    const flip = i % 2 === 1;
+
+                    return (
+                        <article
+                            className={`group border-t border-line py-10 sm:py-14 ${
+                                flip ? "reveal-right" : "reveal-left"
+                            }`}
+                            key={work.title}
+                        >
+                            <Link
+                                className="block"
+                                href={work.link}
+                                rel={external ? "noopener noreferrer" : undefined}
+                                target={external ? "_blank" : undefined}
+                            >
+                                <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-14">
+                                    {/* Media */}
+                                    <div
+                                        className={`work-card group/img relative overflow-hidden ${flip ? "lg:order-2" : ""}`}
+                                        data-parallax-wrap
+                                        data-work-media
+                                    >
+                                        <div className="work-image-wrap aspect-[16/10]">
+                                            <img
+                                                alt={work.title}
+                                                className="transition-transform duration-700 ease-out group-hover/img:scale-105"
+                                                data-parallax
+                                                src={work.imageOrVideo}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Copy */}
+                                    <div className={`min-w-0 ${flip ? "lg:order-1" : ""}`}>
+                                        <div className="flex items-baseline gap-4">
+                                            {/* Index is real sequence here — the list is ordered by prominence */}
+                                            <span className="display text-3xl leading-none text-[var(--accent)] opacity-25 transition-opacity duration-300 group-hover:opacity-60">
+                                                {String(i + 1).padStart(2, "0")}
+                                            </span>
+                                            <span className="label">
+                                                {external ? "npm package" : "case study"}
+                                            </span>
+                                        </div>
+
+                                        <h3 className="display mt-4 text-2xl leading-tight text-fg transition-colors duration-300 group-hover:text-[var(--accent)] sm:text-3xl lg:text-4xl">
+                                            <span className="link-wipe">{work.title}</span>
+                                        </h3>
+
+                                        <p className="mt-4 max-w-lg text-base leading-relaxed text-muted">
+                                            {work.description[0]}
+                                        </p>
+
+                                        <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-1.5">
+                                            {work.technologies.map((tech) => (
+                                                <li className="font-mono text-[0.7rem] text-faint" key={tech}>
+                                                    {tech}
+                                                </li>
+                                            ))}
+                                        </ul>
+
+                                        <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-transform duration-300 group-hover:translate-x-1">
+                                            {external ? "Visit project" : "Read the case study"}
+                                            <span aria-hidden>{external ? "↗" : "→"}</span>
+                                        </span>
+                                    </div>
+                                </div>
+                            </Link>
+                        </article>
+                    );
+                })}
+                <div className="border-t border-line" />
             </div>
         </section>
     );

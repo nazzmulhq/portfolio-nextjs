@@ -1,90 +1,135 @@
 "use client";
-import { FC, useEffect, useState } from "react";
+import { FC, useEffect, useRef, useState } from "react";
 
 export interface INavBar {}
 
 const SECTIONS = ["Home", "Skills", "Experience", "Education", "Works"];
 
-const useScrollSpy = (offset: number) => {
-    const [active, setActive] = useState("Home");
+/** Active section from live geometry — whichever panel holds the viewport. */
+const useActiveSection = () => {
+    const [active, setActive] = useState("home");
 
     useEffect(() => {
         const ids = SECTIONS.map((s) => s.toLowerCase());
-        const onScroll = () => {
-            let current = "home";
-            for (const id of ids) {
+        let queued = false;
+
+        const measure = () => {
+            queued = false;
+            const line = window.innerHeight * 0.35;
+            let current = ids[0];
+            ids.forEach((id) => {
                 const el = document.getElementById(id);
-                if (el && el.getBoundingClientRect().top - offset <= 1) current = id;
-            }
-            setActive(current.charAt(0).toUpperCase() + current.slice(1));
+                if (el && el.getBoundingClientRect().top <= line) current = id;
+            });
+            setActive(current);
         };
-        onScroll();
+        const onScroll = () => {
+            if (queued) return;
+            queued = true;
+            requestAnimationFrame(measure);
+        };
+
+        measure();
         window.addEventListener("scroll", onScroll, { passive: true });
-        return () => window.removeEventListener("scroll", onScroll);
-    }, [offset]);
+        window.addEventListener("resize", onScroll, { passive: true });
+        return () => {
+            window.removeEventListener("scroll", onScroll);
+            window.removeEventListener("resize", onScroll);
+        };
+    }, []);
 
     return active;
 };
 
-const scrollTo = (label: string, offset: number) => {
-    const el = document.getElementById(label.toLowerCase());
+const scrollTo = (id: string) => {
+    if (id === "home") {
+        window.scrollTo({ top: 0, behavior: "smooth" });
+        return;
+    }
+    const el = document.getElementById(id);
     if (!el) return;
-    const top = label.toLowerCase() === "home" ? 0 : el.getBoundingClientRect().top + window.pageYOffset - offset;
-    window.scrollTo({ top, behavior: "smooth" });
+    window.scrollTo({
+        top: el.getBoundingClientRect().top + window.pageYOffset - 24,
+        behavior: "smooth",
+    });
 };
 
 export const NavBar: FC<INavBar> = () => {
-    const active = useScrollSpy(70);
+    const active = useActiveSection();
+    const navRef = useRef<HTMLDivElement>(null);
+    const [indicatorStyle, setIndicatorStyle] = useState<{ left: number; width: number }>({ left: 0, width: 0 });
+
+    useEffect(() => {
+        if (!navRef.current) return;
+        const activeBtn = navRef.current.querySelector<HTMLElement>(`[data-id="${active}"]`);
+        if (activeBtn) {
+            setIndicatorStyle({
+                left: activeBtn.offsetLeft,
+                width: activeBtn.offsetWidth,
+            });
+        }
+    }, [active]);
 
     return (
-        <div className="fixed top-6 left-0 right-0 z-50 hidden justify-center md:flex">
-            <nav className="glass rounded-full p-1.5 shadow-[0_18px_50px_-24px_var(--shadow)]">
-                <ul className="flex items-center gap-1">
-                    {SECTIONS.map((item) => (
-                        <li key={item}>
-                            <button
-                                className={`rounded-full px-5 py-1.5 text-sm font-medium tracking-wide transition-all duration-300 ${
-                                    active === item
-                                        ? "bg-[linear-gradient(120deg,var(--accent-strong),var(--accent-2))] text-[var(--accent-contrast)] shadow-[0_0_18px_-2px_var(--glow)]"
-                                        : "text-muted hover:bg-[var(--surface-2)] hover:text-fg"
-                                }`}
-                                onClick={() => scrollTo(item, 70)}
-                                type="button"
-                            >
-                                {item}
-                            </button>
-                        </li>
-                    ))}
-                </ul>
-            </nav>
-        </div>
+        <header className="fixed left-0 right-0 top-6 z-40 hidden justify-center md:flex pointer-events-none">
+            <div ref={navRef} className="nav-pill pointer-events-auto">
+                <span
+                    className="nav-indicator"
+                    style={{
+                        left: `${indicatorStyle.left}px`,
+                        width: `${indicatorStyle.width}px`,
+                        opacity: indicatorStyle.width > 0 ? 1 : 0,
+                    }}
+                />
+                {SECTIONS.map((item) => {
+                    const id = item.toLowerCase();
+                    const isActive = active === id;
+                    return (
+                        <button
+                            key={item}
+                            data-id={id}
+                            data-active={isActive}
+                            className="nav-pill-item"
+                            onClick={() => scrollTo(id)}
+                            type="button"
+                        >
+                            {item}
+                        </button>
+                    );
+                })}
+            </div>
+        </header>
     );
 };
 
 export const NavBarMobile: FC<INavBar> = () => {
-    const active = useScrollSpy(52);
+    const active = useActiveSection();
 
     return (
-        <div
-            className="fixed left-1/2 z-50 flex w-[95%] max-w-sm -translate-x-1/2 justify-center md:hidden"
-            style={{ bottom: "max(1.5rem, calc(env(safe-area-inset-bottom) + 0.75rem))" }}
+        <nav
+            className="fixed left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 md:hidden"
+            style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))" }}
         >
-            <nav className="glass flex items-center gap-0.5 rounded-full p-1 shadow-[0_18px_50px_-24px_var(--shadow)] sm:gap-1 sm:p-1.5">
-                {SECTIONS.map((item) => (
-                    <button
-                        key={item}
-                        className={`whitespace-nowrap rounded-full px-2 py-1.5 text-[9px] font-medium capitalize transition-all duration-300 sm:px-3 sm:py-2 sm:text-xs ${
-                            active === item
-                                ? "bg-[linear-gradient(120deg,var(--accent-strong),var(--accent-2))] text-[var(--accent-contrast)] shadow-[0_0_12px_-2px_var(--glow)]"
-                                : "text-muted hover:bg-[var(--surface-2)] hover:text-fg"
-                        }`}
-                        onClick={() => scrollTo(item, 52)}
-                        type="button"
-                    >
-                        {item === "Experience" ? "Exp" : item === "Education" ? "Edu" : item}
-                    </button>
-                ))}
-            </nav>
-        </div>
+            <ul className="flex items-center justify-between rounded-full border border-line bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-2 py-2 backdrop-blur-xl shadow-lg">
+                {SECTIONS.map((item) => {
+                    const id = item.toLowerCase();
+                    return (
+                        <li className="flex-1" key={item}>
+                            <button
+                                className={`w-full rounded-full px-1 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
+                                    active === id
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-bold shadow-md"
+                                        : "text-faint hover:text-fg"
+                                }`}
+                                onClick={() => scrollTo(id)}
+                                type="button"
+                            >
+                                {item === "Experience" ? "Exp" : item === "Education" ? "Edu" : item}
+                            </button>
+                        </li>
+                    );
+                })}
+            </ul>
+        </nav>
     );
 };
