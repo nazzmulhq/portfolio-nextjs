@@ -1,106 +1,128 @@
-"use client";
-
-import { FC, useState } from "react";
+import { FC } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
 
 export interface IExperience {}
 
-const Experience: FC<IExperience> = () => {
-    const { experience } = info;
-    const [activeIdx, setActiveIdx] = useState<number | null>(0);
+interface Role {
+    title: string;
+    company: string;
+    date: string;
+    description: string[];
+    problemSolved?: string;
+    technologies?: string[];
+}
 
-    const toggle = (index: number, e: React.MouseEvent) => {
-        const target = e.target as HTMLElement;
-        if (target.closest("a") || target.closest("button")) return;
-        setActiveIdx((prev) => (prev === index ? null : index));
-    };
+const RoleCard: FC<{ role: Role; index: number; total: number }> = ({ role, index, total }) => {
+    const [start, end] = role.date.split(/\s*[–-]\s*/);
+    const isCurrent = /present/i.test(role.date);
 
     return (
-        <section className="relative px-4 sm:px-6" id="experience">
-            <SectionHeading label="Experience" />
-            <div className="mx-auto mt-8 w-full max-w-4xl space-y-5 py-6" data-stagger>
-                {experience.map((exp: any, index: number) => {
-                    const open = activeIdx === index;
-                    return (
-                        <div
-                            key={`${exp.company}-${index}`}
-                            style={{ ["--i" as string]: index }}
-                            className="group glass-card rail cursor-pointer overflow-hidden p-5 sm:p-6"
-                            onClick={(e) => toggle(index, e)}
+        <article className="exp-card" data-exp-card style={{ zIndex: index + 1 }}>
+            <div className="exp-panel">
+                <div className="flex flex-wrap items-start justify-between gap-3 border-b border-line pb-3 sm:gap-4 sm:pb-4">
+                    <div className="min-w-0">
+                        <p className="label flex items-center gap-2">
+                            <span>{start}</span>
+                            <span className="text-faint">→</span>
+                            <span className={isCurrent ? "text-hot" : undefined}>
+                                {end ?? "Present"}
+                            </span>
+                            {isCurrent && <span className="pulse-dot ml-1" />}
+                        </p>
+
+                        <h3 className="display mt-2.5 text-lg leading-tight text-fg sm:mt-3 sm:text-2xl lg:text-3xl">
+                            {role.title}
+                        </h3>
+                        <p className="mt-1.5 font-mono text-xs tracking-wide text-accent">
+                            {role.company}
+                        </p>
+                    </div>
+
+                    <span className="digit shrink-0 text-[0.65rem] tracking-[0.2em] text-faint">
+                        {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+                    </span>
+                </div>
+
+                {role.problemSolved && (
+                    <p className="mt-4 max-w-2xl text-[0.875rem] leading-relaxed text-fg/90 sm:mt-5 sm:text-[0.95rem]">
+                        {role.problemSolved}
+                    </p>
+                )}
+
+                <ul className="mt-4 space-y-2 sm:mt-5 sm:space-y-2.5">
+                    {role.description.map((line) => (
+                        <li
+                            className="flex items-start gap-2.5 text-[0.8rem] leading-relaxed text-muted sm:gap-3 sm:text-sm"
+                            key={line}
                         >
-                            <div className="relative z-10 flex h-full flex-col">
-                                <div className="mb-3 flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
-                                    <div>
-                                        <h3 className="font-display text-base font-bold leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:text-lg">
-                                            {exp.title}
-                                        </h3>
-                                        <h4 className="text-xs font-semibold text-accent/90 sm:text-sm">
-                                            {exp.company}
-                                        </h4>
-                                    </div>
-                                    <div className="flex shrink-0 items-center gap-2.5 self-start sm:self-center">
-                                        <span className="chip font-mono uppercase">{exp.date}</span>
-                                        <span className="flex h-6 w-6 items-center justify-center rounded-full border border-line text-muted">
-                                            <svg
-                                                className={`h-3.5 w-3.5 transition-transform duration-300 ${open ? "rotate-180 text-accent" : ""}`}
-                                                fill="none"
-                                                stroke="currentColor"
-                                                viewBox="0 0 24 24"
-                                            >
-                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
-                                            </svg>
-                                        </span>
-                                    </div>
-                                </div>
+                            <span className="mt-[0.45rem] h-px w-3 shrink-0 bg-[var(--accent)] opacity-60" />
+                            <span>{line}</span>
+                        </li>
+                    ))}
+                </ul>
 
-                                {!open && (
-                                    <p className="mb-2 line-clamp-1 text-xs font-light text-muted">
-                                        {exp.description[0]}
-                                    </p>
-                                )}
+                {role.technologies && (
+                    <ul className="mt-5 flex flex-wrap gap-1.5 border-t border-line pt-3 sm:mt-6 sm:gap-2 sm:pt-4">
+                        {role.technologies.map((tech) => (
+                            <li className="tag" key={tech}>
+                                {tech}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </div>
+        </article>
+    );
+};
 
-                                <div
-                                    className={`overflow-hidden transition-all duration-500 ease-in-out ${
-                                        open ? "mb-4 max-h-[800px] opacity-100" : "max-h-0 opacity-0"
-                                    }`}
-                                >
-                                    <ul className="mt-2 space-y-2 text-xs font-light leading-relaxed text-muted sm:text-sm">
-                                        {exp.description.map((desc: string, i: number) => (
-                                            <li className="flex items-start gap-2.5" key={i}>
-                                                <svg className="mt-1 h-3 w-3 shrink-0 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                                                </svg>
-                                                <span>{desc}</span>
-                                            </li>
-                                        ))}
-                                    </ul>
+const Experience: FC<IExperience> = () => {
+    const roles = info.experience as Role[];
 
-                                    {exp.problemSolved && (
-                                        <div className="mt-4 rounded-xl border border-[color-mix(in_srgb,var(--accent)_28%,transparent)] bg-[var(--accent-soft)] p-3.5">
-                                            <span className="mb-0.5 block text-[10px] font-bold uppercase tracking-wider text-accent">
-                                                Key Problem Solved
-                                            </span>
-                                            <p className="text-xs font-light leading-relaxed text-fg/90">
-                                                {exp.problemSolved}
-                                            </p>
-                                        </div>
-                                    )}
-                                </div>
+    return (
+        // Tighter desktop padding: the pinned stage supplies its own height, so
+        // full section padding only adds dead space above and below.
+        <section
+            className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-24 lg:py-8"
+            id="experience"
+        >
+            {/* Pinned stage holds the heading too — pinning only the deck
+                scrolls "Where I've built" off screen for the whole sequence,
+                leaving five unlabelled cards cycling on their own.
 
-                                {exp.technologies && (
-                                    <div className="mt-auto flex flex-wrap gap-1.5 border-t border-line pt-3">
-                                        {exp.technologies.map((tech: string) => (
-                                            <span key={tech} className="chip">
-                                                {tech}
-                                            </span>
-                                        ))}
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-                    );
-                })}
+                The absolute stacking is gated behind [data-deck-ready], which
+                JS only sets once the pinned timeline is actually running, so a
+                failure leaves a readable vertical list rather than a pile of
+                overlapping cards. */}
+            <div className="exp-stage mt-2 lg:mt-0" data-exp-stage>
+                <SectionHeading
+                    index="02"
+                    label="Experience"
+                    note={`${roles.length} roles · 2021 — present`}
+                    title="Where I've built"
+                />
+
+                <div className="exp-nodes mb-5 mt-6 sm:mt-8" data-exp-nodes>
+                    {roles.map((role, i) => (
+                        <span
+                            className="exp-node"
+                            data-exp-node
+                            data-on={i === 0 ? "" : undefined}
+                            key={`${role.company}-${role.date}`}
+                        />
+                    ))}
+                </div>
+
+                <div className="exp-deck" data-exp-deck>
+                    {roles.map((role, i) => (
+                        <RoleCard
+                            index={i}
+                            key={`${role.company}-${role.date}`}
+                            role={role}
+                            total={roles.length}
+                        />
+                    ))}
+                </div>
             </div>
         </section>
     );

@@ -21,7 +21,11 @@ const ScrollReveal = () => {
         root.classList.add("js-reveal");
 
         const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const els = Array.from(document.querySelectorAll<HTMLElement>(SELECTOR));
+        // Content inside [data-motion] is owned by HomeMotion's GSAP timelines;
+        // running both would leave the two fighting over the same properties.
+        const els = Array.from(document.querySelectorAll<HTMLElement>(SELECTOR)).filter(
+            (el) => !el.closest("[data-motion]"),
+        );
 
         let io: IntersectionObserver | undefined;
 

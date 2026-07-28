@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Bricolage_Grotesque, Geist, Geist_Mono } from "next/font/google";
+import { Archivo, Geist, IBM_Plex_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import ScrollReveal from "@src/components/ScrollReveal";
 import "./globals.css";
@@ -20,18 +20,27 @@ const geistSans = Geist({
     display: "swap",
 });
 
-const geistMono = Geist_Mono({
-    variable: "--font-geist-mono",
+// Data/utility face — Plex Mono's engineered detailing suits the spec-sheet
+// labels better than a neutral mono.
+const plexMono = IBM_Plex_Mono({
+    variable: "--font-plex-mono",
     subsets: ["latin"],
     display: "swap",
+    weight: ["400", "500", "600"],
 });
 
-const bricolage = Bricolage_Grotesque({
-    variable: "--font-bricolage",
+// Display face — a wide grotesque that holds up at poster sizes.
+const archivo = Archivo({
+    variable: "--font-archivo",
     subsets: ["latin"],
     display: "swap",
-    weight: ["400", "500", "600", "700", "800"],
+    weight: ["600", "700", "800", "900"],
 });
+
+// Analytics ships in production builds only — `next dev` would otherwise report
+// every local page view as real traffic. This is a build-time constant, so the
+// GA script is dropped from the dev bundle rather than merely skipped at runtime.
+const GA_ID = process.env.NODE_ENV === "production" ? "G-X18XQGB0NX" : null;
 
 // Runs before paint: applies saved theme (no flash) and arms the reveal
 // system so elements start hidden before the observer animates them in.
@@ -136,13 +145,13 @@ export default function RootLayout({
                 <script dangerouslySetInnerHTML={{ __html: themeInit }} />
             </head>
             <body
-                className={`${geistSans.variable} ${geistMono.variable} ${bricolage.variable} antialiased overflow-x-hidden`}
+                className={`${geistSans.variable} ${plexMono.variable} ${archivo.variable} antialiased overflow-x-hidden`}
             >
                 <div aria-hidden className="scroll-progress" />
                 <ScrollReveal />
                 {children}
             </body>
-            <GoogleAnalytics gaId="G-X18XQGB0NX" />
+            {GA_ID && <GoogleAnalytics gaId={GA_ID} />}
         </html>
     );
 }

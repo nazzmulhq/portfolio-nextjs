@@ -1,32 +1,97 @@
 import { FC } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
+import { iconFor } from "./techIcons";
 
 export interface ISkills {}
 
-const Skills: FC<ISkills> = () => {
-    const { skills } = info;
+const TechMark: FC<{ name: string }> = ({ name }) => {
+    const icon = iconFor(name);
+    if (!icon) return null;
+
     return (
-        <section className="relative px-4 sm:px-6" id="skills">
-            <SectionHeading label="Skills" title="Technologies & Tools" />
-            <p className="reveal mx-auto mt-3 max-w-md text-center text-sm font-light text-muted">
-                The stack I reach for across full-stack, DevOps, and product work.
-            </p>
-            <div
-                className="mx-auto mt-8 grid max-w-4xl grid-cols-2 gap-3 py-6 sm:grid-cols-3 sm:gap-4 lg:grid-cols-4"
-                data-stagger
-            >
-                {skills.map((skill, index) => (
-                    <div
-                        key={skill}
-                        style={{ ["--i" as string]: index }}
-                        className="group glass-card rail flex h-14 items-center gap-2.5 overflow-hidden px-4"
-                    >
-                        <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-[color-mix(in_srgb,var(--accent)_45%,var(--faint))] shadow-[0_0_0_0_var(--glow)] transition-all duration-300 group-hover:bg-[var(--accent)] group-hover:shadow-[0_0_10px_var(--glow)]" />
-                        <span className="relative z-10 truncate text-sm font-semibold tracking-wide text-muted transition-colors duration-300 group-hover:text-fg">
-                            {skill}
+        <svg
+            aria-hidden
+            className="tile-icon"
+            fill={icon.stroke ? "none" : "currentColor"}
+            role="presentation"
+            stroke={icon.stroke ? "currentColor" : undefined}
+            strokeLinecap={icon.stroke ? "round" : undefined}
+            strokeLinejoin={icon.stroke ? "round" : undefined}
+            strokeWidth={icon.stroke ? 1.6 : undefined}
+            viewBox="0 0 24 24"
+        >
+            {icon.paths.map((d) => (
+                <path d={d} key={d} />
+            ))}
+        </svg>
+    );
+};
+
+const Skills: FC<ISkills> = () => {
+    const { skillGroups } = info;
+
+    // Flattened once so the matrix is a single continuous grid — the
+    // discipline stays legible through each tile's own tag.
+    const cells = skillGroups.flatMap((group, gi) =>
+        group.items.map((item) => ({
+            name: item,
+            group: group.label,
+            tag: group.label.slice(0, 3).toUpperCase(),
+            groupIndex: gi,
+            hex: iconFor(item)?.hex,
+        })),
+    );
+
+    return (
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-28" id="skills">
+            <SectionHeading
+                index="01"
+                label="Capabilities"
+                note={`${cells.length} tools · ${skillGroups.length} disciplines`}
+                title="What I work with"
+            />
+
+            {/* Legend — maps each three-letter tag back to its discipline. */}
+            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-1.5 sm:mt-10 sm:gap-x-6 sm:gap-y-2" data-skill-legend>
+                {skillGroups.map((group) => (
+                    <span className="flex items-baseline gap-2" key={group.label}>
+                        <span className="digit text-[0.6rem] text-accent">
+                            {group.label.slice(0, 3).toUpperCase()}
                         </span>
-                    </div>
+                        <span className="label text-muted">{group.label}</span>
+                        <span className="digit text-[0.6rem] text-faint">
+                            {String(group.items.length).padStart(2, "0")}
+                        </span>
+                    </span>
+                ))}
+            </div>
+
+            {/* Matrix. A scan line sweeps down it on scroll (see HomeMotion). */}
+            <div className="matrix mt-5 sm:mt-6" data-skill-matrix>
+                <span aria-hidden className="matrix-scan" data-skill-scan />
+
+                {cells.map((cell, i) => (
+                    <article
+                        className="tile"
+                        data-skill-tile
+                        key={cell.name}
+                        // --brand drives the hover colour. Icons sit monochrome by
+                        // default: eighteen brand palettes at once would drown the
+                        // single-accent scheme, so the real colour is the reward
+                        // for pointing at one.
+                        style={
+                            {
+                                "--g": cell.groupIndex,
+                                "--brand": cell.hex ?? "var(--accent)",
+                            } as React.CSSProperties
+                        }
+                    >
+                        <span className="tile-idx">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="tile-tag">{cell.tag}</span>
+                        <TechMark name={cell.name} />
+                        <span className="tile-name">{cell.name}</span>
+                    </article>
                 ))}
             </div>
         </section>

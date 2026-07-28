@@ -1,23 +1,34 @@
-import { FC } from "react";
+import { FC, ReactNode } from "react";
 
 export interface ISectionHeading {
+    /** Two-digit section number shown in the rule, e.g. "02". */
+    index: string;
     label: string;
-    title?: string;
+    title: string;
+    note?: ReactNode;
 }
 
-const SectionHeading: FC<ISectionHeading> = ({ label, title }) => (
-    <div className="reveal mt-12 flex flex-col items-center gap-4 px-4 text-center sm:mt-20">
-        <div className="flex w-full items-center justify-center gap-4">
-            <span className="h-px max-w-[120px] flex-1 bg-gradient-to-r from-transparent to-[color-mix(in_srgb,var(--accent)_50%,transparent)]" />
-            <span className="eyebrow shrink-0">{label}</span>
-            <span className="h-px max-w-[120px] flex-1 bg-gradient-to-l from-transparent to-[color-mix(in_srgb,var(--accent)_50%,transparent)]" />
+const SectionHeading: FC<ISectionHeading> = ({ index, label, title, note }) => (
+    <header data-heading>
+        <div className="flex items-center gap-4" data-heading-rule>
+            <span className="digit text-xs text-accent">{index}</span>
+            <span className="section-rule flex-1" />
+            {note && <span className="label whitespace-nowrap">{note}</span>}
         </div>
-        {title && (
-            <h2 className="font-display text-2xl font-extrabold tracking-tight text-fg sm:text-4xl">
-                {title}
-            </h2>
-        )}
-    </div>
+
+        <p className="label mt-6 flex items-center gap-2" data-heading-label>
+            {label}
+        </p>
+
+        {/* data-decode is picked up by the motion controller, which scrambles
+            the characters back into place as the heading enters. */}
+        <h2
+            className="display mt-3 text-[clamp(2.25rem,7vw,4.5rem)] text-fg"
+            data-decode
+        >
+            {title}
+        </h2>
+    </header>
 );
 
 export default SectionHeading;

@@ -26,6 +26,15 @@ const info = {
         "Kubernetes",
         "Microservices",
     ],
+    // Grouped view for the home page — the category is information, where a
+    // flat list of pills is just decoration.
+    skillGroups: [
+        { label: "Languages", items: ["TypeScript", "JavaScript", "Python"] },
+        { label: "Frontend", items: ["React.js", "Next.js", "Redux Toolkit", "TailwindCSS", "Ant Design"] },
+        { label: "Backend", items: ["Nest.js", "FastAPI", "Django", "REST APIs", "Microservices"] },
+        { label: "Data", items: ["PostgreSQL", "MySQL", "MongoDB", "Redis"] },
+        { label: "Infrastructure", items: ["Docker", "Kubernetes", "GitHub Actions", "CI/CD"] },
+    ],
     experience: [
         {
             icon: "https://img.icons8.com/ios/50/000000/react-native.png",
