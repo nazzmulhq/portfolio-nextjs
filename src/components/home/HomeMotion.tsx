@@ -418,8 +418,13 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     fitDeck();
                     ScrollTrigger.addEventListener("refreshInit", fitDeck);
 
-                    // Everything starts off-stage to the right.
+                    // Everything starts off-stage right EXCEPT the first record,
+                    // which is pre-placed. Starting all three off-stage meant
+                    // the stage pinned to an empty frame — you scrolled into the
+                    // section and got a heading with nothing under it until the
+                    // scrub had advanced far enough to fly the first card in.
                     gsap.set(eduCards, { xPercent: 120, autoAlpha: 0, scale: 0.9 });
+                    gsap.set(eduCards[0], { xPercent: 0, autoAlpha: 1, scale: 1 });
 
                     const journey = gsap.timeline({
                         defaults: { ease: "none" },
@@ -444,24 +449,38 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                         },
                     });
 
-                    // Each record gets its own slice of the timeline, so they
-                    // arrive strictly one by one rather than overlapping:
-                    // in from the right, zoom in, zoom back out, exit left.
+                    // Each record owns its own slice of the timeline, so they
+                    // arrive strictly one by one: in from the right, zoom in,
+                    // zoom back out, exit left as the next one arrives.
+                    const last = eduCards.length - 1;
                     eduCards.forEach((card, i) => {
                         const at = i * 6;
-                        journey
-                            .to(
+
+                        // The first record is already on stage (see the set
+                        // above), so it goes straight to its zoom.
+                        if (i > 0) {
+                            journey.to(
                                 card,
                                 { xPercent: 0, autoAlpha: 1, scale: 1, duration: 2 },
                                 at,
-                            )
+                            );
+                        }
+
+                        journey
                             .to(card, { scale: 1.12, duration: 1.2 }, at + 2)
-                            .to(card, { scale: 1, duration: 1.2 }, at + 3.2)
-                            .to(
+                            .to(card, { scale: 1, duration: 1.2 }, at + 3.2);
+
+                        // The last record holds instead of exiting — sending it
+                        // left too would leave the stage pinned and empty for
+                        // the tail of the scroll, the same dead frame the
+                        // pre-placed first card fixes at the other end.
+                        if (i < last) {
+                            journey.to(
                                 card,
                                 { xPercent: -120, autoAlpha: 0, scale: 0.9, duration: 2 },
                                 at + 4.4,
                             );
+                        }
                     });
 
                     return () => {
