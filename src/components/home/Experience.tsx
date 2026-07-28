@@ -83,7 +83,9 @@ const Experience: FC<IExperience> = () => {
     const roles = info.experience as Role[];
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="experience">
+        // Tighter vertical padding on desktop: the pinned stage supplies its own
+        // height, so full section padding only adds dead space above and below.
+        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-24 lg:py-10" id="experience">
             <SectionHeading
                 label="Experience"
                 note={`${roles.length} roles · 2021 — present`}
@@ -93,7 +95,7 @@ const Experience: FC<IExperience> = () => {
             {/* Pinned stage: on desktop the roles stack as panels and advance with
                 scroll. Without JS (or on mobile) they stay a normal vertical list —
                 the deck only becomes absolutely-positioned once JS marks it ready. */}
-            <div className="exp-stage mt-12" data-exp-stage>
+            <div className="exp-stage mt-8 lg:mt-6" data-exp-stage>
                 <div className="exp-rail" data-exp-rail>
                     <span className="exp-rail-fill" data-exp-rail-fill />
                 </div>

@@ -564,7 +564,9 @@ body {
 
 @media (min-width: 1024px) {
     .exp-stage[data-deck-ready] {
-        min-height: 100svh;
+        /* Just enough to centre the deck without leaving a canyon above and
+           below it — the pin already holds the section in place. */
+        min-height: 78svh;
         display: flex;
         align-items: center;
         padding-left: 3rem;
@@ -584,7 +586,6 @@ body {
     }
     .exp-stage[data-deck-ready] .exp-panel {
         height: 100%;
-        overflow-y: auto;
         /* Stacked panels must occlude each other. The default translucent
            card lets the outgoing role read straight through the incoming
            one, so inside the deck the surface goes opaque. */

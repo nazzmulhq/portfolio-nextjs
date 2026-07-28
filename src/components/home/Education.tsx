@@ -16,7 +16,8 @@ const Education: FC<IEducation> = () => {
                     const startYear = edu.date.split(/[\s–-]+/)[0];
                     return (
                         <article
-                            className="reveal glass-card group relative flex flex-col overflow-hidden p-6 sm:p-7"
+                            className="glass-card group relative flex flex-col overflow-hidden p-6 sm:p-7"
+                            data-edu-card
                             key={edu.title}
                         >
                             {/* Oversized start year, set as a watermark rather than a label —

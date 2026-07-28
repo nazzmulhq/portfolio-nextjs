@@ -149,6 +149,21 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     // leaves a readable list rather than a pile of cards.
                     stage.setAttribute("data-deck-ready", "");
 
+                    // Size the deck to its tallest panel. A fixed height crops
+                    // the longer roles once the cards are absolutely positioned.
+                    const deckEl = scope.querySelector<HTMLElement>("[data-exp-deck]");
+                    const fitDeck = () => {
+                        if (!deckEl) return;
+                        const tallest = expCards.reduce((max, card) => {
+                            const panel = card.querySelector<HTMLElement>(".exp-panel");
+                            return Math.max(max, panel?.scrollHeight ?? 0);
+                        }, 0);
+                        if (tallest) deckEl.style.height = `${Math.ceil(tallest)}px`;
+                    };
+                    fitDeck();
+                    // Re-measure whenever ScrollTrigger recalculates (resize, fonts).
+                    ScrollTrigger.addEventListener("refreshInit", fitDeck);
+
                     // Panels stay fully opaque and slide over one another. Cross-
                     // fading makes both semi-transparent mid-transition, so the
                     // outgoing role reads straight through the incoming one.
@@ -193,7 +208,9 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     }
 
                     return () => {
+                        ScrollTrigger.removeEventListener("refreshInit", fitDeck);
                         stage.removeAttribute("data-deck-ready");
+                        if (deckEl) deckEl.style.height = "";
                         gsap.set(expCards, { clearProps: "all" });
                     };
                 });
@@ -218,26 +235,33 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 });
             }
 
-            /* ── EDUCATION ───────────────────────────────────────── */
-            const eduRows = claim(q("#education .reveal"));
-            if (eduRows.length) {
-                gsap.fromTo(
-                    eduRows,
-                    { clipPath: "inset(0% 100% 0% 0%)", autoAlpha: 0 },
-                    {
-                        clipPath: "inset(0% 0% 0% 0%)",
-                        autoAlpha: 1,
-                        duration: 0.9,
-                        ease: "power2.out",
-                        stagger: 0.12,
+            /* ── EDUCATION — enter right, centre, pulse, exit right ─ */
+            const eduCards = claim(q<HTMLElement>("[data-edu-card]"));
+            if (eduCards.length) {
+                eduCards.forEach((card, i) => {
+                    // Scrubbed, so the whole journey is driven by scroll position
+                    // rather than firing once. Each card is nudged slightly later
+                    // than the last so they arrive as a cascade.
+                    const tl = gsap.timeline({
+                        defaults: { ease: "none" },
                         scrollTrigger: {
-                            trigger: eduRows[0],
-                            start: "top 90%",
-                            end: "bottom 5%",
-                            toggleActions: "play reverse play reverse",
+                            trigger: "#education",
+                            start: "top bottom",
+                            end: "bottom top",
+                            scrub: 0.6,
                         },
-                    },
-                );
+                    });
+
+                    tl.fromTo(
+                        card,
+                        { xPercent: 130, autoAlpha: 0, scale: 0.9 },
+                        { xPercent: 0, autoAlpha: 1, scale: 1, duration: 3 },
+                        i * 0.35,
+                    )
+                        .to(card, { scale: 1.09, duration: 1.2 }) // zoom in
+                        .to(card, { scale: 1, duration: 1.2 }) // zoom back out
+                        .to(card, { xPercent: 130, autoAlpha: 0, duration: 3 }); // exit right
+                });
             }
 
             /* ── WORKS ───────────────────────────────────────────── */
