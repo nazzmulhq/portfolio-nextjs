@@ -36,10 +36,11 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     clearProps: "clipPath,transform",
                 });
 
-            // An entrance that starts hidden makes the animation responsible for
-            // the content being visible at all — so if motion is off or the tab
-            // is hidden (rAF throttled), jump straight to the finished state.
-            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches || document.hidden) {
+            // Only reduced-motion skips setup entirely. A hidden tab must NOT:
+            // the pinned deck is a layout feature, and bailing out here left it
+            // un-built for anyone whose tab was backgrounded at load. rAF being
+            // throttled is handled by the safety timeout and the refresh below.
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
                 showEverything();
                 return;
             }
@@ -134,54 +135,87 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 });
             }
 
-            /* ── EXPERIENCE ──────────────────────────────────────── */
-            claim(q("#experience .timeline-card")).forEach((card) => {
-                const panel = card.querySelector<HTMLElement>(".glass-card");
-                const dot = card.querySelector<HTMLElement>(".timeline-dot");
-                // Plays on the way in and reverses on the way out, so the card
-                // zooms back down as it leaves rather than just sitting there.
-                const trigger = {
-                    trigger: card,
-                    start: "top 88%",
-                    end: "bottom 10%",
-                    toggleActions: "play reverse play reverse",
-                } as const;
+            /* ── EXPERIENCE — pinned panel deck ──────────────────── */
+            const stage = scope.querySelector<HTMLElement>("[data-exp-stage]");
+            const expCards = claim(q<HTMLElement>("[data-exp-card]"));
+            const railFill = scope.querySelector<HTMLElement>("[data-exp-rail-fill]");
 
-                if (panel) {
-                    gsap.fromTo(
-                        panel,
-                        { scale: 0.84, autoAlpha: 0, y: 30 },
-                        {
-                            scale: 1,
-                            autoAlpha: 1,
-                            y: 0,
-                            duration: 0.9,
-                            ease: "power3.out",
-                            scrollTrigger: trigger,
+            // Desktop only. Pinning fights mobile's dynamic viewport, and the
+            // deck needs the height a small screen doesn't have.
+            const mm = gsap.matchMedia();
+            if (stage && expCards.length > 1) {
+                mm.add("(min-width: 1024px)", () => {
+                    // Gate the absolute stacking on JS being live, so a failure
+                    // leaves a readable list rather than a pile of cards.
+                    stage.setAttribute("data-deck-ready", "");
+
+                    // Panels stay fully opaque and slide over one another. Cross-
+                    // fading makes both semi-transparent mid-transition, so the
+                    // outgoing role reads straight through the incoming one.
+                    gsap.set(expCards, { autoAlpha: 1, yPercent: 100, scale: 1 });
+                    gsap.set(expCards[0], { yPercent: 0 });
+
+                    const deck = gsap.timeline({
+                        defaults: { ease: "none" },
+                        scrollTrigger: {
+                            trigger: stage,
+                            start: "top top",
+                            end: () => `+=${(expCards.length - 1) * window.innerHeight * 0.85}`,
+                            pin: true,
+                            scrub: 0.6,
+                            invalidateOnRefresh: true,
                         },
-                    );
-                }
-                if (dot) {
-                    gsap.fromTo(
-                        dot,
-                        { scale: 0 },
-                        { scale: 1, duration: 0.7, ease: "back.out(3)", scrollTrigger: trigger },
-                    );
-                }
-            });
+                    });
 
-            const rule = scope.querySelector<HTMLElement>("[data-timeline-rule]");
-            const timeline = scope.querySelector<HTMLElement>("[data-timeline]");
-            if (rule && timeline) {
-                gsap.fromTo(
-                    rule,
-                    { scaleY: 0 },
-                    {
-                        scaleY: 1,
-                        ease: "none",
-                        scrollTrigger: { trigger: timeline, start: "top 75%", end: "bottom 85%", scrub: 0.4 },
-                    },
-                );
+                    expCards.forEach((card, i) => {
+                        if (i === 0) return;
+                        // Outgoing settles back a touch; the incoming panel
+                        // slides up over it at full opacity and occludes it.
+                        deck.to(expCards[i - 1], { yPercent: -6, scale: 0.97 }, i - 1);
+                        deck.to(card, { yPercent: 0 }, i - 1);
+                    });
+
+                    if (railFill) {
+                        gsap.fromTo(
+                            railFill,
+                            { scaleY: 0 },
+                            {
+                                scaleY: 1,
+                                ease: "none",
+                                scrollTrigger: {
+                                    trigger: stage,
+                                    start: "top top",
+                                    end: () => `+=${(expCards.length - 1) * window.innerHeight * 0.85}`,
+                                    scrub: 0.6,
+                                },
+                            },
+                        );
+                    }
+
+                    return () => {
+                        stage.removeAttribute("data-deck-ready");
+                        gsap.set(expCards, { clearProps: "all" });
+                    };
+                });
+
+                // Below the deck breakpoint the roles read as a plain list, so
+                // give them the same quiet entrance the rest of the page uses.
+                mm.add("(max-width: 1023px)", () => {
+                    expCards.forEach((card) => {
+                        gsap.fromTo(
+                            card,
+                            { y: 30, autoAlpha: 0 },
+                            {
+                                y: 0,
+                                autoAlpha: 1,
+                                duration: 0.8,
+                                ease: "power3.out",
+                                scrollTrigger: { trigger: card, start: "top 90%", once: true },
+                            },
+                        );
+                    });
+                    return () => gsap.set(expCards, { clearProps: "all" });
+                });
             }
 
             /* ── EDUCATION ───────────────────────────────────────── */
@@ -308,9 +342,24 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
             });
 
             const raf = requestAnimationFrame(() => ScrollTrigger.refresh());
+
+            // Positions measured while the tab was hidden can be stale, and a
+            // throttled ticker may have left tweens mid-flight — resync on the
+            // first frame after the page becomes visible again.
+            const onVisible = () => {
+                if (document.hidden) return;
+                if (intro.progress() < 1) intro.progress(1);
+                ScrollTrigger.refresh();
+            };
+            document.addEventListener("visibilitychange", onVisible);
+
             return () => {
                 clearTimeout(safety);
                 cancelAnimationFrame(raf);
+                document.removeEventListener("visibilitychange", onVisible);
+                // The pin outlives useGSAP's own revert if the media context
+                // isn't torn down explicitly.
+                mm.revert();
             };
         },
         { scope: root },

@@ -7,13 +7,6 @@ import MagneticButton from "./MagneticButton";
 
 export interface IHome {}
 
-const STATS = [
-    { value: "4+", label: "Years Experience" },
-    { value: "5+", label: "Enterprise Apps" },
-    { value: "10+", label: "OSS & Dev Tools" },
-    { value: "300%", label: "Max Query Boost" },
-];
-
 const FLOATING_TAGS = [
     { name: "Next.js 16", style: "top-2 -left-6 sm:-left-10" },
     { name: "NestJS", style: "bottom-12 -left-8 sm:-left-12" },
@@ -142,14 +135,8 @@ const Home: FC<IHome> = () => {
                                 </span>
                             ))}
 
-                            <div className="plate aspect-[3/4] w-60 sm:w-72 lg:w-88 xl:w-96 shadow-2xl">
-                                <img
-                                    alt="Nazmul Haque"
-                                    className="object-top"
-                                    height={640}
-                                    src={me.image}
-                                    width={480}
-                                />
+                            <div className="portrait aspect-[3/4] w-60 shadow-2xl sm:w-72 lg:w-88 xl:w-96">
+                                <img alt="Nazmul Haque" height={640} src={me.image} width={480} />
                             </div>
                         </div>
 
@@ -158,18 +145,6 @@ const Home: FC<IHome> = () => {
                             <span>Since 2021</span>
                         </figcaption>
                     </figure>
-                </div>
-
-                {/* Stats bar */}
-                <div className="hero-line mt-14 grid grid-cols-2 gap-3 sm:mt-16 sm:grid-cols-4 sm:gap-4" data-hero>
-                    {STATS.map((stat) => (
-                        <div className="stat-block glass-card group/stat h-full" key={stat.label}>
-                            <p className="stat-value text-gradient" data-counter={stat.value}>
-                                {stat.value}
-                            </p>
-                            <p className="stat-label">{stat.label}</p>
-                        </div>
-                    ))}
                 </div>
             </div>
 

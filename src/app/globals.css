@@ -331,6 +331,43 @@ body {
     50% { opacity: 0.8; transform: scale(1.08); }
 }
 
+/* Portrait — the source photo has a warm beige backdrop that fights the
+   ink/orange palette. Desaturate it, wash the top in accent and fade the
+   base into the canvas so it reads as part of the page, not a pasted-in
+   snapshot. */
+.portrait {
+    position: relative;
+    isolation: isolate;
+    overflow: hidden;
+    border-radius: 0.85rem;
+    border: 1px solid var(--line-strong);
+    background: var(--surface-2);
+}
+.portrait img {
+    display: block;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    object-position: center top;
+    filter: saturate(0.7) contrast(1.06) brightness(0.96);
+    transition:
+        filter 0.6s ease,
+        scale 0.9s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.portrait::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background:
+        linear-gradient(180deg, transparent 45%, color-mix(in srgb, var(--canvas) 92%, transparent) 100%),
+        linear-gradient(145deg, color-mix(in srgb, var(--accent) 26%, transparent) 0%, transparent 55%);
+}
+.portrait:hover img {
+    filter: saturate(0.95) contrast(1.06) brightness(1);
+    scale: 1.03;
+}
+
 .plate {
     position: relative;
     overflow: hidden;
@@ -491,6 +528,72 @@ body {
 
 .timeline-card { position: relative; padding-left: 2.5rem; }
 
+/* ── Experience: pinned panel deck ──────────────────────────────
+   Cards stack and advance with scroll while the section is pinned.
+   The absolute positioning is gated behind [data-deck-ready], which
+   JS only sets once the pinned timeline is actually running — so
+   without JS the roles remain a readable vertical list instead of a
+   pile of overlapping cards. */
+.exp-stage { position: relative; }
+.exp-deck { position: relative; display: grid; gap: 1.25rem; }
+.exp-panel { padding: 1.5rem; }
+
+.exp-rail {
+    display: none;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 2px;
+    height: 100%;
+    background: var(--line);
+    border-radius: 2px;
+    overflow: hidden;
+}
+.exp-rail-fill {
+    display: block;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(to bottom, var(--accent), var(--accent-2));
+    transform-origin: 50% 0;
+    transform: scaleY(0);
+}
+
+@media (min-width: 640px) {
+    .exp-panel { padding: 2rem; }
+}
+
+@media (min-width: 1024px) {
+    .exp-stage[data-deck-ready] {
+        min-height: 100svh;
+        display: flex;
+        align-items: center;
+        padding-left: 3rem;
+    }
+    .exp-stage[data-deck-ready] .exp-rail { display: block; }
+    .exp-stage[data-deck-ready] .exp-deck {
+        display: block;
+        width: 100%;
+        height: 30rem;
+        /* Panels queue below the deck before sliding up — clip so they
+           aren't visible sitting in the pinned space underneath. */
+        overflow: hidden;
+    }
+    .exp-stage[data-deck-ready] .exp-card {
+        position: absolute;
+        inset: 0;
+    }
+    .exp-stage[data-deck-ready] .exp-panel {
+        height: 100%;
+        overflow-y: auto;
+        /* Stacked panels must occlude each other. The default translucent
+           card lets the outgoing role read straight through the incoming
+           one, so inside the deck the surface goes opaque. */
+        background: var(--surface);
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+    }
+}
+
 .company-badge {
     display: inline-flex;
     align-items: center;
@@ -561,9 +664,17 @@ body {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    transition: scale 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+    /* Several project shots are near-white and blow out against the ink
+       canvas; pull them back until hover. */
+    filter: saturate(0.85) brightness(0.92);
+    transition:
+        filter 0.6s ease,
+        scale 0.7s cubic-bezier(0.22, 1, 0.36, 1);
 }
-.work-card:hover .work-image-wrap img { scale: 1.05; }
+.work-card:hover .work-image-wrap img {
+    filter: saturate(1) brightness(1);
+    scale: 1.05;
+}
 
 .work-image-wrap::after {
     content: "";

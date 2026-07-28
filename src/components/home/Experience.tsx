@@ -1,6 +1,4 @@
-"use client";
-
-import { FC, useState } from "react";
+import { FC } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
 
@@ -15,18 +13,13 @@ interface Role {
     technologies?: string[];
 }
 
-const TimelineCard: FC<{ role: Role; index: number }> = ({ role, index }) => {
-    // The current role opens by default — it's the one worth reading first.
-    const [open, setOpen] = useState(index === 0);
+const RoleCard: FC<{ role: Role; index: number; total: number }> = ({ role, index, total }) => {
     const [start, end] = role.date.split(/\s*[–-]\s*/);
     const isCurrent = /present/i.test(role.date);
 
     return (
-        <article className="timeline-card reveal py-6 sm:py-8">
-            <div className="timeline-dot" style={{ top: "2rem" }} />
-
-            <div className="glass-card group/card overflow-hidden p-5 transition-colors duration-300 sm:p-7">
-                {/* Period leads the record — the sequence is the information */}
+        <article className="exp-card" data-exp-card style={{ zIndex: index + 1 }}>
+            <div className="glass-card exp-panel">
                 <div className="flex flex-wrap items-start justify-between gap-4 border-b border-line pb-4">
                     <div className="min-w-0">
                         <p className="label flex items-center gap-2">
@@ -43,29 +36,15 @@ const TimelineCard: FC<{ role: Role; index: number }> = ({ role, index }) => {
                             )}
                         </p>
 
-                        <h3 className="display mt-3 text-xl leading-tight text-fg transition-colors duration-300 group-hover/card:text-[var(--accent)] sm:text-2xl">
+                        <h3 className="display mt-3 text-xl leading-tight text-fg sm:text-2xl lg:text-3xl">
                             {role.title}
                         </h3>
                         <p className="mt-1 text-sm font-semibold text-accent">{role.company}</p>
                     </div>
 
-                    <button
-                        aria-expanded={open}
-                        className="label inline-flex shrink-0 items-center gap-1.5 rounded-full border border-line px-3 py-1.5 text-accent transition-all hover:border-[var(--accent)]/50 hover:bg-[var(--accent-soft)]"
-                        onClick={() => setOpen((v) => !v)}
-                        type="button"
-                    >
-                        <span>{open ? "Less" : "Detail"}</span>
-                        <svg
-                            className={`h-3 w-3 transition-transform duration-300 ${open ? "rotate-180" : ""}`}
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth={2.5}
-                            viewBox="0 0 24 24"
-                        >
-                            <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
-                        </svg>
-                    </button>
+                    <span className="label shrink-0 text-faint">
+                        {String(index + 1).padStart(2, "0")} / {String(total).padStart(2, "0")}
+                    </span>
                 </div>
 
                 {role.problemSolved && (
@@ -74,8 +53,20 @@ const TimelineCard: FC<{ role: Role; index: number }> = ({ role, index }) => {
                     </p>
                 )}
 
+                <ul className="mt-4 space-y-2 border-l-2 border-[var(--accent)]/30 pl-4">
+                    {role.description.map((line) => (
+                        <li
+                            className="flex items-start gap-2 text-sm leading-relaxed text-muted"
+                            key={line}
+                        >
+                            <span className="mt-1 text-xs text-[var(--accent)]">▹</span>
+                            <span>{line}</span>
+                        </li>
+                    ))}
+                </ul>
+
                 {role.technologies && (
-                    <ul className="mt-4 flex flex-wrap gap-x-4 gap-y-1.5">
+                    <ul className="mt-5 flex flex-wrap gap-x-4 gap-y-1.5 border-t border-line pt-4">
                         {role.technologies.map((tech) => (
                             <li className="font-mono text-[0.7rem] text-faint" key={tech}>
                                 {tech}
@@ -83,47 +74,40 @@ const TimelineCard: FC<{ role: Role; index: number }> = ({ role, index }) => {
                         ))}
                     </ul>
                 )}
-
-                {/* grid-rows 0fr → 1fr animates to auto height without measuring */}
-                <div
-                    className="grid transition-[grid-template-rows] duration-500 ease-out"
-                    style={{ gridTemplateRows: open ? "1fr" : "0fr" }}
-                >
-                    <div className="overflow-hidden">
-                        <ul className="mt-5 space-y-2.5 border-l-2 border-[var(--accent)]/30 pl-4">
-                            {role.description.map((line) => (
-                                <li
-                                    className="flex items-start gap-2 text-sm leading-relaxed text-muted"
-                                    key={line}
-                                >
-                                    <span className="mt-1 text-xs text-[var(--accent)]">▹</span>
-                                    <span>{line}</span>
-                                </li>
-                            ))}
-                        </ul>
-                    </div>
-                </div>
             </div>
         </article>
     );
 };
 
 const Experience: FC<IExperience> = () => {
-    const { experience } = info;
+    const roles = info.experience as Role[];
 
     return (
         <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="experience">
             <SectionHeading
                 label="Experience"
-                note={`${experience.length} roles · 2021 — present`}
+                note={`${roles.length} roles · 2021 — present`}
                 title="Where I've built"
             />
 
-            <div className="relative mt-12" data-timeline>
-                <span aria-hidden className="timeline-line" data-timeline-rule />
-                {(experience as Role[]).map((role, i) => (
-                    <TimelineCard index={i} key={`${role.company}-${role.date}`} role={role} />
-                ))}
+            {/* Pinned stage: on desktop the roles stack as panels and advance with
+                scroll. Without JS (or on mobile) they stay a normal vertical list —
+                the deck only becomes absolutely-positioned once JS marks it ready. */}
+            <div className="exp-stage mt-12" data-exp-stage>
+                <div className="exp-rail" data-exp-rail>
+                    <span className="exp-rail-fill" data-exp-rail-fill />
+                </div>
+
+                <div className="exp-deck" data-exp-deck>
+                    {roles.map((role, i) => (
+                        <RoleCard
+                            index={i}
+                            key={`${role.company}-${role.date}`}
+                            role={role}
+                            total={roles.length}
+                        />
+                    ))}
+                </div>
             </div>
         </section>
     );
