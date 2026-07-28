@@ -1549,6 +1549,97 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   MOBILE COMPACTING
+   Measured at 390x844: the page ran 10,295px, with Experience alone
+   at 3,657px (4+ screens) and the hero overflowing before its CTAs.
+   These rules tighten the same components rather than hiding content.
+   ════════════════════════════════════════════════════════════════ */
+
+@media (max-width: 1023px) {
+    /* The node rails carry the gap between heading and deck, and they are
+       display:none below the pin breakpoint — which takes their margins with
+       them, leaving the heading sitting flush on the first card. */
+    .exp-deck,
+    .edu-deck {
+        margin-top: 1.75rem;
+    }
+}
+
+@media (max-width: 639px) {
+    /* Four tiles across instead of three, and shorter. 21 tools was seven
+       rows of tall squares; this is six rows of compact ones. */
+    .matrix {
+        /* 4.5rem, not 5rem: at 360px a 5rem floor only fits three columns, and
+           the matrix jumped back to seven rows on smaller Androids. */
+        grid-template-columns: repeat(auto-fill, minmax(4.5rem, 1fr));
+        gap: 0.375rem;
+    }
+    .tile {
+        aspect-ratio: 1 / 1.02;
+        padding: 0.45rem;
+    }
+    .tile-icon {
+        width: 1.4rem;
+        height: 1.4rem;
+    }
+    .tile-name {
+        margin-top: 0.2rem;
+        font-size: 0.6rem;
+    }
+    .tile-idx,
+    .tile-tag {
+        font-size: 0.45rem;
+    }
+    .tile-tag {
+        top: 0.45rem;
+        right: 0.45rem;
+    }
+
+    /* Five roles stacked is the single longest run on the page. */
+    .exp-deck {
+        gap: 0.875rem;
+    }
+    .exp-panel {
+        padding: 1.1rem;
+    }
+
+    .edu-deck {
+        gap: 0.875rem;
+    }
+    .edu-panel {
+        padding: 1.15rem;
+    }
+    .edu-year {
+        font-size: 5.5rem;
+    }
+
+    .work-entry {
+        gap: 1.25rem;
+        padding-bottom: 2.5rem;
+    }
+
+    /* Four controls at desktop size wrapped onto three rows. */
+    .btn-accent,
+    .btn-ghost {
+        padding: 0.7rem 1.1rem;
+        font-size: 0.7rem;
+        letter-spacing: 0.1em;
+    }
+
+    .datum {
+        font-size: 0.65rem;
+        line-height: 1.75;
+    }
+
+    /* The fixed bottom nav sits over the last line of any section that ends
+       flush; the footer already reserves room, these need a little too. */
+    .tag {
+        padding: 0.2rem 0.5rem;
+        font-size: 0.625rem;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════
    CV PRINT LAYOUT
    ════════════════════════════════════════════════════════════════ */
 @page {

@@ -8,7 +8,7 @@ const Education: FC<IEducation> = () => {
     const { education } = info;
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-24" id="education">
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-24" id="education">
             {/* Pinned stage, like Experience: the heading travels with the cards
                 so the section stays labelled while records cycle through.
                 [data-edu-ready] gates the absolute stacking on JS being live —
@@ -21,7 +21,7 @@ const Education: FC<IEducation> = () => {
                     title="Where I studied"
                 />
 
-                <div className="edu-nodes mb-5 mt-8" data-edu-nodes>
+                <div className="edu-nodes mb-5 mt-6 sm:mt-8" data-edu-nodes>
                     {education.map((edu, i) => (
                         <span
                             className="exp-node"

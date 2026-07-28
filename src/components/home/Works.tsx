@@ -9,7 +9,7 @@ const Works: FC<IWorks> = () => {
     const { works } = info;
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="works">
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-28" id="works">
             <SectionHeading
                 index="04"
                 label="Selected work"
@@ -17,7 +17,7 @@ const Works: FC<IWorks> = () => {
                 title="Things I've shipped"
             />
 
-            <div className="mt-16">
+            <div className="mt-10 sm:mt-16">
                 {works.map((work, i) => {
                     const external = !work.link?.startsWith("/");
 
@@ -48,7 +48,7 @@ const Works: FC<IWorks> = () => {
 
                             <div className="work-copy" data-work-copy>
                                 <div className="flex items-center gap-4">
-                                    <span className="digit text-5xl leading-none text-accent opacity-25 transition-opacity duration-500 group-hover:opacity-70 sm:text-6xl">
+                                    <span className="digit text-4xl leading-none text-accent opacity-25 transition-opacity duration-500 group-hover:opacity-70 sm:text-6xl">
                                         {String(i + 1).padStart(2, "0")}
                                     </span>
                                     <span className="h-px flex-1 bg-[var(--line)]" />
@@ -57,7 +57,7 @@ const Works: FC<IWorks> = () => {
                                     </span>
                                 </div>
 
-                                <h3 className="display mt-6 text-3xl leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:text-4xl">
+                                <h3 className="display mt-5 text-2xl leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:mt-6 sm:text-4xl">
                                     <Link
                                         className="link-wipe"
                                         href={work.link}
@@ -68,11 +68,11 @@ const Works: FC<IWorks> = () => {
                                     </Link>
                                 </h3>
 
-                                <p className="mt-5 max-w-lg text-base leading-relaxed text-muted">
+                                <p className="mt-4 max-w-lg text-[0.95rem] leading-relaxed text-muted sm:mt-5 sm:text-base">
                                     {work.description[0]}
                                 </p>
 
-                                <ul className="mt-7 flex flex-wrap gap-2">
+                                <ul className="mt-5 flex flex-wrap gap-2 sm:mt-7">
                                     {work.technologies.map((tech) => (
                                         <li className="tag" key={tech}>
                                             {tech}
@@ -81,7 +81,7 @@ const Works: FC<IWorks> = () => {
                                 </ul>
 
                                 <Link
-                                    className="label mt-8 inline-flex items-center gap-2 text-accent transition-transform duration-300 group-hover:translate-x-1"
+                                    className="label mt-6 inline-flex items-center gap-2 text-accent transition-transform duration-300 group-hover:translate-x-1 sm:mt-8"
                                     href={work.link}
                                     rel={external ? "noopener noreferrer" : undefined}
                                     target={external ? "_blank" : undefined}

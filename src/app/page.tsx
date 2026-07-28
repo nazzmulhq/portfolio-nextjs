@@ -179,7 +179,7 @@ export default function Page() {
                 <Education />
                 <Works />
 
-                <footer className="mx-auto w-full max-w-6xl px-5 pb-32 pt-16 sm:px-8 sm:pb-24 sm:pt-20">
+                <footer className="mx-auto w-full max-w-6xl px-5 pb-28 pt-12 sm:px-8 sm:pb-24 sm:pt-20">
                     <div className="border-t border-line pt-10">
                         <div className="flex items-center gap-4">
                             <span className="digit text-xs text-accent">05</span>

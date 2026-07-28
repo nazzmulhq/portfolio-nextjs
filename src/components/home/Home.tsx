@@ -26,13 +26,13 @@ const Home: FC<IHome> = () => {
 
     return (
         <section
-            className="relative flex min-h-svh flex-col justify-center px-5 pt-24 pb-16 sm:px-8 sm:pt-28 sm:pb-20"
+            className="relative flex min-h-svh flex-col justify-center px-5 pt-16 pb-24 sm:px-8 sm:pt-28 sm:pb-20"
             id="home"
         >
             <div className="mx-auto w-full max-w-6xl">
                 {/* Top status strip — sets the console frame before any content. */}
                 <div
-                    className="mb-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-line pb-4"
+                    className="mb-6 flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-line pb-3 sm:mb-10 sm:gap-x-6 sm:pb-4"
                     data-hero
                 >
                     <span className="label flex items-center gap-2 text-fg">
@@ -43,7 +43,7 @@ const Home: FC<IHome> = () => {
                     <span className="label ml-auto hidden md:inline">23.8103° N, 90.4125° E</span>
                 </div>
 
-                <div className="grid grid-cols-1 items-end gap-12 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
+                <div className="grid grid-cols-1 items-end gap-7 sm:gap-10 lg:grid-cols-[minmax(0,1fr)_auto] lg:gap-16">
                     {/* ── Text column ── */}
                     <div className="min-w-0">
                         <h1 className="display text-[clamp(3.25rem,12vw,9rem)] text-fg">
@@ -62,7 +62,7 @@ const Home: FC<IHome> = () => {
                         {/* Scrambles into place on load — the one place the decode
                             effect runs without a scroll trigger. */}
                         <p
-                            className="mt-7 max-w-xl font-mono text-sm leading-relaxed tracking-wide text-muted sm:text-base"
+                            className="mt-5 max-w-xl font-mono text-[0.8rem] leading-relaxed tracking-wide text-muted sm:mt-7 sm:text-base"
                             data-hero
                             data-decode-now
                         >
@@ -70,7 +70,7 @@ const Home: FC<IHome> = () => {
                             developer tooling.
                         </p>
 
-                        <dl className="mt-9 max-w-md" data-hero>
+                        <dl className="mt-6 max-w-md sm:mt-9" data-hero>
                             {SPECS.map((spec) => (
                                 <div className="datum" key={spec.key}>
                                     <dt>{spec.key}</dt>
@@ -80,7 +80,7 @@ const Home: FC<IHome> = () => {
                             ))}
                         </dl>
 
-                        <div className="mt-10 flex flex-wrap items-center gap-3" data-hero>
+                        <div className="mt-7 flex flex-wrap items-center gap-2.5 sm:mt-10 sm:gap-3" data-hero>
                             <MagneticButton
                                 className="btn-accent"
                                 onClick={() => {
@@ -165,19 +165,19 @@ const Home: FC<IHome> = () => {
                         {/* .frame wraps the image only — the brackets are pinned to
                             its corners, so including the caption would push the
                             bottom pair below the photo. */}
-                        <div className="frame frame-brackets" data-brackets>
+                        <div className="frame frame-brackets w-fit" data-brackets>
                             <span />
                             <span />
                             <span />
                             <span />
 
-                            <div className="portrait aspect-[3/4] w-56 sm:w-72 lg:w-80 xl:w-[22rem]">
+                            <div className="portrait aspect-[3/4] w-32 xs:w-36 sm:w-56 lg:w-80 xl:w-[22rem]">
                                 <span aria-hidden className="scanbar" />
                                 <img alt="Nazmul Haque" height={640} src={me.image} width={480} />
                             </div>
                         </div>
 
-                        <figcaption className="mt-4 flex items-center justify-between">
+                        <figcaption className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 sm:mt-4 sm:justify-between">
                             <span className="label">ID · NH-2021</span>
                             <span className="label text-accent">{me.experience}</span>
                         </figcaption>
@@ -185,7 +185,7 @@ const Home: FC<IHome> = () => {
                 </div>
             </div>
 
-            <div className="mt-14 hidden justify-center sm:flex" data-hero>
+            <div className="mt-12 hidden justify-center sm:flex" data-hero>
                 <div className="scroll-cue">
                     <span className="label text-[0.6rem]">Scroll</span>
                     <span className="scroll-cue-line" />

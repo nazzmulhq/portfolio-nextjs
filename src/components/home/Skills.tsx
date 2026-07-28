@@ -44,7 +44,7 @@ const Skills: FC<ISkills> = () => {
     );
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="skills">
+        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-28" id="skills">
             <SectionHeading
                 index="01"
                 label="Capabilities"
@@ -53,7 +53,7 @@ const Skills: FC<ISkills> = () => {
             />
 
             {/* Legend — maps each three-letter tag back to its discipline. */}
-            <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2" data-skill-legend>
+            <div className="mt-7 flex flex-wrap gap-x-4 gap-y-1.5 sm:mt-10 sm:gap-x-6 sm:gap-y-2" data-skill-legend>
                 {skillGroups.map((group) => (
                     <span className="flex items-baseline gap-2" key={group.label}>
                         <span className="digit text-[0.6rem] text-accent">
@@ -68,7 +68,7 @@ const Skills: FC<ISkills> = () => {
             </div>
 
             {/* Matrix. A scan line sweeps down it on scroll (see HomeMotion). */}
-            <div className="matrix mt-6" data-skill-matrix>
+            <div className="matrix mt-5 sm:mt-6" data-skill-matrix>
                 <span aria-hidden className="matrix-scan" data-skill-scan />
 
                 {cells.map((cell, i) => (
