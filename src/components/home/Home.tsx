@@ -171,9 +171,9 @@ const Home: FC<IHome> = () => {
                             <span />
                             <span />
 
-                            <div className="portrait aspect-[3/4] w-32 xs:w-36 sm:w-56 lg:w-80 xl:w-[22rem]">
+                            <div className="portrait aspect-square w-32 xs:w-36 sm:w-56 lg:w-80 xl:w-[22rem]">
                                 <span aria-hidden className="scanbar" />
-                                <img alt="Nazmul Haque" height={640} src={me.image} width={480} />
+                                <img alt="Nazmul Haque" height={512} src={me.image} width={512} />
                             </div>
                         </div>
 
