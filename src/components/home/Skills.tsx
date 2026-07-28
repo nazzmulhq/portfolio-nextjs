@@ -5,68 +5,93 @@ import SectionHeading from "./SectionHeading";
 export interface ISkills {}
 
 /**
- * Horizontal track. On desktop the section pins and these panels travel
- * sideways with scroll; below that breakpoint the same markup is a plain
- * responsive grid, so it stays readable with JS off.
+ * Two-letter symbols, periodic-table style. Derived by hand rather than
+ * generated: an automatic rule collides (React/REST both give "Re") and
+ * produces unreadable pairs for names like CI/CD or Kubernetes.
  */
+const SYMBOLS: Record<string, string> = {
+    "TypeScript": "Ts",
+    "JavaScript": "Js",
+    "Python": "Py",
+    "React.js": "Re",
+    "Next.js": "Nx",
+    "Redux Toolkit": "Rx",
+    "TailwindCSS": "Tw",
+    "Ant Design": "An",
+    "Nest.js": "Ns",
+    "FastAPI": "Fa",
+    "Django": "Dj",
+    "REST APIs": "Ra",
+    "Microservices": "Ms",
+    "PostgreSQL": "Pg",
+    "MySQL": "My",
+    "MongoDB": "Mg",
+    "Redis": "Rd",
+    "Docker": "Dk",
+    "Kubernetes": "K8",
+    "GitHub Actions": "Ga",
+    "CI/CD": "Ci",
+};
+
+const symbolFor = (name: string) =>
+    SYMBOLS[name] ?? (name[0] + (name[1] ?? "")).replace(/^./, (c) => c.toUpperCase());
+
 const Skills: FC<ISkills> = () => {
     const { skillGroups } = info;
-    const total = skillGroups.reduce((n, g) => n + g.items.length, 0);
+
+    // Flattened once so the matrix is a single continuous grid — the
+    // discipline stays legible through each tile's own tag.
+    const cells = skillGroups.flatMap((group, gi) =>
+        group.items.map((item) => ({
+            name: item,
+            group: group.label,
+            tag: group.label.slice(0, 3).toUpperCase(),
+            groupIndex: gi,
+        })),
+    );
 
     return (
-        <section className="py-20 sm:py-28" id="skills">
-            {/* Heading and track are pinned together — pinning the track alone
-                scrolls the heading off the screen while the panels travel, so
-                the moving row loses the label that explains it. */}
-            <div className="skill-stage" data-skill-stage>
-                <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
-                    <SectionHeading
-                        index="01"
-                        label="Capabilities"
-                        note={`${total} tools · ${skillGroups.length} disciplines`}
-                        title="What I work with"
-                    />
-                </div>
+        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="skills">
+            <SectionHeading
+                index="01"
+                label="Capabilities"
+                note={`${cells.length} tools · ${skillGroups.length} disciplines`}
+                title="What I work with"
+            />
 
-                {/* Padding lives on the track, not the section, so the first
-                    panel still lines up with the heading before it travels. */}
-                <div className="skill-viewport mt-10">
-                    <div
-                        className="skill-track px-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-3"
-                        data-skill-track
+            {/* Legend — maps each three-letter tag back to its discipline. */}
+            <div className="mt-10 flex flex-wrap gap-x-6 gap-y-2" data-skill-legend>
+                {skillGroups.map((group, i) => (
+                    <span className="flex items-baseline gap-2" key={group.label}>
+                        <span className="digit text-[0.6rem] text-accent">
+                            {group.label.slice(0, 3).toUpperCase()}
+                        </span>
+                        <span className="label text-muted">{group.label}</span>
+                        <span className="digit text-[0.6rem] text-faint">
+                            {String(group.items.length).padStart(2, "0")}
+                        </span>
+                    </span>
+                ))}
+            </div>
+
+            {/* Matrix. A scan line sweeps down it on scroll (see HomeMotion). */}
+            <div className="matrix mt-6" data-skill-matrix>
+                <span aria-hidden className="matrix-scan" data-skill-scan />
+
+                {cells.map((cell, i) => (
+                    <article
+                        className="tile"
+                        data-skill-tile
+                        key={cell.name}
+                        style={{ "--g": cell.groupIndex } as React.CSSProperties}
+                        title={`${cell.name} · ${cell.group}`}
                     >
-                        {skillGroups.map((group, i) => (
-                            <article
-                                className="skill-panel"
-                                data-index={String(i + 1).padStart(2, "0")}
-                                data-skill-panel
-                                key={group.label}
-                            >
-                                <div className="flex items-baseline justify-between gap-4">
-                                    <h3 className="display text-2xl text-fg">{group.label}</h3>
-                                    <span className="digit text-[0.65rem] text-faint">
-                                        {String(group.items.length).padStart(2, "0")}
-                                    </span>
-                                </div>
-
-                                <ul className="mt-6">
-                                    {group.items.map((item, j) => (
-                                        <li className="skill-item" key={item}>
-                                            <span className="idx">
-                                                {String(j + 1).padStart(2, "0")}
-                                            </span>
-                                            <span>{item}</span>
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                <span className="label mt-6 block border-t border-line pt-4 text-accent">
-                                    {group.label.slice(0, 3)}—{String(i + 1).padStart(2, "0")}
-                                </span>
-                            </article>
-                        ))}
-                    </div>
-                </div>
+                        <span className="tile-idx">{String(i + 1).padStart(2, "0")}</span>
+                        <span className="tile-tag">{cell.tag}</span>
+                        <span className="tile-sym">{symbolFor(cell.name)}</span>
+                        <span className="tile-name">{cell.name}</span>
+                    </article>
+                ))}
             </div>
         </section>
     );

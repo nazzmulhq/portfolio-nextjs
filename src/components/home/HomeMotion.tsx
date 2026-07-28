@@ -88,7 +88,8 @@ const splitChars = (el: HTMLElement) => {
  *
  *   hero        brackets draw, name masks up per character, copy decodes;
  *               powers down (scale + blur) on the way out
- *   skills      the section pins and the discipline panels travel sideways
+ *   skills      capability matrix powers on across the grid's diagonal,
+ *               with a scan line sweeping down it
  *   experience  pinned deck; roles are drawn on with a top-down blind wipe
  *               while a node rail tracks position
  *   education   scrubbed: enter right → centre → zoom → exit right
@@ -118,6 +119,19 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
             }
 
             const mm = gsap.matchMedia();
+
+            // GSAP's ticker is rAF-driven, and browsers stop rAF entirely in a
+            // backgrounded tab. A one-shot entrance that fires while hidden is
+            // therefore left frozen part-way — the tab comes back showing
+            // half-drawn headings and a partly-lit matrix. Registering those
+            // tweens here lets the visibility handler settle whichever ones
+            // actually started. Scrubbed tweens don't need this: their value is
+            // recomputed from scroll position on the next refresh.
+            const entrances: gsap.core.Animation[] = [];
+            const onceIn = <T extends gsap.core.Animation>(anim: T) => {
+                entrances.push(anim);
+                return anim;
+            };
 
             /* ── HERO — brackets, character mask, decode ─────────── */
             const heroChars = heroLines.flatMap((line) => splitChars(line));
@@ -178,7 +192,7 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 const meta = header.querySelector<HTMLElement>("[data-heading-label]");
                 const titleChars = title ? splitChars(title) : [];
 
-                const tl = gsap.timeline({
+                const tl = onceIn(gsap.timeline({
                     defaults: { ease: "power3.out" },
                     scrollTrigger: {
                         trigger: header,
@@ -190,7 +204,7 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                         // for the whole pinned sequence.
                         once: true,
                     },
-                });
+                }));
 
                 if (rule) {
                     tl.fromTo(
@@ -211,88 +225,64 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 }
             });
 
-            /* ── SKILLS — pinned horizontal track ────────────────── */
-            const skillStage = scope.querySelector<HTMLElement>("[data-skill-stage]");
-            const skillTrack = scope.querySelector<HTMLElement>("[data-skill-track]");
-            const skillPanels = q<HTMLElement>("[data-skill-panel]");
+            /* ── SKILLS — capability matrix ─────────────────────── */
+            const matrix = scope.querySelector<HTMLElement>("[data-skill-matrix]");
+            const tiles = q<HTMLElement>("[data-skill-tile]");
+            const legend = q<HTMLElement>("[data-skill-legend] > *");
+            const matrixScan = scope.querySelector<HTMLElement>("[data-skill-scan]");
 
-            if (skillStage && skillTrack && skillPanels.length) {
-                mm.add("(min-width: 1024px)", () => {
-                    // Gate the flex/max-content layout on JS being live, so a
-                    // failure leaves a readable grid rather than a clipped row.
-                    skillStage.setAttribute("data-track-ready", "");
+            if (matrix && tiles.length) {
+                onceIn(gsap.fromTo(
+                    legend,
+                    { autoAlpha: 0, y: 10 },
+                    {
+                        autoAlpha: 1,
+                        y: 0,
+                        duration: 0.5,
+                        stagger: 0.06,
+                        ease: "power3.out",
+                        scrollTrigger: { trigger: matrix, start: "top 88%", once: true },
+                    },
+                ));
 
-                    // Recomputed on every refresh so a resize re-derives travel.
-                    const distance = () =>
-                        Math.max(0, skillTrack.scrollWidth - window.innerWidth + 96);
+                // Tiles power on across the grid's diagonal. `stagger.grid: "auto"`
+                // has GSAP infer rows/columns from the rendered layout, so the
+                // sequence still reads correctly after the grid re-flows at a
+                // different width.
+                onceIn(gsap.fromTo(
+                    tiles,
+                    { autoAlpha: 0, scale: 0.82, filter: "blur(5px)" },
+                    {
+                        autoAlpha: 1,
+                        scale: 1,
+                        filter: "blur(0px)",
+                        duration: 0.55,
+                        ease: "power3.out",
+                        stagger: { grid: "auto", from: "start", amount: 0.9 },
+                        scrollTrigger: { trigger: matrix, start: "top 82%", once: true },
+                    },
+                ));
 
-                    const travel = gsap.to(skillTrack, {
-                        x: () => -distance(),
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: skillStage,
-                            // Stage is viewport-tall and centres its own
-                            // content, so pin flush to the top.
-                            start: "top top",
-                            end: () => `+=${distance()}`,
-                            pin: true,
-                            scrub: 0.8,
-                            anticipatePin: 1,
-                            invalidateOnRefresh: true,
+                // A scan line crosses the matrix as it passes through the
+                // viewport — scrubbed, so it tracks the scroll in both
+                // directions instead of firing once.
+                if (matrixScan) {
+                    gsap.fromTo(
+                        matrixScan,
+                        { top: "-12%", autoAlpha: 0 },
+                        {
+                            top: "100%",
+                            autoAlpha: 1,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: matrix,
+                                start: "top 85%",
+                                end: "bottom 25%",
+                                scrub: 0.5,
+                            },
                         },
-                    });
-
-                    // Each panel resolves as it crosses into the viewport
-                    // *horizontally*. containerAnimation re-maps the trigger's
-                    // start/end onto the track tween's own progress, so these
-                    // read against sideways travel rather than page scroll.
-                    skillPanels.forEach((panel) => {
-                        gsap.fromTo(
-                            panel,
-                            { autoAlpha: 0.25, scale: 0.93, filter: "blur(3px)" },
-                            {
-                                autoAlpha: 1,
-                                scale: 1,
-                                filter: "blur(0px)",
-                                ease: "none",
-                                scrollTrigger: {
-                                    trigger: panel,
-                                    containerAnimation: travel,
-                                    start: "left 95%",
-                                    end: "left 50%",
-                                    scrub: true,
-                                },
-                            },
-                        );
-                    });
-
-                    return () => {
-                        skillStage.removeAttribute("data-track-ready");
-                        gsap.set([skillTrack, skillPanels], { clearProps: "all" });
-                    };
-                });
-
-                // Below the pin breakpoint the panels are a plain grid, so give
-                // them the quiet entrance the rest of the page uses.
-                mm.add("(max-width: 1023px)", () => {
-                    const tweens = skillPanels.map((panel) =>
-                        gsap.fromTo(
-                            panel,
-                            { y: 30, autoAlpha: 0 },
-                            {
-                                y: 0,
-                                autoAlpha: 1,
-                                duration: 0.7,
-                                ease: "power3.out",
-                                scrollTrigger: { trigger: panel, start: "top 90%", once: true },
-                            },
-                        ),
                     );
-                    return () => {
-                        tweens.forEach((t) => t.scrollTrigger?.kill());
-                        gsap.set(skillPanels, { clearProps: "all" });
-                    };
-                });
+                }
             }
 
             /* ── EXPERIENCE — pinned deck, blind-wipe transitions ── */
@@ -591,6 +581,12 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
             const onVisible = () => {
                 if (document.hidden) return;
                 if (intro.progress() < 1) intro.progress(1);
+                // Only tweens that already started: anything still at 0 hasn't
+                // been scrolled into view yet and should keep its entrance.
+                entrances.forEach((anim) => {
+                    const p = anim.progress();
+                    if (p > 0 && p < 1) anim.progress(1);
+                });
                 ScrollTrigger.refresh();
             };
             document.addEventListener("visibilitychange", onVisible);
