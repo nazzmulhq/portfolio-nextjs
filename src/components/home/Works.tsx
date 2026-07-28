@@ -11,6 +11,7 @@ const Works: FC<IWorks> = () => {
     return (
         <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="works">
             <SectionHeading
+                index="04"
                 label="Selected work"
                 note={`${works.length} projects · open source`}
                 title="Things I've shipped"
@@ -23,9 +24,8 @@ const Works: FC<IWorks> = () => {
 
                     return (
                         <article
-                            className={`group border-t border-line py-10 sm:py-14 ${
-                                flip ? "reveal-right" : "reveal-left"
-                            }`}
+                            className="group border-t border-line py-10 sm:py-14"
+                            data-work-row
                             key={work.title}
                         >
                             <Link
@@ -35,27 +35,25 @@ const Works: FC<IWorks> = () => {
                                 target={external ? "_blank" : undefined}
                             >
                                 <div className="grid grid-cols-1 items-center gap-8 lg:grid-cols-2 lg:gap-14">
-                                    {/* Media */}
+                                    {/* Media — unmasks sideways with a sweep passing over it */}
                                     <div
                                         className={`work-card group/img relative overflow-hidden ${flip ? "lg:order-2" : ""}`}
                                         data-parallax-wrap
                                         data-work-media
                                     >
+                                        <span aria-hidden className="work-sweep" data-work-sweep />
                                         <div className="work-image-wrap aspect-[16/10]">
-                                            <img
-                                                alt={work.title}
-                                                className="transition-transform duration-700 ease-out group-hover/img:scale-105"
-                                                data-parallax
-                                                src={work.imageOrVideo}
-                                            />
+                                            <img alt={work.title} data-parallax src={work.imageOrVideo} />
                                         </div>
                                     </div>
 
-                                    {/* Copy */}
-                                    <div className={`min-w-0 ${flip ? "lg:order-1" : ""}`}>
+                                    {/* Copy — travels against the media column */}
+                                    <div
+                                        className={`min-w-0 ${flip ? "lg:order-1" : ""}`}
+                                        data-work-copy
+                                    >
                                         <div className="flex items-baseline gap-4">
-                                            {/* Index is real sequence here — the list is ordered by prominence */}
-                                            <span className="display text-3xl leading-none text-[var(--accent)] opacity-25 transition-opacity duration-300 group-hover:opacity-60">
+                                            <span className="digit text-3xl leading-none text-accent opacity-30 transition-opacity duration-300 group-hover:opacity-80">
                                                 {String(i + 1).padStart(2, "0")}
                                             </span>
                                             <span className="label">
@@ -63,7 +61,7 @@ const Works: FC<IWorks> = () => {
                                             </span>
                                         </div>
 
-                                        <h3 className="display mt-4 text-2xl leading-tight text-fg transition-colors duration-300 group-hover:text-[var(--accent)] sm:text-3xl lg:text-4xl">
+                                        <h3 className="display mt-4 text-2xl leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:text-3xl lg:text-4xl">
                                             <span className="link-wipe">{work.title}</span>
                                         </h3>
 
@@ -71,15 +69,15 @@ const Works: FC<IWorks> = () => {
                                             {work.description[0]}
                                         </p>
 
-                                        <ul className="mt-6 flex flex-wrap gap-x-4 gap-y-1.5">
+                                        <ul className="mt-6 flex flex-wrap gap-2">
                                             {work.technologies.map((tech) => (
-                                                <li className="font-mono text-[0.7rem] text-faint" key={tech}>
+                                                <li className="tag" key={tech}>
                                                     {tech}
                                                 </li>
                                             ))}
                                         </ul>
 
-                                        <span className="mt-7 inline-flex items-center gap-2 text-sm font-semibold text-accent transition-transform duration-300 group-hover:translate-x-1">
+                                        <span className="label mt-7 inline-flex items-center gap-2 text-accent transition-transform duration-300 group-hover:translate-x-1">
                                             {external ? "Visit project" : "Read the case study"}
                                             <span aria-hidden>{external ? "↗" : "→"}</span>
                                         </span>

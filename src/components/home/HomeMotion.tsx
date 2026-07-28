@@ -7,15 +7,93 @@ import { ReactNode, useRef } from "react";
 
 gsap.registerPlugin(useGSAP, ScrollTrigger);
 
+/** Clearance kept above pinned stages, for the fixed nav. */
+const PIN_OFFSET = 104;
+
+const GLYPHS = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789/\\<>[]{}#$%&*+=—";
+
 /**
- * Home page motion. Each section gets its own technique rather than one shared
- * fade, so the page keeps revealing something new as you scroll:
+ * Scramble text into place. Only used on monospace copy — a proportional
+ * face would reflow on every frame as the random glyphs change width.
+ */
+const decode = (el: HTMLElement) => {
+    const final = el.dataset.decodeText ?? el.textContent ?? "";
+    el.dataset.decodeText = final;
+    const chars = [...final];
+    const state = { p: 0 };
+
+    return gsap.to(state, {
+        p: 1,
+        duration: Math.min(1.6, 0.4 + chars.length * 0.012),
+        ease: "power2.inOut",
+        onUpdate: () => {
+            const settled = state.p * chars.length;
+            el.textContent = chars
+                .map((c, i) => {
+                    if (i < settled || c === " ") return c;
+                    return GLYPHS[(Math.random() * GLYPHS.length) | 0];
+                })
+                .join("");
+        },
+        onComplete: () => {
+            el.textContent = final;
+        },
+    });
+};
+
+/**
+ * Split into per-character spans, each word wrapped in its own overflow-hidden
+ * box so characters can be masked upward. Returns the character spans.
  *
- *   hero        orchestrated load, then drifts away on scrub
- *   skills      rows enter from alternating sides; marquees skew with velocity
- *   experience  rule draws, cards wipe upward, dots pop in
- *   education   rows wipe open horizontally, like records being read
- *   works       media unmasks sideways while the image parallaxes
+ * Idempotent: the original string is stashed on the element, so a re-run (React
+ * strict-mode double invoke, or a resize-driven rebuild) starts from the text
+ * rather than from already-split markup.
+ */
+const splitChars = (el: HTMLElement) => {
+    const text = el.dataset.splitText ?? el.textContent ?? "";
+    el.dataset.splitText = text;
+    el.textContent = "";
+
+    const chars: HTMLElement[] = [];
+    const words = text.split(" ");
+
+    words.forEach((word, wi) => {
+        const box = document.createElement("span");
+        box.style.display = "inline-block";
+        box.style.overflow = "hidden";
+        box.style.verticalAlign = "top";
+        // The mask would otherwise crop descenders ("q", "y", "p").
+        box.style.paddingBottom = "0.14em";
+        box.style.marginBottom = "-0.14em";
+
+        [...word].forEach((ch) => {
+            const s = document.createElement("span");
+            s.textContent = ch;
+            s.style.display = "inline-block";
+            s.style.willChange = "transform";
+            box.appendChild(s);
+            chars.push(s);
+        });
+
+        el.appendChild(box);
+        if (wi < words.length - 1) el.appendChild(document.createTextNode(" "));
+    });
+
+    return chars;
+};
+
+/**
+ * Home page motion. Every section gets its own technique rather than one shared
+ * fade, so the page keeps introducing something new as you scroll:
+ *
+ *   hero        brackets draw, name masks up per character, copy decodes;
+ *               powers down (scale + blur) on the way out
+ *   skills      the section pins and the discipline panels travel sideways
+ *   experience  pinned deck; roles are drawn on with a top-down blind wipe
+ *               while a node rail tracks position
+ *   education   scrubbed: enter right → centre → zoom → exit right
+ *   works       media and copy columns parallax against each other, with a
+ *               scan sweep crossing the image as it unmasks
  *   footer      the address rises on its own
  */
 const HomeMotion = ({ children }: { children: ReactNode }) => {
@@ -28,184 +106,268 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
 
             const q = <T extends HTMLElement>(sel: string) => gsap.utils.toArray<T>(sel, scope);
             const heroBits = q("[data-hero]");
-            const allReveals = q(".reveal, .reveal-left, .reveal-right");
+            const heroLines = q("[data-hero-line]");
 
-            const showEverything = () =>
-                gsap.set([...heroBits, ...allReveals], {
-                    autoAlpha: 1,
-                    clearProps: "clipPath,transform",
-                });
-
-            // Only reduced-motion skips setup entirely. A hidden tab must NOT:
-            // the pinned deck is a layout feature, and bailing out here left it
-            // un-built for anyone whose tab was backgrounded at load. rAF being
-            // throttled is handled by the safety timeout and the refresh below.
+            // Only reduced-motion skips setup. A hidden tab must NOT: the pinned
+            // stages are layout features, and bailing here left them unbuilt for
+            // anyone whose tab was backgrounded at load. A throttled ticker is
+            // handled by the safety timeout and the visibility resync below.
             if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-                showEverything();
+                gsap.set([...heroBits, ...heroLines], { autoAlpha: 1, clearProps: "transform" });
                 return;
             }
 
-            // Elements handled by a section-specific treatment below; the generic
-            // reveal must skip them or the two tweens fight over the same props.
-            const claimed = new Set<HTMLElement>();
-            const claim = <T extends HTMLElement>(els: T[]) => {
-                els.forEach((el) => claimed.add(el));
-                return els;
-            };
+            const mm = gsap.matchMedia();
 
-            /* ── HERO ────────────────────────────────────────────── */
-            const intro = gsap.timeline({ defaults: { ease: "power3.out" } }).fromTo(
-                heroBits,
-                { yPercent: 90, autoAlpha: 0 },
-                { yPercent: 0, autoAlpha: 1, duration: 1.1, stagger: 0.07 },
-            );
+            /* ── HERO — brackets, character mask, decode ─────────── */
+            const heroChars = heroLines.flatMap((line) => splitChars(line));
+            const brackets = q("[data-brackets] > span");
+
+            const intro = gsap.timeline({ defaults: { ease: "power3.out" } });
+
+            intro
+                .fromTo(
+                    heroChars,
+                    { yPercent: 115 },
+                    { yPercent: 0, duration: 1, stagger: 0.022 },
+                    0,
+                )
+                .fromTo(
+                    brackets,
+                    { scale: 0, autoAlpha: 0 },
+                    { scale: 1, autoAlpha: 1, duration: 0.6, stagger: 0.08 },
+                    0.25,
+                )
+                .fromTo(
+                    heroBits,
+                    { y: 26, autoAlpha: 0 },
+                    { y: 0, autoAlpha: 1, duration: 0.8, stagger: 0.09 },
+                    0.35,
+                );
+
+            const decodeNow = scope.querySelector<HTMLElement>("[data-decode-now]");
+            if (decodeNow) intro.add(decode(decodeNow), 0.7);
+
             // setTimeout still fires when rAF is throttled, so a stalled ticker
             // can never leave the hero permanently blank.
             const safety = setTimeout(() => {
                 if (intro.progress() < 1) intro.progress(1);
-            }, 2600);
+            }, 2800);
 
+            // Power-down on exit: the hero recedes rather than merely fading.
             const heroShell = scope.querySelector<HTMLElement>("#home > div");
             if (heroShell) {
                 gsap.to(heroShell, {
-                    yPercent: -8,
-                    autoAlpha: 0.25,
+                    scale: 0.94,
+                    filter: "blur(6px)",
+                    autoAlpha: 0,
                     ease: "none",
-                    scrollTrigger: { trigger: "#home", start: "top top", end: "bottom top", scrub: 0.5 },
+                    scrollTrigger: {
+                        trigger: "#home",
+                        start: "top top",
+                        end: "bottom top",
+                        scrub: 0.5,
+                    },
                 });
             }
 
-            /* ── SKILLS — rows drift left/right for the whole pass ─ */
-            claim(q("#skills .reveal")).forEach((row, i) => {
-                const dir = i % 2 === 0 ? 1 : -1;
-                // Continuous horizontal travel tied to scroll position…
-                gsap.fromTo(
-                    row,
-                    { xPercent: -6 * dir },
-                    {
-                        xPercent: 6 * dir,
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: "#skills",
-                            start: "top bottom",
-                            end: "bottom top",
-                            scrub: 0.6,
-                        },
+            /* ── SECTION HEADINGS — rule draws, title masks up ───── */
+            q("[data-heading]").forEach((header) => {
+                const rule = header.querySelector<HTMLElement>("[data-heading-rule]");
+                const title = header.querySelector<HTMLElement>("[data-decode]");
+                const meta = header.querySelector<HTMLElement>("[data-heading-label]");
+                const titleChars = title ? splitChars(title) : [];
+
+                const tl = gsap.timeline({
+                    defaults: { ease: "power3.out" },
+                    scrollTrigger: {
+                        trigger: header,
+                        start: "top 88%",
+                        // `once`, not play/reverse. Two of these headings live
+                        // inside pinned stages: a pinned element stops moving,
+                        // so a refresh re-measures it as "before start" and the
+                        // reverse fires — leaving the heading permanently blank
+                        // for the whole pinned sequence.
+                        once: true,
                     },
-                );
-                // …and a separate fade so entering and leaving both read.
-                // Different property from the scrub tween, so they compose.
-                gsap.fromTo(
-                    row,
-                    { autoAlpha: 0 },
-                    {
-                        autoAlpha: 1,
-                        duration: 0.7,
-                        ease: "power2.out",
-                        scrollTrigger: {
-                            trigger: row,
-                            start: "top 90%",
-                            end: "bottom 12%",
-                            toggleActions: "play reverse play reverse",
-                        },
-                    },
-                );
+                });
+
+                if (rule) {
+                    tl.fromTo(
+                        rule,
+                        { scaleX: 0, transformOrigin: "0 50%" },
+                        { scaleX: 1, duration: 0.9, ease: "power3.inOut" },
+                        0,
+                    );
+                }
+                if (meta) tl.fromTo(meta, { autoAlpha: 0, x: -12 }, { autoAlpha: 1, x: 0, duration: 0.5 }, 0.2);
+                if (titleChars.length) {
+                    tl.fromTo(
+                        titleChars,
+                        { yPercent: 110 },
+                        { yPercent: 0, duration: 0.8, stagger: 0.014 },
+                        0.25,
+                    );
+                }
             });
 
-            // Skew the marquee *wrappers* by scroll velocity — the tracks
-            // themselves run a CSS transform animation that an inline transform
-            // would override, stopping the marquee dead.
-            const marqueeWraps = q("#skills .marquee-track").map((t) => t.parentElement as HTMLElement);
-            if (marqueeWraps.length) {
-                ScrollTrigger.create({
-                    trigger: "#skills",
-                    start: "top bottom",
-                    end: "bottom top",
-                    onUpdate: (self) => {
-                        const skew = gsap.utils.clamp(-7, 7, self.getVelocity() / 300);
-                        gsap.to(marqueeWraps, {
-                            skewX: skew,
-                            duration: 0.5,
-                            ease: "power2.out",
-                            overwrite: "auto",
-                        });
-                    },
-                    onLeave: () => gsap.to(marqueeWraps, { skewX: 0, duration: 0.4 }),
-                    onLeaveBack: () => gsap.to(marqueeWraps, { skewX: 0, duration: 0.4 }),
+            /* ── SKILLS — pinned horizontal track ────────────────── */
+            const skillStage = scope.querySelector<HTMLElement>("[data-skill-stage]");
+            const skillTrack = scope.querySelector<HTMLElement>("[data-skill-track]");
+            const skillPanels = q<HTMLElement>("[data-skill-panel]");
+
+            if (skillStage && skillTrack && skillPanels.length) {
+                mm.add("(min-width: 1024px)", () => {
+                    // Gate the flex/max-content layout on JS being live, so a
+                    // failure leaves a readable grid rather than a clipped row.
+                    skillStage.setAttribute("data-track-ready", "");
+
+                    // Recomputed on every refresh so a resize re-derives travel.
+                    const distance = () =>
+                        Math.max(0, skillTrack.scrollWidth - window.innerWidth + 96);
+
+                    const travel = gsap.to(skillTrack, {
+                        x: () => -distance(),
+                        ease: "none",
+                        scrollTrigger: {
+                            trigger: skillStage,
+                            // Stage is viewport-tall and centres its own
+                            // content, so pin flush to the top.
+                            start: "top top",
+                            end: () => `+=${distance()}`,
+                            pin: true,
+                            scrub: 0.8,
+                            anticipatePin: 1,
+                            invalidateOnRefresh: true,
+                        },
+                    });
+
+                    // Each panel resolves as it crosses into the viewport
+                    // *horizontally*. containerAnimation re-maps the trigger's
+                    // start/end onto the track tween's own progress, so these
+                    // read against sideways travel rather than page scroll.
+                    skillPanels.forEach((panel) => {
+                        gsap.fromTo(
+                            panel,
+                            { autoAlpha: 0.25, scale: 0.93, filter: "blur(3px)" },
+                            {
+                                autoAlpha: 1,
+                                scale: 1,
+                                filter: "blur(0px)",
+                                ease: "none",
+                                scrollTrigger: {
+                                    trigger: panel,
+                                    containerAnimation: travel,
+                                    start: "left 95%",
+                                    end: "left 50%",
+                                    scrub: true,
+                                },
+                            },
+                        );
+                    });
+
+                    return () => {
+                        skillStage.removeAttribute("data-track-ready");
+                        gsap.set([skillTrack, skillPanels], { clearProps: "all" });
+                    };
+                });
+
+                // Below the pin breakpoint the panels are a plain grid, so give
+                // them the quiet entrance the rest of the page uses.
+                mm.add("(max-width: 1023px)", () => {
+                    const tweens = skillPanels.map((panel) =>
+                        gsap.fromTo(
+                            panel,
+                            { y: 30, autoAlpha: 0 },
+                            {
+                                y: 0,
+                                autoAlpha: 1,
+                                duration: 0.7,
+                                ease: "power3.out",
+                                scrollTrigger: { trigger: panel, start: "top 90%", once: true },
+                            },
+                        ),
+                    );
+                    return () => {
+                        tweens.forEach((t) => t.scrollTrigger?.kill());
+                        gsap.set(skillPanels, { clearProps: "all" });
+                    };
                 });
             }
 
-            /* ── EXPERIENCE — pinned panel deck ──────────────────── */
+            /* ── EXPERIENCE — pinned deck, blind-wipe transitions ── */
             const stage = scope.querySelector<HTMLElement>("[data-exp-stage]");
-            const expCards = claim(q<HTMLElement>("[data-exp-card]"));
-            const railFill = scope.querySelector<HTMLElement>("[data-exp-rail-fill]");
+            const expCards = q<HTMLElement>("[data-exp-card]");
+            const expNodes = q<HTMLElement>("[data-exp-node]");
 
-            // Desktop only. Pinning fights mobile's dynamic viewport, and the
-            // deck needs the height a small screen doesn't have.
-            const mm = gsap.matchMedia();
             if (stage && expCards.length > 1) {
                 mm.add("(min-width: 1024px)", () => {
-                    // Gate the absolute stacking on JS being live, so a failure
-                    // leaves a readable list rather than a pile of cards.
                     stage.setAttribute("data-deck-ready", "");
 
-                    // Size the deck to its tallest panel. A fixed height crops
-                    // the longer roles once the cards are absolutely positioned.
                     const deckEl = scope.querySelector<HTMLElement>("[data-exp-deck]");
+
+                    // Size the deck to its tallest panel, capped to whatever the
+                    // viewport has left once the heading and node rail — which
+                    // share the pinned stage — have taken their space. A fixed
+                    // height crops the longer roles now that the cards are
+                    // absolutely positioned; an uncapped one runs the card's
+                    // base off the bottom edge.
                     const fitDeck = () => {
                         if (!deckEl) return;
                         const tallest = expCards.reduce((max, card) => {
                             const panel = card.querySelector<HTMLElement>(".exp-panel");
                             return Math.max(max, panel?.scrollHeight ?? 0);
                         }, 0);
-                        if (tallest) deckEl.style.height = `${Math.ceil(tallest)}px`;
+                        if (!tallest) return;
+
+                        // Measured, not guessed: the deck is the stage's last
+                        // child, so its offset doesn't depend on the height
+                        // we're about to set.
+                        const offset =
+                            deckEl.getBoundingClientRect().top - stage.getBoundingClientRect().top;
+                        const available = window.innerHeight - offset - 32;
+                        deckEl.style.height = `${Math.ceil(Math.max(260, Math.min(tallest, available)))}px`;
                     };
                     fitDeck();
-                    // Re-measure whenever ScrollTrigger recalculates (resize, fonts).
                     ScrollTrigger.addEventListener("refreshInit", fitDeck);
 
-                    // Panels stay fully opaque and slide over one another. Cross-
-                    // fading makes both semi-transparent mid-transition, so the
-                    // outgoing role reads straight through the incoming one.
-                    gsap.set(expCards, { autoAlpha: 1, yPercent: 100, scale: 1 });
-                    gsap.set(expCards[0], { yPercent: 0 });
+                    // Each role is *drawn on* top-down rather than slid in. The
+                    // content never moves, so long copy stays readable through
+                    // the whole transition.
+                    gsap.set(expCards, { autoAlpha: 1, clipPath: "inset(0% 0% 100% 0%)" });
+                    gsap.set(expCards[0], { clipPath: "inset(0% 0% 0% 0%)" });
+
+                    const span = () => (expCards.length - 1) * window.innerHeight * 0.9;
 
                     const deck = gsap.timeline({
                         defaults: { ease: "none" },
                         scrollTrigger: {
                             trigger: stage,
+                            // Stage is viewport-tall, so pinning at the top
+                            // leaves each role centred on screen.
                             start: "top top",
-                            end: () => `+=${(expCards.length - 1) * window.innerHeight * 0.85}`,
+                            end: span,
                             pin: true,
                             scrub: 0.6,
+                            anticipatePin: 1,
                             invalidateOnRefresh: true,
+                            onUpdate: (self) => {
+                                const lit = Math.round(self.progress * (expCards.length - 1));
+                                expNodes.forEach((n, i) => {
+                                    if (i <= lit) n.setAttribute("data-on", "");
+                                    else n.removeAttribute("data-on");
+                                });
+                            },
                         },
                     });
 
                     expCards.forEach((card, i) => {
                         if (i === 0) return;
-                        // Outgoing settles back a touch; the incoming panel
-                        // slides up over it at full opacity and occludes it.
-                        deck.to(expCards[i - 1], { yPercent: -6, scale: 0.97 }, i - 1);
-                        deck.to(card, { yPercent: 0 }, i - 1);
+                        // Outgoing recedes underneath while the incoming panel
+                        // is wiped in over the top of it.
+                        deck.to(expCards[i - 1], { scale: 0.97, autoAlpha: 0.55 }, i - 1);
+                        deck.to(card, { clipPath: "inset(0% 0% 0% 0%)" }, i - 1);
                     });
-
-                    if (railFill) {
-                        gsap.fromTo(
-                            railFill,
-                            { scaleY: 0 },
-                            {
-                                scaleY: 1,
-                                ease: "none",
-                                scrollTrigger: {
-                                    trigger: stage,
-                                    start: "top top",
-                                    end: () => `+=${(expCards.length - 1) * window.innerHeight * 0.85}`,
-                                    scrub: 0.6,
-                                },
-                            },
-                        );
-                    }
 
                     return () => {
                         ScrollTrigger.removeEventListener("refreshInit", fitDeck);
@@ -215,10 +377,8 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     };
                 });
 
-                // Below the deck breakpoint the roles read as a plain list, so
-                // give them the same quiet entrance the rest of the page uses.
                 mm.add("(max-width: 1023px)", () => {
-                    expCards.forEach((card) => {
+                    const tweens = expCards.map((card) =>
                         gsap.fromTo(
                             card,
                             { y: 30, autoAlpha: 0 },
@@ -229,82 +389,146 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                                 ease: "power3.out",
                                 scrollTrigger: { trigger: card, start: "top 90%", once: true },
                             },
-                        );
-                    });
-                    return () => gsap.set(expCards, { clearProps: "all" });
+                        ),
+                    );
+                    return () => {
+                        tweens.forEach((t) => t.scrollTrigger?.kill());
+                        gsap.set(expCards, { clearProps: "all" });
+                    };
                 });
             }
 
-            /* ── EDUCATION — enter right, centre, pulse, exit right ─ */
-            const eduCards = claim(q<HTMLElement>("[data-edu-card]"));
-            if (eduCards.length) {
-                eduCards.forEach((card, i) => {
-                    // Scrubbed, so the whole journey is driven by scroll position
-                    // rather than firing once. Each card is nudged slightly later
-                    // than the last so they arrive as a cascade.
-                    const tl = gsap.timeline({
-                        defaults: { ease: "none" },
-                        scrollTrigger: {
-                            trigger: "#education",
-                            start: "top bottom",
-                            end: "bottom top",
-                            scrub: 0.6,
-                        },
-                    });
-
-                    tl.fromTo(
-                        card,
-                        { xPercent: 130, autoAlpha: 0, scale: 0.9 },
-                        { xPercent: 0, autoAlpha: 1, scale: 1, duration: 3 },
-                        i * 0.35,
-                    )
-                        .to(card, { scale: 1.09, duration: 1.2 }) // zoom in
-                        .to(card, { scale: 1, duration: 1.2 }) // zoom back out
-                        .to(card, { xPercent: 130, autoAlpha: 0, duration: 3 }); // exit right
-                });
-            }
-
-            /* ── WORKS ───────────────────────────────────────────── */
-            q("[data-work-media]").forEach((media) => {
-                gsap.fromTo(
-                    media,
-                    { clipPath: "inset(0% 0% 0% 100%)", yPercent: 8 },
-                    {
-                        clipPath: "inset(0% 0% 0% 0%)",
-                        yPercent: 0,
-                        duration: 1.1,
-                        ease: "power3.inOut",
-                        scrollTrigger: {
-                            trigger: media,
-                            start: "top 88%",
-                            end: "bottom 8%",
-                            toggleActions: "play reverse play reverse",
-                        },
+            /* ── EDUCATION — enter right → centre → zoom → exit ──── */
+            const eduCards = q<HTMLElement>("[data-edu-card]");
+            eduCards.forEach((card, i) => {
+                // Scrubbed, so the whole journey is driven by scroll position
+                // rather than firing once. Each card is nudged slightly later
+                // than the last so they arrive as a cascade.
+                const tl = gsap.timeline({
+                    defaults: { ease: "none" },
+                    scrollTrigger: {
+                        trigger: "#education",
+                        start: "top bottom",
+                        end: "bottom top",
+                        scrub: 0.6,
                     },
-                );
+                });
+
+                tl.fromTo(
+                    card,
+                    { xPercent: 130, autoAlpha: 0, scale: 0.9 },
+                    { xPercent: 0, autoAlpha: 1, scale: 1, duration: 3 },
+                    i * 0.35,
+                )
+                    .to(card, { scale: 1.09, duration: 1.2 })
+                    .to(card, { scale: 1, duration: 1.2 })
+                    .to(card, { xPercent: 130, autoAlpha: 0, duration: 3 });
             });
 
-            q("[data-parallax]").forEach((img) => {
-                gsap.fromTo(
-                    img,
-                    { yPercent: -6 },
-                    {
-                        yPercent: 6,
-                        ease: "none",
-                        scrollTrigger: {
-                            trigger: img.closest("[data-parallax-wrap]") ?? img,
-                            start: "top bottom",
-                            end: "bottom top",
-                            scrub: 0.5,
+            /* ── WORKS — opposing columns + scan sweep unmask ────── */
+            q("[data-work-row]").forEach((row) => {
+                const media = row.querySelector<HTMLElement>("[data-work-media]");
+                const copy = row.querySelector<HTMLElement>("[data-work-copy]");
+                const sweep = row.querySelector<HTMLElement>("[data-work-sweep]");
+                const img = row.querySelector<HTMLElement>("[data-parallax]");
+
+                // The two columns travel in opposite directions for the whole
+                // pass — the row reads as two planes at different depths.
+                if (media) {
+                    gsap.fromTo(
+                        media,
+                        { yPercent: 7 },
+                        {
+                            yPercent: -7,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: row,
+                                start: "top bottom",
+                                end: "bottom top",
+                                scrub: 0.5,
+                            },
                         },
-                    },
-                );
+                    );
+
+                    // Unmask animates clipPath only — a second transform tween
+                    // here would fight the parallax above.
+                    //
+                    // Scrubbed, not toggled. A toggleActions version stalled a
+                    // fraction of a frame in and never resumed, leaving every
+                    // project image permanently masked; a scrubbed value is a
+                    // pure function of scroll position, so there is no play/
+                    // pause state that can get stuck. It also re-masks on the
+                    // way back up, which is the behaviour we want anyway.
+                    gsap.fromTo(
+                        media,
+                        { clipPath: "inset(0% 0% 0% 100%)" },
+                        {
+                            clipPath: "inset(0% 0% 0% 0%)",
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: row,
+                                start: "top 92%",
+                                end: "top 45%",
+                                scrub: 0.6,
+                            },
+                        },
+                    );
+                }
+
+                if (copy) {
+                    gsap.fromTo(
+                        copy,
+                        { yPercent: -5 },
+                        {
+                            yPercent: 5,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: row,
+                                start: "top bottom",
+                                end: "bottom top",
+                                scrub: 0.5,
+                            },
+                        },
+                    );
+                }
+
+                if (sweep) {
+                    gsap.fromTo(
+                        sweep,
+                        { top: "-30%", autoAlpha: 0 },
+                        {
+                            top: "100%",
+                            autoAlpha: 1,
+                            duration: 1.2,
+                            ease: "power2.inOut",
+                            scrollTrigger: { trigger: row, start: "top 80%", once: true },
+                            onComplete: () => gsap.set(sweep, { autoAlpha: 0 }),
+                        },
+                    );
+                }
+
+                // Slow inner drift so the image isn't locked to its frame.
+                if (img) {
+                    gsap.fromTo(
+                        img,
+                        { yPercent: -5 },
+                        {
+                            yPercent: 5,
+                            ease: "none",
+                            scrollTrigger: {
+                                trigger: row,
+                                start: "top bottom",
+                                end: "bottom top",
+                                scrub: 0.6,
+                            },
+                        },
+                    );
+                }
             });
 
             /* ── FOOTER ──────────────────────────────────────────── */
             const address = scope.querySelector<HTMLElement>("footer a.display");
             if (address) {
-                claim([address]);
                 gsap.fromTo(
                     address,
                     { yPercent: 40, autoAlpha: 0 },
@@ -318,52 +542,46 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 );
             }
 
-            /* ── GENERIC (headings and anything not claimed above) ─ */
-            allReveals
-                .filter((el) => !claimed.has(el))
-                .forEach((el) => {
-                    const dir = el.classList.contains("reveal-left")
-                        ? { x: -50 }
-                        : el.classList.contains("reveal-right")
-                          ? { x: 50 }
-                          : { y: 34 };
-                    gsap.fromTo(
-                        el,
-                        { ...dir, autoAlpha: 0 },
-                        {
-                            x: 0,
-                            y: 0,
-                            autoAlpha: 1,
-                            duration: 0.85,
-                            ease: "power3.out",
-                            scrollTrigger: {
-                                trigger: el,
-                                start: "top 90%",
-                                end: "bottom 8%",
-                                toggleActions: "play reverse play reverse",
-                            },
+            /* ── GENERIC REVEALS (anything not claimed above) ─────── */
+            q(".reveal, .reveal-left, .reveal-right").forEach((el) => {
+                const from = el.classList.contains("reveal-left")
+                    ? { x: -50 }
+                    : el.classList.contains("reveal-right")
+                      ? { x: 50 }
+                      : { y: 34 };
+                gsap.fromTo(
+                    el,
+                    { ...from, autoAlpha: 0 },
+                    {
+                        x: 0,
+                        y: 0,
+                        autoAlpha: 1,
+                        duration: 0.85,
+                        ease: "power3.out",
+                        scrollTrigger: {
+                            trigger: el,
+                            start: "top 90%",
+                            end: "bottom 8%",
+                            toggleActions: "play reverse play reverse",
                         },
-                    );
-                });
+                    },
+                );
+            });
 
-            /* ── COUNTERS ────────────────────────────────────────── */
-            q("[data-counter]").forEach((el) => {
-                const raw = el.getAttribute("data-counter") || el.innerText;
-                const match = raw.match(/^(\d+)(.*)$/);
-                if (!match) return;
-                const target = parseInt(match[1], 10);
-                const suffix = match[2] || "";
-                const obj = { val: 0 };
-                gsap.to(obj, {
-                    val: target,
-                    duration: 1.8,
-                    ease: "power2.out",
-                    scrollTrigger: { trigger: el, start: "top 90%", once: true },
-                    onUpdate: () => {
-                        el.innerText = `${Math.floor(obj.val)}${suffix}`;
+            /* ── TELEMETRY READOUT — scroll position + section ────── */
+            const bar = scope.ownerDocument.querySelector<HTMLElement>("[data-readout-bar]");
+            const pct = scope.ownerDocument.querySelector<HTMLElement>("[data-readout-pct]");
+            if (bar || pct) {
+                gsap.set(bar, { scaleX: 0 });
+                ScrollTrigger.create({
+                    start: 0,
+                    end: "max",
+                    onUpdate: (self) => {
+                        if (bar) gsap.set(bar, { scaleX: self.progress });
+                        if (pct) pct.textContent = `${Math.round(self.progress * 100)}`.padStart(3, "0");
                     },
                 });
-            });
+            }
 
             const raf = requestAnimationFrame(() => ScrollTrigger.refresh());
 
@@ -381,8 +599,8 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 clearTimeout(safety);
                 cancelAnimationFrame(raf);
                 document.removeEventListener("visibilitychange", onVisible);
-                // The pin outlives useGSAP's own revert if the media context
-                // isn't torn down explicitly.
+                // Pins outlive useGSAP's own revert unless the media context is
+                // torn down explicitly.
                 mm.revert();
             };
         },

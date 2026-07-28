@@ -1,76 +1,72 @@
-"use client";
-
 import { FC } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
 
 export interface ISkills {}
 
-/** Repeat items enough times to fill any viewport so the loop never shows a gap. */
-const MarqueeRow: FC<{ items: string[]; reverse?: boolean; speed?: number }> = ({
-    items,
-    reverse = false,
-    speed = 30,
-}) => {
-    const repeated = Array(6).fill(items).flat();
-
-    return (
-        <div
-            aria-label={items.join(", ")}
-            className="relative overflow-hidden py-1"
-            style={{
-                maskImage:
-                    "linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent)",
-                WebkitMaskImage:
-                    "linear-gradient(to right, transparent, black 40px, black calc(100% - 40px), transparent)",
-            }}
-        >
-            <div
-                className="marquee-track"
-                data-reverse={reverse || undefined}
-                style={{ "--marquee-duration": `${speed}s` } as React.CSSProperties}
-            >
-                {repeated.map((item, i) => (
-                    <span className="marquee-pill shrink-0" key={`${item}-${i}`}>
-                        {item}
-                    </span>
-                ))}
-            </div>
-        </div>
-    );
-};
-
+/**
+ * Horizontal track. On desktop the section pins and these panels travel
+ * sideways with scroll; below that breakpoint the same markup is a plain
+ * responsive grid, so it stays readable with JS off.
+ */
 const Skills: FC<ISkills> = () => {
     const { skillGroups } = info;
     const total = skillGroups.reduce((n, g) => n + g.items.length, 0);
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28" id="skills">
-            <SectionHeading
-                label="Capabilities"
-                note={`${total} tools · ${skillGroups.length} disciplines`}
-                title="What I work with"
-            />
+        <section className="py-20 sm:py-28" id="skills">
+            {/* Heading and track are pinned together — pinning the track alone
+                scrolls the heading off the screen while the panels travel, so
+                the moving row loses the label that explains it. */}
+            <div className="skill-stage" data-skill-stage>
+                <div className="mx-auto w-full max-w-6xl px-5 sm:px-8">
+                    <SectionHeading
+                        index="01"
+                        label="Capabilities"
+                        note={`${total} tools · ${skillGroups.length} disciplines`}
+                        title="What I work with"
+                    />
+                </div>
 
-            <div className="mt-12">
-                {skillGroups.map((group, i) => (
+                {/* Padding lives on the track, not the section, so the first
+                    panel still lines up with the heading before it travels. */}
+                <div className="skill-viewport mt-10">
                     <div
-                        className="reveal grid gap-3 border-t border-line py-5 sm:grid-cols-[11rem_minmax(0,1fr)] sm:items-center sm:gap-8"
-                        key={group.label}
+                        className="skill-track px-5 sm:grid-cols-2 sm:px-8 lg:grid-cols-3"
+                        data-skill-track
                     >
-                        {/* Labelled index column gives the moving track something to
-                            read against — the discipline is the information. */}
-                        <div className="flex items-baseline gap-3 sm:flex-col sm:items-start sm:gap-1">
-                            <p className="label text-fg">{group.label}</p>
-                            <p className="font-mono text-[0.65rem] text-faint">
-                                {String(group.items.length).padStart(2, "0")} tools
-                            </p>
-                        </div>
+                        {skillGroups.map((group, i) => (
+                            <article
+                                className="skill-panel"
+                                data-index={String(i + 1).padStart(2, "0")}
+                                data-skill-panel
+                                key={group.label}
+                            >
+                                <div className="flex items-baseline justify-between gap-4">
+                                    <h3 className="display text-2xl text-fg">{group.label}</h3>
+                                    <span className="digit text-[0.65rem] text-faint">
+                                        {String(group.items.length).padStart(2, "0")}
+                                    </span>
+                                </div>
 
-                        <MarqueeRow items={group.items} reverse={i % 2 === 1} speed={26 + i * 4} />
+                                <ul className="mt-6">
+                                    {group.items.map((item, j) => (
+                                        <li className="skill-item" key={item}>
+                                            <span className="idx">
+                                                {String(j + 1).padStart(2, "0")}
+                                            </span>
+                                            <span>{item}</span>
+                                        </li>
+                                    ))}
+                                </ul>
+
+                                <span className="label mt-6 block border-t border-line pt-4 text-accent">
+                                    {group.label.slice(0, 3)}—{String(i + 1).padStart(2, "0")}
+                                </span>
+                            </article>
+                        ))}
                     </div>
-                ))}
-                <div className="border-t border-line" />
+                </div>
             </div>
         </section>
     );

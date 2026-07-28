@@ -159,6 +159,17 @@ export default function Page() {
                 <ThemeToggle />
             </div>
 
+            {/* Telemetry readout — scroll position, driven by HomeMotion. */}
+            <div aria-hidden className="readout">
+                <span>SCROLL</span>
+                <span className="readout-bar">
+                    <span data-readout-bar />
+                </span>
+                <span className="text-fg" data-readout-pct>
+                    000
+                </span>
+            </div>
+
             <NavBar />
 
             <HomeMotion>
@@ -169,16 +180,23 @@ export default function Page() {
                 <Works />
 
                 <footer className="mx-auto w-full max-w-6xl px-5 pb-32 pt-16 sm:px-8 sm:pb-24 sm:pt-20">
-                    <div className="reveal border-t border-line pt-10">
-                        <p className="label">Get in touch</p>
+                    <div className="border-t border-line pt-10">
+                        <div className="flex items-center gap-4">
+                            <span className="digit text-xs text-accent">05</span>
+                            <span className="section-rule flex-1" />
+                            <span className="label">End of transmission</span>
+                        </div>
+
+                        <p className="label mt-8">Get in touch</p>
                         <a
-                            className="display link-wipe mt-5 inline-block text-[clamp(1.75rem,5vw,3.25rem)] text-fg"
+                            className="display link-wipe mt-4 inline-block text-[clamp(1.75rem,5vw,3.25rem)] text-fg"
                             href="mailto:nazmul2018s@gmail.com"
                         >
                             nazmul2018s@gmail.com
                         </a>
+
                         <div className="mt-10 flex flex-wrap items-center justify-between gap-4 border-t border-line pt-6">
-                            <p className="label">Dhaka, Bangladesh</p>
+                            <p className="label">Dhaka, Bangladesh · 23.8103° N</p>
                             <p className="label">© {new Date().getFullYear()} Nazmul Haque</p>
                         </div>
                     </div>

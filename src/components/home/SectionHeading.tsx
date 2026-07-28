@@ -1,22 +1,33 @@
 import { FC, ReactNode } from "react";
 
 export interface ISectionHeading {
+    /** Two-digit section number shown in the rule, e.g. "02". */
+    index: string;
     label: string;
     title: string;
     note?: ReactNode;
 }
 
-const SectionHeading: FC<ISectionHeading> = ({ label, title, note }) => (
-    <header className="reveal">
-        <div className="section-divider mb-8" />
-        <div className="flex flex-wrap items-baseline justify-between gap-x-6 gap-y-2">
-            <p className="label flex items-center gap-2">
-                <span className="inline-block h-1.5 w-1.5 rounded-full bg-[var(--accent)]" />
-                {label}
-            </p>
-            {note && <p className="label">{note}</p>}
+const SectionHeading: FC<ISectionHeading> = ({ index, label, title, note }) => (
+    <header data-heading>
+        <div className="flex items-center gap-4" data-heading-rule>
+            <span className="digit text-xs text-accent">{index}</span>
+            <span className="section-rule flex-1" />
+            {note && <span className="label whitespace-nowrap">{note}</span>}
         </div>
-        <h2 className="display mt-5 text-[clamp(2rem,6vw,4rem)] text-fg">{title}</h2>
+
+        <p className="label mt-6 flex items-center gap-2" data-heading-label>
+            {label}
+        </p>
+
+        {/* data-decode is picked up by the motion controller, which scrambles
+            the characters back into place as the heading enters. */}
+        <h2
+            className="display mt-3 text-[clamp(2.25rem,7vw,4.5rem)] text-fg"
+            data-decode
+        >
+            {title}
+        </h2>
     </header>
 );
 
