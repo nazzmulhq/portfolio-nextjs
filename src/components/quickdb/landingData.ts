@@ -28,6 +28,7 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["17", "Paste playground"],
     ["18", "7 records detected"],
     ["19", "7 rows staged — ⌘S to save"],
+    ["20", "Saved — 129 customers in the table"],
 ] as const;
 
 /**
@@ -54,6 +55,9 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     17: "pasteBtn",
     18: "importBtn",
     19: "importBtn",
+    // Nothing left to click once the import lands — cursor stays parked at
+    // Save, which is greyed out now that there's nothing pending.
+    20: "saveBtn",
 };
 
 export interface TypedField {
@@ -264,11 +268,23 @@ export const TOASTS: Record<number, string> = {
     9: "Schema loaded — 8 tables in classicmodels.",
     13: "4 cells updated in customers.",
     19: "Added 7 rows to the table preview",
+    20: "7 rows saved to customers.",
 };
 
-/** Scroll progress at which step 1 begins, and the span each step occupies. */
+/** Total steps in the story — STEPS.length would work too, but the scroll-
+ *  span math below (P0 + STEP_COUNT * PSTEP) reads clearer spelled out. */
+export const STEP_COUNT = 20;
+
+/**
+ * Scroll progress at which step 1 begins, and the span each step occupies.
+ * PSTEP is (1 - P0) / STEP_COUNT, so the last step's window ends right at
+ * the scrollable range's edge (p maxes at 1.0) with no dead scroll room
+ * after it and no step clipped short before it. Recompute this if
+ * STEP_COUNT changes — it does not derive itself, to keep the actual
+ * per-step scroll distance easy to eyeball from the two literals.
+ */
 export const P0 = 0.11;
-export const PSTEP = 0.0463;
+export const PSTEP = 0.0445;
 
 /** The screen is laid out in a fixed 1920-wide space and scaled to fit. */
 export const DESIGN_W = 1920;

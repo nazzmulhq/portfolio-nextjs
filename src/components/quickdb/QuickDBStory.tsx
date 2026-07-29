@@ -603,7 +603,10 @@ const QuickDBStory: FC = () => {
     // Not just s === 15: the payments tab stays mounted into the first part
     // of step 16 so there's something for the cursor to close (see tick()).
     const pay = paymentsOpen;
-    const tail = s === 19;
+    // Step 20 is the save landing: same tail rows as step 19 (the pasted
+    // records are still the last thing in the table), but now committed.
+    const tail = s === 19 || s === 20;
+    const imported = s === 20;
     // Not just s >= 10: the tab stays closed into the first part of step 10
     // so the cursor visibly clicks the customers row first (see tick()).
     const grid = tableOpen;
@@ -623,9 +626,14 @@ const QuickDBStory: FC = () => {
     const rows = src.map((c, i) => {
         const swap = filled && i >= 1 && i <= 4;
         const isEditRow = s === 10 && !tail && i === EDIT_ROW;
+        // The pasted rows land without an assigned customerNumber (the paste
+        // preview's "Auto-generate IDs" checkbox is what fills these in) —
+        // blank through step 19's "staged" view, sequential once step 20
+        // shows the committed table. i=10 is TAIL's first ID-less row.
+        const num = c[0] === "" && imported ? 497 + (i - 10) : c[0];
         return {
             i: tail ? 113 + i : i + 1,
-            num: c[0],
+            num,
             name: c[1],
             last: isEditRow && editShowingValue ? EDIT_VALUE : c[2],
             lastBg: isEditRow && editDirty ? "rgba(226,177,60,.16)" : "transparent",
