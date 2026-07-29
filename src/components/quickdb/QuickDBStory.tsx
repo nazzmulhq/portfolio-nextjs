@@ -91,6 +91,15 @@ const easeInOutCubic = (t: number) =>
 const CELL_COLS = "56px 200px 230px 190px 190px 190px 240px 210px 150px";
 const PAY_COLS = "56px 420px 320px 390px 260px";
 
+/**
+ * Pointer height in the screen's 1920-wide design space, with the width
+ * derived so the glyph keeps its 13:19 aspect. The mock's body text is 13px
+ * in that space; much past this and the pointer stops reading as part of the
+ * window and starts reading as an overlay sitting on top of it.
+ */
+const CURSOR_H = 20;
+const CURSOR_W = (13 / 19) * CURSOR_H;
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | null) => {
@@ -1443,10 +1452,10 @@ const QuickDBStory: FC = () => {
                             }}
                         >
                             <svg
-                                height="25"
+                                height={CURSOR_H}
                                 style={{ display: "block", overflow: "visible" }}
                                 viewBox="0 0 13 19"
-                                width="17"
+                                width={CURSOR_W}
                             >
                                 <path
                                     d="M0 0 L0 17 L4.4 12.9 L7.1 18.9 L9.9 17.6 L7.3 11.8 L12.8 11.6 Z"
