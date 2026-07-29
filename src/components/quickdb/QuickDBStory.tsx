@@ -76,6 +76,7 @@ type RefKey =
     | "fkRow"
     | "fkChip"
     | "filterVal"
+    | "gridWrap"
     | "toast"
     | "toastText"
     | "extSearch"
@@ -192,11 +193,24 @@ const QuickDBStory: FC = () => {
                     }
                 }
             }
-            // Step 11 tracks the growing selection rather than a fixed node.
+            // Step 11 tracks the growing selection rather than a fixed node:
+            // the drag handle rides the bottom-right corner of the range box,
+            // which is n rows tall and offset by the grid's header.
+            //
+            // The grid's own top is measured, not assumed. The design hardcoded
+            // 204 here, which was exactly the chrome above it (28 menu + 38
+            // window + 36 tabs + 60 toolbar + 42 filter) — so any change to a
+            // toolbar's height silently put the cursor in the wrong place.
             if (s === 11) {
                 const n = e.selN || 1;
-                e.aim = { x: 1496, y: 204 + 34 + n * 31 - 6 };
-                return;
+                const wrap = el("gridWrap");
+                if (wrap) {
+                    const sr = scr.getBoundingClientRect();
+                    const k = sr.width / DESIGN_W || 1;
+                    const gridTop = (wrap.getBoundingClientRect().top - sr.top) / k;
+                    e.aim = { x: 1496, y: gridTop + 34 + n * 31 - 6 };
+                    return;
+                }
             }
 
             const t = TARGETS[s];
@@ -1257,7 +1271,10 @@ const QuickDBStory: FC = () => {
                                         />
                                         <FilterBar filterOn={pay} filterValRef={set("filterVal")} />
 
-                                        <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+                                        <div
+                                            ref={set("gridWrap")}
+                                            style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}
+                                        >
                                             {!pay && (
                                                 <div>
                                                     <div
@@ -1877,32 +1894,72 @@ const ExtensionPane: FC<{ step: number; installBtnRef: (el: HTMLElement | null) 
     </div>
 );
 
+/** Box-with-arrow mark on the CSV / JSON export actions. */
+const ExportGlyph: FC = () => (
+    <svg
+        fill="none"
+        height="12"
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.6"
+        viewBox="0 0 24 24"
+        width="12"
+    >
+        <path d="M14 4h6v6M20 4l-8 8" />
+        <path d="M18 14.5V19a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 19V7.5A1.5 1.5 0 0 1 5 6h4.5" />
+    </svg>
+);
+
 const GridToolbar: FC<{
     changes: number;
     pasteActive: boolean;
     pasteBtnRef: (el: HTMLElement | null) => void;
     saveBtnRef: (el: HTMLElement | null) => void;
 }> = ({ changes, pasteActive, pasteBtnRef, saveBtnRef }) => (
+    // One row, not two stacked pairs: the history buttons sit side by side and
+    // Refresh / Edit Table run inline, matching the product's own toolbar.
+    //
+    // nowrap + flex-shrink:0 on every group matters here. Inline, the row's
+    // natural width lands within a few px of the editor pane, and flex's
+    // default shrinking broke each label onto two lines ("↻" over "Refresh").
+    // The hint is the one flexible item, so any shortfall truncates there.
     <div
         style={{
-            height: 60,
+            height: 46,
             flex: "none",
             display: "flex",
             alignItems: "center",
             padding: "0 14px",
             borderBottom: `1px solid ${C.line}`,
             background: C.panel,
+            whiteSpace: "nowrap",
         }}
     >
-        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginRight: 22 }}>
-            <div style={{ width: 19, height: 19, borderRadius: "50%", border: `1.4px solid ${C.dark}` }} />
-            <div style={{ width: 19, height: 19, borderRadius: "50%", border: `1.4px solid ${C.dark}`, background: "#2a2a2a" }} />
+        <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 20, flexShrink: 0 }}>
+            {["↺", "↻"].map((g) => (
+                <span
+                    key={g}
+                    style={{
+                        width: 20,
+                        height: 20,
+                        borderRadius: "50%",
+                        border: `1.4px solid ${C.line3}`,
+                        display: "grid",
+                        placeItems: "center",
+                        fontSize: 11,
+                        color: C.dark,
+                    }}
+                >
+                    {g}
+                </span>
+            ))}
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginRight: 24, fontSize: 13, color: C.textDim }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>↻ Refresh</div>
-            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>✎ Edit Table</div>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 13, color: C.textDim, flexShrink: 0 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>↻ Refresh</span>
+            <span style={{ display: "flex", alignItems: "center", gap: 7 }}>✎ Edit Table</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: C.textDim }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, marginLeft: 22, fontSize: 13, color: C.textDim, flexShrink: 0 }}>
             <span>＋ Add</span>
             <span
                 ref={pasteBtnRef}
@@ -1918,7 +1975,7 @@ const GridToolbar: FC<{
             <span style={{ color: C.dark }}>⧉ Clone</span>
             <span style={{ color: C.dark }}>🗑 Delete</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: 26, fontSize: 13 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8, marginLeft: 22, fontSize: 13, flexShrink: 0 }}>
             {changes > 0 ? (
                 <>
                     <span
@@ -1937,28 +1994,49 @@ const GridToolbar: FC<{
                         Save
                         <span style={{ background: "#1b1b1b", color: "#fff", borderRadius: 9, padding: "0 6px", fontSize: 11 }}>{changes}</span>
                     </span>
-                    <span style={{ color: C.text }}>Discard</span>
+                    <span style={{ color: C.text, padding: "4px 10px" }}>Discard</span>
                 </>
             ) : (
-                <span style={{ display: "flex", gap: 14, color: C.dark }}>
-                    <span>Save</span>
-                    <span>Discard</span>
-                </span>
+                // Disabled, but still shaped like the buttons they become once
+                // there are edits to commit.
+                ["Save", "Discard"].map((t) => (
+                    <span
+                        key={t}
+                        style={{ padding: "4px 10px", borderRadius: 3, background: "#252525", color: C.dark }}
+                    >
+                        {t}
+                    </span>
+                ))
             )}
         </div>
-        <div style={{ display: "flex", marginLeft: 26, border: `1px solid ${C.line3}`, borderRadius: 3, overflow: "hidden", fontSize: 13 }}>
-            <span style={{ padding: "4px 12px", background: C.line3, color: "#fff" }}>Table</span>
+        <div style={{ display: "flex", marginLeft: 22, border: `1px solid ${C.line3}`, borderRadius: 4, overflow: "hidden", fontSize: 13, flexShrink: 0 }}>
+            <span style={{ padding: "4px 12px", background: "#3f3f3f", color: "#fff" }}>Table</span>
             {["Transpose", "Text", "Tree"].map((t) => (
                 <span key={t} style={{ padding: "4px 12px", color: C.textDim }}>
                     {t}
                 </span>
             ))}
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 18, marginLeft: 26, fontSize: 13, color: C.textDim }}>
-            <span>⇱ CSV</span>
-            <span>⇱ JSON</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, marginLeft: 22, fontSize: 13, color: C.textDim, flexShrink: 0 }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ExportGlyph />
+                CSV
+            </span>
+            <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                <ExportGlyph />
+                JSON
+            </span>
         </div>
-        <div style={{ marginLeft: 22, fontSize: 11.5, color: C.faint, whiteSpace: "nowrap" }}>
+        <div
+            style={{
+                marginLeft: 18,
+                minWidth: 0,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                fontSize: 11,
+                color: C.faint,
+            }}
+        >
             Click Edit | Drag Select | Ctrl+S Save | Ctrl+N Add | Ctrl+G Go To Row
         </div>
     </div>
