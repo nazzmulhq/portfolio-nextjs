@@ -45,6 +45,9 @@ const C = {
     bluePale: "#7cc4f5",
     amber: "#e2b13c",
     amberPale: "#f5cf6a",
+    /** Focus ring on an active filter clause — dimmer than --amber, which is
+        reserved for dirty-cell and key highlights inside the grid. */
+    amberLine: "#c8862c",
     green: "#a8cf8f",
     cell: "#d4d4d4",
 } as const;
@@ -1961,18 +1964,35 @@ const GridToolbar: FC<{
     </div>
 );
 
+const Funnel: FC<{ size?: number }> = ({ size = 13 }) => (
+    <svg
+        fill="none"
+        height={size}
+        stroke="currentColor"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        strokeWidth="1.7"
+        viewBox="0 0 24 24"
+        width={size}
+    >
+        <path d="M21.5 3.5h-19l7.6 9v6.2l3.8 1.8v-8z" />
+    </svg>
+);
+
 const FilterBar: FC<{ filterOn: boolean; filterValRef: (el: HTMLElement | null) => void }> = ({
     filterOn,
     filterValRef,
 }) => {
-    const seg: CSSProperties = {
-        height: 26,
+    // One amber ring around the whole clause with grey dividers inside it,
+    // rather than a border per segment — the row reads as a single active
+    // filter that way, which is what the ring is signalling.
+    const divider: CSSProperties = {
         display: "flex",
         alignItems: "center",
-        gap: 24,
+        gap: 20,
         padding: "0 9px",
-        border: `1px solid ${C.line3}`,
-        background: C.raised,
+        borderRight: `1px solid ${C.line3}`,
+        whiteSpace: "nowrap",
     };
     return (
         <div
@@ -1981,48 +2001,80 @@ const FilterBar: FC<{ filterOn: boolean; filterValRef: (el: HTMLElement | null) 
                 flex: "none",
                 display: "flex",
                 alignItems: "center",
-                gap: 12,
+                gap: 14,
                 padding: "0 14px",
                 borderBottom: `1px solid ${C.line}`,
                 background: C.panel,
             }}
         >
             {filterOn && (
-                <div style={{ display: "flex", alignItems: "center", fontSize: 12.5, color: C.text }}>
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "stretch",
+                        height: 28,
+                        border: `1px solid ${C.amberLine}`,
+                        borderRadius: 4,
+                        overflow: "hidden",
+                        background: C.raised,
+                        fontSize: 12.5,
+                        color: C.text,
+                    }}
+                >
                     <span
                         style={{
-                            width: 26,
-                            height: 26,
+                            width: 30,
                             display: "grid",
                             placeItems: "center",
-                            border: `1px solid ${C.line3}`,
-                            borderRight: "none",
-                            background: C.raised,
-                            color: C.blueLight,
+                            borderRight: `1px solid ${C.line3}`,
                         }}
                     >
-                        ✓
+                        <span
+                            style={{
+                                width: 13,
+                                height: 13,
+                                display: "grid",
+                                placeItems: "center",
+                                border: `1.5px solid ${C.amberLine}`,
+                                borderRadius: 2,
+                                fontSize: 9,
+                                lineHeight: 1,
+                                color: C.textStrong,
+                            }}
+                        >
+                            ✓
+                        </span>
                     </span>
-                    <span style={seg}>
+                    <span style={divider}>
                         customerNumber…<span style={{ color: C.faint }}>⌄</span>
                     </span>
-                    <span style={{ ...seg, borderLeft: "none" }}>
+                    {/* "=" not the reference shot's "contains": step 15's caption
+                        reads "payments where customerNumber = 121", and the grid
+                        below is an equality match on 121. */}
+                    <span style={divider}>
                         =<span style={{ color: C.faint }}>⌄</span>
                     </span>
                     <span
                         ref={filterValRef}
                         style={{
-                            height: 26,
                             width: 150,
                             display: "flex",
                             alignItems: "center",
                             padding: "0 9px",
-                            border: `1px solid ${C.line3}`,
-                            borderLeft: "none",
-                            background: C.raised,
                         }}
                     >
-                        121<span style={{ marginLeft: "auto", color: C.faint }}>✕</span>
+                        121
+                    </span>
+                    <span
+                        style={{
+                            width: 28,
+                            display: "grid",
+                            placeItems: "center",
+                            color: C.faint,
+                            fontSize: 12,
+                        }}
+                    >
+                        ✕
                     </span>
                 </div>
             )}
@@ -2031,48 +2083,56 @@ const FilterBar: FC<{ filterOn: boolean; filterValRef: (el: HTMLElement | null) 
                     display: "flex",
                     alignItems: "center",
                     gap: 7,
-                    height: 26,
-                    padding: "0 10px",
-                    border: `1px solid ${C.line3}`,
-                    borderRadius: 3,
                     fontSize: 12.5,
                     color: C.textDim,
                 }}
             >
-                ⚟ Add filter
+                <Funnel />
+                Add filter
             </div>
-            {filterOn && (
-                <div
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", fontSize: 12.5 }}>
+                <span
                     style={{
                         display: "flex",
-                        alignItems: "center",
-                        gap: 7,
-                        height: 26,
-                        padding: "0 10px",
+                        alignItems: "stretch",
+                        height: 28,
                         border: `1px solid ${C.line3}`,
-                        borderRadius: 3,
-                        fontSize: 11.5,
-                        color: C.textDim,
-                        lineHeight: 1.1,
+                        borderRadius: 4,
+                        overflow: "hidden",
+                        background: C.raised,
                     }}
                 >
-                    ⚟ 4 /<br />
-                    273
-                </div>
-            )}
-            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", fontSize: 12.5 }}>
-                <span style={{ height: 26, width: 150, display: "flex", alignItems: "center", padding: "0 9px", border: `1px solid ${C.line3}`, background: C.raised, color: C.faint }}>
-                    Go to row
-                </span>
-                <span style={{ height: 26, width: 44, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${C.line3}`, borderLeft: "none", background: C.raised, color: C.faint }}>
-                    #
-                </span>
-                <span style={{ height: 26, padding: "0 12px", display: "flex", alignItems: "center", border: `1px solid ${C.line3}`, borderLeft: "none", background: "#2a2a2a", color: C.text }}>
-                    GO
+                    <span style={{ width: 150, display: "flex", alignItems: "center", padding: "0 9px", color: C.faint }}>
+                        Go to row
+                    </span>
+                    <span
+                        style={{
+                            width: 44,
+                            display: "flex",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderLeft: `1px solid ${C.line3}`,
+                            color: C.faint,
+                        }}
+                    >
+                        #
+                    </span>
+                    <span
+                        style={{
+                            padding: "0 12px",
+                            display: "flex",
+                            alignItems: "center",
+                            borderLeft: `1px solid ${C.line3}`,
+                            background: "#2a2a2a",
+                            color: C.text,
+                        }}
+                    >
+                        GO
+                    </span>
                 </span>
                 <span
                     style={{
-                        height: 26,
+                        height: 28,
                         width: 260,
                         display: "flex",
                         alignItems: "center",
@@ -2080,6 +2140,7 @@ const FilterBar: FC<{ filterOn: boolean; filterValRef: (el: HTMLElement | null) 
                         padding: "0 9px",
                         marginLeft: 16,
                         border: `1px solid ${C.line3}`,
+                        borderRadius: 4,
                         background: C.raised,
                         color: C.faint,
                     }}
