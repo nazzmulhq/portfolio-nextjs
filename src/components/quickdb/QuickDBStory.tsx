@@ -123,6 +123,17 @@ const CLOSE_AT = 0.66;
  */
 const OPEN_AT = 0.66;
 
+/**
+ * Per-frame lerp factor driving the cursor toward its aim point — the
+ * standard "ease toward a target" pattern (newPos += (aim - pos) * GLIDE_EASE
+ * each frame), so travel naturally decelerates into the target rather than
+ * arriving at a constant speed and stopping abruptly. Lower is slower: at
+ * 0.18 a full-width traverse settled in ~40 frames (~650ms); at 0.11 the same
+ * traverse takes ~65 frames (~1.1s), which reads as a deliberate move across
+ * the window rather than a snap.
+ */
+const GLIDE_EASE = 0.11;
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | null) => {
@@ -253,8 +264,8 @@ const QuickDBStory: FC = () => {
             }
             const dx = e.aim.x - e.cx;
             const dy = e.aim.y - e.cy;
-            e.cx += dx * 0.18;
-            e.cy += dy * 0.18;
+            e.cx += dx * GLIDE_EASE;
+            e.cy += dy * GLIDE_EASE;
             const near = Math.abs(dx) < 24 && Math.abs(dy) < 24;
             // A brief dip while parked reads as the click. Shallower than the
             // dot's 0.62: an arrow shrinking that far reads as broken rather
@@ -1511,7 +1522,15 @@ const QuickDBStory: FC = () => {
                             left/top can be the aim point directly and the scale
                             pulse pivots on the tip — no centring offset, unlike the
                             dot this replaces. overflow:visible lets the outline
-                            bleed past the viewBox at the tip. */}
+                            bleed past the viewBox at the tip.
+
+                            Position (left/top) is written every frame by the JS
+                            glide loop, which already eases — a CSS transition on
+                            those would fight it with a second, competing lag. The
+                            click-pulse (transform: scale) is the opposite: it's a
+                            two-state flip written directly with no easing of its
+                            own, which read as a snap. Transitioning transform only
+                            smooths that dip without touching the glide. */}
                         <div
                             aria-hidden
                             ref={set("cur")}
@@ -1522,6 +1541,7 @@ const QuickDBStory: FC = () => {
                                 opacity: 0,
                                 pointerEvents: "none",
                                 transformOrigin: "0 0",
+                                transition: "transform 0.16s ease-out",
                                 filter: "drop-shadow(0 3px 7px rgba(0,0,0,.7))",
                             }}
                         >
@@ -1968,23 +1988,29 @@ const GridToolbar: FC<{
         }}
     >
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 20, flexShrink: 0 }}>
-            {["↺", "↻"].map((g) => (
-                <span
-                    key={g}
-                    style={{
-                        width: 20,
-                        height: 20,
-                        borderRadius: "50%",
-                        border: `1.4px solid ${C.line3}`,
-                        display: "grid",
-                        placeItems: "center",
-                        fontSize: 11,
-                        color: C.dark,
-                    }}
-                >
-                    {g}
-                </span>
-            ))}
+            {/* Undo lights up once there's something to undo, matching the
+                real extension; redo stays dim throughout the story since
+                nothing here is ever undone. */}
+            {["↺", "↻"].map((g, i) => {
+                const active = i === 0 && changes > 0;
+                return (
+                    <span
+                        key={g}
+                        style={{
+                            width: 20,
+                            height: 20,
+                            borderRadius: "50%",
+                            border: `1.4px solid ${active ? C.blueLight : C.line3}`,
+                            display: "grid",
+                            placeItems: "center",
+                            fontSize: 11,
+                            color: active ? C.blueLight : C.dark,
+                        }}
+                    >
+                        {g}
+                    </span>
+                );
+            })}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 18, fontSize: 13, color: C.textDim, flexShrink: 0 }}>
             <span style={{ display: "flex", alignItems: "center", gap: 7 }}>↻ Refresh</span>
