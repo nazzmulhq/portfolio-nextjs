@@ -1,6 +1,6 @@
 "use client";
 
-import { CSSProperties, FC, Fragment, ReactNode, useEffect, useRef, useState } from "react";
+import { CSSProperties, FC, ReactNode, useEffect, useRef, useState } from "react";
 import {
     CATEGORIES,
     CUST,
@@ -1661,66 +1661,26 @@ const Tab: FC<{ active: boolean; name: string; closeRef?: (el: HTMLElement | nul
     </div>
 );
 
-const Kbd: FC<{ children: ReactNode }> = ({ children }) => (
-    <span
-        style={{
-            minWidth: 22,
-            height: 20,
-            padding: "0 5px",
-            borderRadius: 4,
-            background: "#2a2a2a",
-            color: C.textDim,
-            fontSize: 11,
-            lineHeight: "20px",
-            textAlign: "center",
-        }}
-    >
-        {children}
-    </span>
-);
-
 const WelcomePane: FC = () => (
     <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
         <div
             style={{
-                position: "absolute",
-                left: "50%",
-                top: "47%",
-                transform: "translate(-50%,-50%)",
+                position: "relative",
                 width: 300,
                 height: 300,
                 borderRadius: 44,
                 border: "18px solid #232323",
-            }}
-        />
-        <div
-            style={{
-                position: "relative",
-                marginTop: 270,
-                display: "grid",
-                gridTemplateColumns: "auto auto",
-                gap: "12px 60px",
+                display: "flex",
                 alignItems: "center",
+                justifyContent: "center",
             }}
         >
-            {(
-                [
-                    ["Open Chat", ["⌃", "⌘", "I"]],
-                    ["Show All Commands", ["⇧", "⌘", "P"]],
-                    ["Open Recent", ["⌃", "R"]],
-                    ["Open File or Folder", ["⌘", "O"]],
-                    ["New Untitled Text File", ["⌘", "N"]],
-                ] as const
-            ).map(([label, keys]) => (
-                <Fragment key={label}>
-                    <div style={{ fontSize: 13.5, color: C.muted }}>{label}</div>
-                    <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
-                        {keys.map((k) => (
-                            <Kbd key={k}>{k}</Kbd>
-                        ))}
-                    </div>
-                </Fragment>
-            ))}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+                alt="QuickDB"
+                src="/images/quickdb-logo.png"
+                style={{ width: 120, height: 120, borderRadius: 22, objectFit: "cover" }}
+            />
         </div>
     </div>
 );
