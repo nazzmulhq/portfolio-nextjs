@@ -100,6 +100,15 @@ const PAY_COLS = "56px 420px 320px 390px 260px";
 const CURSOR_H = 20;
 const CURSOR_W = (13 / 19) * CURSOR_H;
 
+/**
+ * Fraction into step 16 ("Close the tab, back to customers") at which the
+ * payments tab actually closes. Lines up with the middle of the click-pulse
+ * window in `glide` (0.58–0.74), so the tab disappears right as the cursor's
+ * dip reads as a click on the ✕ rather than the tab vanishing on its own the
+ * instant the step changes.
+ */
+const CLOSE_AT = 0.66;
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | null) => {
@@ -109,6 +118,7 @@ const QuickDBStory: FC = () => {
     const [step, setStep] = useState(1);
     const [selN, setSelN] = useState(0);
     const [findDone, setFindDone] = useState(false);
+    const [paymentsOpen, setPaymentsOpen] = useState(false);
 
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
@@ -124,6 +134,7 @@ const QuickDBStory: FC = () => {
         sh: 0,
         step: 1,
         selN: 0,
+        paymentsOpen: false,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -406,12 +417,22 @@ const QuickDBStory: FC = () => {
                 if (tip) tip.style.top = `${34 + n * 31 - 30}px`;
             }
 
-            if (s !== e.step || n !== e.selN) {
+            // The payments tab stays open through the first part of step 16 so
+            // the cursor has something to travel to and click — CLOSE_AT lines
+            // up with the middle of the pulse window above, so the tab closes
+            // right as the click reads. Past that point TARGETS[16]'s ref is
+            // gone; resolveAim falls back to the last cached position, so the
+            // cursor holds still where it clicked rather than jumping.
+            const paymentsOpen = s === 15 || (s === 16 && e.frac < CLOSE_AT);
+
+            if (s !== e.step || n !== e.selN || paymentsOpen !== e.paymentsOpen) {
                 const changedStep = s !== e.step;
                 e.step = s;
                 e.selN = n;
+                e.paymentsOpen = paymentsOpen;
                 setStep(s);
                 setSelN(n);
+                setPaymentsOpen(paymentsOpen);
                 if (changedStep) applyStep(s);
             }
         };
@@ -440,7 +461,9 @@ const QuickDBStory: FC = () => {
 
     /* ── derived view model (mirrors the design's renderVals) ──── */
     const s = step;
-    const pay = s === 15;
+    // Not just s === 15: the payments tab stays mounted into the first part
+    // of step 16 so there's something for the cursor to close (see tick()).
+    const pay = paymentsOpen;
     const tail = s === 19;
     const grid = s >= 10;
     const filtering = s === 9 && findDone;
