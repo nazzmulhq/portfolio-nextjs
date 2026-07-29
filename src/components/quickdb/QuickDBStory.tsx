@@ -207,12 +207,15 @@ const QuickDBStory: FC = () => {
             e.cx += dx * 0.18;
             e.cy += dy * 0.18;
             const near = Math.abs(dx) < 24 && Math.abs(dy) < 24;
-            // A brief squash while parked reads as the click.
-            const pulse = near && e.frac > 0.58 && e.frac < 0.74 ? 0.62 : 1;
+            // A brief dip while parked reads as the click. Shallower than the
+            // dot's 0.62: an arrow shrinking that far reads as broken rather
+            // than pressed, because its silhouette carries the meaning.
+            const pulse = near && e.frac > 0.58 && e.frac < 0.74 ? 0.84 : 1;
             cur.style.left = `${e.cx.toFixed(1)}px`;
             cur.style.top = `${e.cy.toFixed(1)}px`;
-            cur.style.opacity = e.visible ? "0.95" : "0";
-            cur.style.transform = `translate(-50%,-50%) scale(${pulse})`;
+            cur.style.opacity = e.visible ? "1" : "0";
+            // Tip-anchored: the element's origin is the arrow's point.
+            cur.style.transform = `scale(${pulse})`;
             if (Math.abs(dx) > 0.6 || Math.abs(dy) > 0.6 || pulse !== 1) {
                 e.gliding = true;
                 requestAnimationFrame(glide);
@@ -1421,6 +1424,11 @@ const QuickDBStory: FC = () => {
                             </span>
                         </div>
 
+                        {/* Arrow pointer. The path's tip sits at the SVG origin, so
+                            left/top can be the aim point directly and the scale
+                            pulse pivots on the tip — no centring offset, unlike the
+                            dot this replaces. overflow:visible lets the outline
+                            bleed past the viewBox at the tip. */}
                         <div
                             aria-hidden
                             ref={set("cur")}
@@ -1428,16 +1436,27 @@ const QuickDBStory: FC = () => {
                                 position: "absolute",
                                 left: 0,
                                 top: 0,
-                                width: 18,
-                                height: 18,
-                                borderRadius: "50%",
-                                background: "#fff",
-                                boxShadow: "0 0 0 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.6)",
                                 opacity: 0,
                                 pointerEvents: "none",
-                                transform: "translate(-50%,-50%)",
+                                transformOrigin: "0 0",
+                                filter: "drop-shadow(0 3px 7px rgba(0,0,0,.7))",
                             }}
-                        />
+                        >
+                            <svg
+                                height="25"
+                                style={{ display: "block", overflow: "visible" }}
+                                viewBox="0 0 13 19"
+                                width="17"
+                            >
+                                <path
+                                    d="M0 0 L0 17 L4.4 12.9 L7.1 18.9 L9.9 17.6 L7.3 11.8 L12.8 11.6 Z"
+                                    fill="#fff"
+                                    stroke="rgba(0,0,0,.62)"
+                                    strokeLinejoin="round"
+                                    strokeWidth="1.1"
+                                />
+                            </svg>
+                        </div>
                     </div>
                 </div>
 
