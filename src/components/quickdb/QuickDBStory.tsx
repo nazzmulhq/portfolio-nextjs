@@ -1,0 +1,2366 @@
+"use client";
+
+import { CSSProperties, FC, Fragment, ReactNode, useEffect, useRef, useState } from "react";
+import {
+    CATEGORIES,
+    CUST,
+    DESIGN_W,
+    EMPTY_ROWS,
+    FIELDS,
+    P0,
+    PAY_ROWS,
+    PREVIEW_ROWS,
+    PSTEP,
+    STEPS,
+    TABLES,
+    TAIL,
+    TARGETS,
+    TOASTS,
+    TOOLS,
+} from "./landingData";
+
+/* ────────────────────────────────────────────────────────────────
+   Palette lifted from the design component. This block is a mock of
+   VS Code's dark theme, so it is deliberately fixed rather than
+   themed — it should look the same in the site's light mode, the way
+   a screenshot would.
+   ──────────────────────────────────────────────────────────────── */
+const C = {
+    canvas: "#08080b",
+    chrome: "#181818",
+    panel: "#1f1f1f",
+    raised: "#202020",
+    line: "#2b2b2b",
+    line2: "#2f2f2f",
+    line3: "#3a3a3a",
+    rowLine: "#262626",
+    text: "#e0e0e0",
+    textStrong: "#e8e8e8",
+    textDim: "#cccccc",
+    muted: "#9d9d9d",
+    faint: "#8b8b8b",
+    dark: "#6f6f6f",
+    blue: "#0078d4",
+    blueLight: "#4daafc",
+    bluePale: "#7cc4f5",
+    amber: "#e2b13c",
+    amberPale: "#f5cf6a",
+    green: "#a8cf8f",
+    cell: "#d4d4d4",
+} as const;
+
+const MONO = "'JetBrains Mono', ui-monospace, monospace";
+const UI = "-apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif";
+
+/** Ref keys the cursor can aim at, plus the stage elements the engine drives. */
+type RefKey =
+    | "track"
+    | "lap"
+    | "bez"
+    | "base"
+    | "screen"
+    | "glow"
+    | "hero"
+    | "cap"
+    | "cur"
+    | "qdbIcon"
+    | "extIcon"
+    | "extCard"
+    | "installBtn"
+    | "addConn"
+    | "pasteBtn"
+    | "importBtn"
+    | "fkRow"
+    | "fkChip"
+    | "filterVal"
+    | "toast"
+    | "toastText"
+    | "extSearch"
+    | "findBox"
+    | "findText"
+    | "custRow"
+    | "saveBtn"
+    | "rangeBox"
+    | "rangeTip"
+    | "closeTab";
+
+const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
+const easeInOutCubic = (t: number) =>
+    t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+const CELL_COLS = "56px 200px 230px 190px 190px 190px 240px 210px 150px";
+const PAY_COLS = "56px 420px 320px 390px 260px";
+
+const QuickDBStory: FC = () => {
+    const refs = useRef({} as Record<RefKey, HTMLElement | null>);
+    const set = (k: RefKey) => (el: HTMLElement | null) => {
+        refs.current[k] = el;
+    };
+
+    const [step, setStep] = useState(1);
+    const [selN, setSelN] = useState(0);
+    const [findDone, setFindDone] = useState(false);
+
+    // Mutable engine scratch — deliberately outside React state so the scroll
+    // loop can run at frame rate without re-rendering.
+    const eng = useRef({
+        p: 0,
+        frac: 0,
+        visible: false,
+        cx: null as number | null,
+        cy: null as number | null,
+        aim: null as { x: number; y: number } | null,
+        gliding: false,
+        seen: {} as Record<string, { x: number; y: number }>,
+        sh: 0,
+        step: 1,
+        selN: 0,
+        findDone: false,
+        typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
+        typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
+        typeTs: 0,
+        typeRaf: 0,
+        raf: 0,
+        toastTimer: 0 as ReturnType<typeof setTimeout> | 0,
+    });
+
+    useEffect(() => {
+        const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const narrow = window.matchMedia("(max-width: 767px)").matches;
+        // The story is a 1920px-wide artefact. Below the breakpoint the compact
+        // version is what is on screen, so there is nothing here to drive.
+        if (reduced || narrow) return undefined;
+
+        const e = eng.current;
+        const el = (k: RefKey) => refs.current[k];
+
+        const viewport = () => {
+            const st = el("track")?.firstElementChild as HTMLElement | null;
+            const de = document.documentElement;
+            return {
+                w: st?.clientWidth || de.clientWidth || window.innerWidth,
+                h: de.clientHeight || window.innerHeight,
+            };
+        };
+
+        /* ── cursor ─────────────────────────────────────────────── */
+        const resolveAim = (s: number) => {
+            const scr = el("screen");
+            if (!scr) return;
+            const toDesign = (node: HTMLElement) => {
+                const sr = scr.getBoundingClientRect();
+                const r = node.getBoundingClientRect();
+                const k = sr.width / DESIGN_W || 1;
+                if (!r.width) return null;
+                return {
+                    x: (r.left + r.width / 2 - sr.left) / k,
+                    y: (r.top + r.height / 2 - sr.top) / k,
+                };
+            };
+
+            // Step 14 hands off from the FK chip to the popover row midway.
+            if (s === 14) {
+                const node = e.frac < 0.45 ? el("fkChip") : el("fkRow");
+                if (node) {
+                    const a = toDesign(node);
+                    if (a) {
+                        e.aim = a;
+                        return;
+                    }
+                }
+            }
+            // Step 11 tracks the growing selection rather than a fixed node.
+            if (s === 11) {
+                const n = e.selN || 1;
+                e.aim = { x: 1496, y: 204 + 34 + n * 31 - 6 };
+                return;
+            }
+
+            const t = TARGETS[s];
+            if (Array.isArray(t)) {
+                e.aim = { x: t[0], y: t[1] };
+                return;
+            }
+            const node = el(t as RefKey);
+            if (node) {
+                const a = toDesign(node);
+                // Cache the last good position: the node may unmount on the
+                // next step while the cursor is still gliding away from it.
+                if (a) e.seen[t as string] = a;
+            }
+            if (e.seen[t as string]) e.aim = e.seen[t as string];
+        };
+
+        const glide = () => {
+            const cur = el("cur");
+            resolveAim(e.step);
+            if (!cur || !e.aim) {
+                e.gliding = false;
+                return;
+            }
+            if (e.cx == null || e.cy == null) {
+                e.cx = e.aim.x;
+                e.cy = e.aim.y;
+            }
+            const dx = e.aim.x - e.cx;
+            const dy = e.aim.y - e.cy;
+            e.cx += dx * 0.18;
+            e.cy += dy * 0.18;
+            const near = Math.abs(dx) < 24 && Math.abs(dy) < 24;
+            // A brief squash while parked reads as the click.
+            const pulse = near && e.frac > 0.58 && e.frac < 0.74 ? 0.62 : 1;
+            cur.style.left = `${e.cx.toFixed(1)}px`;
+            cur.style.top = `${e.cy.toFixed(1)}px`;
+            cur.style.opacity = e.visible ? "0.95" : "0";
+            cur.style.transform = `translate(-50%,-50%) scale(${pulse})`;
+            if (Math.abs(dx) > 0.6 || Math.abs(dy) > 0.6 || pulse !== 1) {
+                e.gliding = true;
+                requestAnimationFrame(glide);
+            } else {
+                e.gliding = false;
+            }
+        };
+
+        const aimCursor = (s: number) => {
+            if (!el("screen") || !el("cur")) return;
+            resolveAim(s);
+            if (!e.aim) return;
+            if (e.cx == null) {
+                e.cx = e.aim.x;
+                e.cy = e.aim.y;
+            }
+            if (!e.gliding) glide();
+        };
+
+        /* ── typing ─────────────────────────────────────────────── */
+        const typeLoop = (ts: number) => {
+            e.typeRaf = 0;
+            const last = e.typeTs || ts;
+            const dt = Math.min(64, ts - last);
+            e.typeTs = ts;
+            let busy = false;
+
+            FIELDS.forEach((fd) => {
+                const node = el(fd.key);
+                const on = fd.active(e.step);
+                const target = on ? 1 : 0;
+                let p = e.typeP[fd.key];
+
+                if (on) {
+                    e.typeD[fd.key] += dt;
+                    if (e.typeD[fd.key] < fd.delay) {
+                        busy = true;
+                        if (node && p === 0) {
+                            node.textContent = fd.placeholder;
+                            node.style.color = C.faint;
+                        }
+                        return;
+                    }
+                } else {
+                    e.typeD[fd.key] = 0;
+                }
+
+                const span = fd.word.length * fd.per;
+                const amt = dt / span;
+                if (p < target) p = Math.min(1, p + amt);
+                else if (p > target) p = Math.max(0, p - amt * 1.6);
+                e.typeP[fd.key] = p;
+                if (p !== target) busy = true;
+
+                if (node) {
+                    const n = Math.round(fd.word.length * p);
+                    node.textContent = n ? fd.word.slice(0, n) : fd.placeholder;
+                    node.style.color = n ? C.text : C.faint;
+                }
+                if (fd.key === "findText") {
+                    const done = p >= 1;
+                    if (done !== e.findDone) {
+                        e.findDone = done;
+                        setFindDone(done);
+                    }
+                }
+            });
+
+            if (busy) e.typeRaf = requestAnimationFrame(typeLoop);
+        };
+
+        const kickTyping = () => {
+            if (e.typeRaf) return;
+            e.typeTs = 0;
+            e.typeRaf = requestAnimationFrame(typeLoop);
+        };
+
+        /* ── per-step chrome (icon highlight + toast) ───────────── */
+        const applyStep = (s: number) => {
+            const cap = el("cap");
+            if (cap) {
+                cap.style.opacity = "0";
+                requestAnimationFrame(() => {
+                    const c2 = el("cap");
+                    if (c2) c2.style.opacity = e.p >= P0 * 0.55 ? "1" : "0";
+                });
+            }
+            const mark = (node: HTMLElement | null, on: boolean) => {
+                if (!node) return;
+                node.style.color = on ? C.textStrong : C.faint;
+                node.style.boxShadow = on ? `inset 2px 0 0 0 ${C.blue}` : "none";
+            };
+            mark(el("extIcon"), s >= 2 && s <= 6);
+            mark(el("qdbIcon"), s >= 7);
+
+            const msg = TOASTS[s];
+            const t = el("toast");
+            if (t) {
+                if (msg) {
+                    const txt = el("toastText");
+                    if (txt) txt.textContent = msg;
+                    t.style.opacity = "1";
+                    t.style.transform = "translateY(0)";
+                } else {
+                    t.style.opacity = "0";
+                    t.style.transform = "translateY(10px)";
+                }
+                if (e.toastTimer) clearTimeout(e.toastTimer);
+                if (msg) {
+                    e.toastTimer = setTimeout(() => {
+                        const t2 = el("toast");
+                        if (t2) {
+                            t2.style.opacity = "0";
+                            t2.style.transform = "translateY(10px)";
+                        }
+                    }, 3400);
+                }
+            }
+            requestAnimationFrame(() => aimCursor(s));
+            kickTyping();
+        };
+
+        /* ── scroll tick ────────────────────────────────────────── */
+        const tick = () => {
+            const track = el("track");
+            if (!track) return;
+            const vp = viewport();
+            const r = track.getBoundingClientRect();
+            const span = Math.max(1, r.height - vp.h);
+            const p = clamp01(-r.top / span);
+
+            // The screen keeps a fixed 1920-wide design space; its height is
+            // derived so the laptop matches the viewport's aspect.
+            const sh = Math.max(720, Math.round((DESIGN_W * vp.h) / vp.w));
+            if (e.sh !== sh) {
+                e.sh = sh;
+                [el("lap"), el("screen")].forEach((node) => {
+                    if (node) node.style.height = `${sh}px`;
+                });
+            }
+
+            const full = vp.w / DESIGN_W;
+            const start = Math.min((vp.w * 0.52) / DESIGN_W, (vp.h * 0.46) / sh);
+            const k = start + (full - start) * easeInOutCubic(clamp01(p / 0.075));
+            const lap = el("lap");
+            if (lap) lap.style.transform = `translate(-50%,-50%) scale(${k.toFixed(4)})`;
+
+            // Bezel, base and glow dissolve as the screen goes full-bleed.
+            const chrome = 1 - clamp01((p - 0.05) / 0.055);
+            (["bez", "base", "glow"] as const).forEach((n) => {
+                const node = el(n);
+                if (node) node.style.opacity = String(chrome);
+            });
+            const scr = el("screen");
+            if (scr) scr.style.borderRadius = `${(12 * chrome).toFixed(2)}px`;
+            const hero = el("hero");
+            if (hero) hero.style.opacity = String(1 - clamp01(p / 0.03));
+
+            e.p = p;
+            const cap = el("cap");
+            if (cap) cap.style.opacity = p >= P0 * 0.55 ? "1" : "0";
+
+            const raw = (p - P0) / PSTEP;
+            const s = Math.max(1, Math.min(STEPS.length, Math.floor(raw) + 1));
+            e.frac = clamp01(raw - Math.floor(raw));
+            e.visible = p >= 0.06 && p <= 0.995;
+            aimCursor(s);
+
+            const n =
+                s === 11
+                    ? Math.min(5, 1 + Math.floor(clamp01((e.frac - 0.08) / 0.74) * 5))
+                    : s === 12 || s === 13
+                      ? 5
+                      : 0;
+            if (n) {
+                const box = el("rangeBox");
+                const tip = el("rangeTip");
+                if (box) box.style.height = `${n * 31}px`;
+                if (tip) tip.style.top = `${34 + n * 31 - 30}px`;
+            }
+
+            if (s !== e.step || n !== e.selN) {
+                const changedStep = s !== e.step;
+                e.step = s;
+                e.selN = n;
+                setStep(s);
+                setSelN(n);
+                if (changedStep) applyStep(s);
+            }
+        };
+
+        const onScroll = () => {
+            if (e.raf) return;
+            e.raf = requestAnimationFrame(() => {
+                e.raf = 0;
+                tick();
+            });
+        };
+
+        window.addEventListener("scroll", onScroll, { passive: true, capture: true });
+        window.addEventListener("resize", onScroll, { passive: true });
+        tick();
+        applyStep(e.step);
+
+        return () => {
+            window.removeEventListener("scroll", onScroll, { capture: true });
+            window.removeEventListener("resize", onScroll);
+            if (e.raf) cancelAnimationFrame(e.raf);
+            if (e.typeRaf) cancelAnimationFrame(e.typeRaf);
+            if (e.toastTimer) clearTimeout(e.toastTimer);
+        };
+    }, []);
+
+    /* ── derived view model (mirrors the design's renderVals) ──── */
+    const s = step;
+    const pay = s === 15;
+    const tail = s === 19;
+    const grid = s >= 10;
+    const filtering = s === 9 && findDone;
+    const dirty = s === 12;
+    const filled = s >= 12 && !tail;
+    const fillVal = CUST[0][4];
+    const changes = s === 12 ? 4 : s === 19 ? 7 : 0;
+
+    const src = tail ? TAIL : CUST;
+    const rows = src.map((c, i) => {
+        const swap = filled && i >= 1 && i <= 4;
+        return {
+            i: tail ? 113 + i : i + 1,
+            num: c[0],
+            name: c[1],
+            last: c[2],
+            first: c[3],
+            phone: swap ? fillVal : c[4],
+            phoneBg: swap && dirty ? "rgba(226,177,60,.16)" : "transparent",
+            phoneFg: swap && dirty ? C.amberPale : C.cell,
+            a1: c[5],
+            a2: c[6],
+            city: c[7],
+        };
+    });
+
+    const visibleTables = TABLES.filter((t) => !filtering || t[0].startsWith("cust"));
+    const capStep = STEPS[s - 1] ?? STEPS[0];
+
+    const sideExt = s >= 2 && s <= 6;
+    const sideQdb = s >= 7;
+    const sideAny = s >= 2;
+    const mainWelcome = s <= 3 || (s >= 7 && s <= 9);
+    const mainExt = s >= 4 && s <= 6;
+    const pastePanel = s >= 17 && s <= 18;
+
+    const th: CSSProperties = {
+        display: "flex",
+        alignItems: "center",
+        gap: 7,
+        padding: "0 9px",
+        borderRight: `1px solid ${C.line2}`,
+    };
+    const td: CSSProperties = {
+        display: "flex",
+        alignItems: "center",
+        padding: "0 9px",
+        borderRight: `1px solid ${C.rowLine}`,
+        overflow: "hidden",
+        whiteSpace: "nowrap",
+    };
+    const typeTag = (bg: string, fg: string, label: string) => (
+        <span style={{ fontSize: 9.5, background: bg, color: fg, borderRadius: 2, padding: "1.5px 3px" }}>
+            {label}
+        </span>
+    );
+    const key = <span style={{ color: C.amber }}>🔑</span>;
+    const colMenu = <span style={{ marginLeft: "auto", color: C.faint }}>⚟ ⋮</span>;
+
+    return (
+        <div
+            className="qd-track"
+            ref={set("track")}
+            style={{ position: "relative", height: "1400vh" }}
+        >
+            <div
+                style={{
+                    position: "sticky",
+                    top: 0,
+                    height: "100vh",
+                    overflow: "hidden",
+                    background:
+                        "radial-gradient(120% 90% at 50% 6%,#15151d 0%,#0a0a0e 55%,#08080b 100%)",
+                }}
+            >
+                <div
+                    aria-hidden
+                    ref={set("glow")}
+                    style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "52%",
+                        width: 1200,
+                        height: 640,
+                        transform: "translate(-50%,-50%)",
+                        background:
+                            "radial-gradient(50% 50% at 50% 50%,rgba(0,120,212,.2),rgba(0,120,212,0) 70%)",
+                        filter: "blur(24px)",
+                        pointerEvents: "none",
+                    }}
+                />
+
+                {/* ── laptop ── */}
+                <div
+                    ref={set("lap")}
+                    style={{
+                        position: "absolute",
+                        left: "50%",
+                        top: "50%",
+                        width: DESIGN_W,
+                        height: 1080,
+                        transformOrigin: "50% 50%",
+                        transform: "translate(-50%,-50%) scale(.4)",
+                    }}
+                >
+                    <div
+                        aria-hidden
+                        ref={set("bez")}
+                        style={{
+                            position: "absolute",
+                            inset: "-18px -18px -48px",
+                            borderRadius: 30,
+                            background: "linear-gradient(160deg,#3a3a44,#191920 40%,#101016)",
+                            boxShadow:
+                                "0 70px 140px -30px rgba(0,0,0,.9),0 0 0 1px rgba(255,255,255,.06) inset",
+                        }}
+                    />
+                    <div
+                        aria-hidden
+                        ref={set("base")}
+                        style={{
+                            position: "absolute",
+                            left: "50%",
+                            top: "100%",
+                            marginTop: 50,
+                            transform: "translateX(-50%)",
+                            width: 2260,
+                            height: 30,
+                            borderRadius: "0 0 22px 22px",
+                            background: "linear-gradient(180deg,#44444e,#22222a 40%,#0e0e12)",
+                            boxShadow: "0 50px 70px -20px rgba(0,0,0,.85)",
+                        }}
+                    >
+                        <div
+                            style={{
+                                position: "absolute",
+                                left: "50%",
+                                top: 0,
+                                transform: "translateX(-50%)",
+                                width: 230,
+                                height: 9,
+                                borderRadius: "0 0 9px 9px",
+                                background: "#0b0b10",
+                            }}
+                        />
+                    </div>
+
+                    {/* ── screen ── */}
+                    <div
+                        ref={set("screen")}
+                        style={{
+                            position: "relative",
+                            width: DESIGN_W,
+                            height: 1080,
+                            overflow: "hidden",
+                            borderRadius: 12,
+                            background: C.chrome,
+                            display: "flex",
+                            flexDirection: "column",
+                            fontFamily: UI,
+                        }}
+                    >
+                        {/* macOS menu bar */}
+                        <div
+                            style={{
+                                height: 28,
+                                flex: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 18,
+                                padding: "0 14px",
+                                background: "#0b0b0f",
+                                fontSize: 13,
+                                color: "rgba(255,255,255,.92)",
+                            }}
+                        >
+                            <div style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,.9)" }} />
+                            <span style={{ fontWeight: 600 }}>Editor</span>
+                            {["File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Window", "Help"].map((m) => (
+                                <span key={m}>{m}</span>
+                            ))}
+                            <div
+                                style={{
+                                    marginLeft: "auto",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 15,
+                                    color: "rgba(255,255,255,.85)",
+                                    fontSize: 12.5,
+                                }}
+                            >
+                                <span>28°C</span>
+                                <span>100%</span>
+                                <div
+                                    style={{
+                                        width: 24,
+                                        height: 12,
+                                        borderRadius: 3,
+                                        border: "1px solid rgba(255,255,255,.5)",
+                                        padding: 1.5,
+                                        boxSizing: "border-box",
+                                    }}
+                                >
+                                    <div style={{ width: "100%", height: "100%", borderRadius: 1, background: "rgba(255,255,255,.9)" }} />
+                                </div>
+                                <div style={{ width: 13, height: 13, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,.7)" }} />
+                                <span>Tue 28 Jul 8:51 PM</span>
+                            </div>
+                        </div>
+
+                        {/* window bar */}
+                        <div
+                            style={{
+                                height: 38,
+                                flex: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 14,
+                                padding: "0 12px",
+                                background: C.chrome,
+                                borderBottom: `1px solid ${C.line}`,
+                            }}
+                        >
+                            <div style={{ display: "flex", gap: 8 }}>
+                                {["#ff5f57", "#febc2e", "#28c840"].map((bg) => (
+                                    <div key={bg} style={{ width: 12, height: 12, borderRadius: "50%", background: bg }} />
+                                ))}
+                            </div>
+                            <div style={{ display: "flex", gap: 14, color: C.faint, fontSize: 14, marginLeft: 8 }}>
+                                <span>←</span>
+                                <span>→</span>
+                            </div>
+                            <div
+                                style={{
+                                    margin: "0 auto",
+                                    width: 600,
+                                    height: 24,
+                                    borderRadius: 6,
+                                    background: C.raised,
+                                    border: `1px solid ${C.line2}`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    padding: "0 10px",
+                                    fontSize: 12,
+                                    color: C.faint,
+                                }}
+                            >
+                                Search
+                            </div>
+                            <div style={{ display: "flex", gap: 10, opacity: 0.5 }}>
+                                {["", "borderLeftWidth", "borderBottomWidth", "borderRightWidth"].map((k2, i) => (
+                                    <div
+                                        key={i}
+                                        style={{
+                                            width: 16,
+                                            height: 12,
+                                            border: "1.4px solid #b0b0b0",
+                                            borderRadius: 2,
+                                            ...(k2 ? { [k2]: 5 } : {}),
+                                        }}
+                                    />
+                                ))}
+                            </div>
+                        </div>
+
+                        <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+                            {/* activity bar */}
+                            <div
+                                style={{
+                                    width: 48,
+                                    flex: "none",
+                                    background: C.chrome,
+                                    borderRight: `1px solid ${C.line}`,
+                                    display: "flex",
+                                    flexDirection: "column",
+                                    alignItems: "center",
+                                    padding: "6px 0",
+                                }}
+                            >
+                                <ActIcon>
+                                    <rect x="4.5" y="2.5" width="11" height="16" rx="1.5" />
+                                    <path d="M15.5 6.5h4v15h-11" />
+                                </ActIcon>
+                                {s >= 6 && (
+                                    <div
+                                        ref={set("qdbIcon")}
+                                        style={{ width: 48, height: 48, display: "grid", placeItems: "center", position: "relative" }}
+                                    >
+                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                        <img
+                                            alt="QuickDB"
+                                            src="/images/quickdb-logo.png"
+                                            style={{ width: 24, height: 24, borderRadius: 5, objectFit: "cover" }}
+                                        />
+                                    </div>
+                                )}
+                                <ActIcon>
+                                    <circle cx="10.5" cy="10.5" r="6.5" />
+                                    <path d="M15.5 15.5L20 20" />
+                                </ActIcon>
+                                <ActIcon>
+                                    <circle cx="7" cy="5.5" r="2.5" />
+                                    <circle cx="7" cy="18.5" r="2.5" />
+                                    <circle cx="17" cy="9" r="2.5" />
+                                    <path d="M7 8v8M9.5 5.5H14a3 3 0 0 1 3 3" />
+                                </ActIcon>
+                                <ActIcon>
+                                    <path d="M7 4.5l11 7.5-11 7.5z" />
+                                </ActIcon>
+                                <ActIcon>
+                                    <circle cx="12" cy="12" r="3.4" />
+                                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
+                                </ActIcon>
+                                <div
+                                    ref={set("extIcon")}
+                                    style={{
+                                        width: 48,
+                                        height: 48,
+                                        display: "grid",
+                                        placeItems: "center",
+                                        color: C.faint,
+                                        position: "relative",
+                                    }}
+                                >
+                                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+                                        <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+                                        <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+                                        <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+                                        <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
+                                    </svg>
+                                </div>
+                                <div style={{ marginTop: "auto", display: "flex", flexDirection: "column" }}>
+                                    <ActIcon>
+                                        <circle cx="12" cy="9" r="3.4" />
+                                        <circle cx="12" cy="12" r="9" />
+                                    </ActIcon>
+                                    <ActIcon>
+                                        <circle cx="12" cy="12" r="3.2" />
+                                        <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.7 15H3.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 4.7 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.2 4V3.7a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2Z" />
+                                    </ActIcon>
+                                </div>
+                            </div>
+
+                            {/* side bar */}
+                            {sideAny && (
+                                <div
+                                    style={{
+                                        width: 392,
+                                        flex: "none",
+                                        background: C.chrome,
+                                        borderRight: `1px solid ${C.line}`,
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        overflow: "hidden",
+                                    }}
+                                >
+                                    {sideExt && (
+                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                                            <PanelTitle>
+                                                EXTENSIONS: MARKETPLACE
+                                                <span style={{ marginLeft: "auto", display: "flex", gap: 12, fontSize: 13, color: C.muted }}>
+                                                    ↻ ···
+                                                </span>
+                                            </PanelTitle>
+                                            <div
+                                                style={{
+                                                    margin: "0 14px",
+                                                    height: 26,
+                                                    border: `1px solid ${C.line3}`,
+                                                    background: C.raised,
+                                                    borderRadius: 2,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    padding: "0 8px",
+                                                    fontSize: 12.5,
+                                                    color: C.text,
+                                                }}
+                                            >
+                                                <span ref={set("extSearch")} style={{ color: C.faint }}>
+                                                    Search Extensions in Marketplace
+                                                </span>
+                                                {s === 2 && <Caret />}
+                                                <span style={{ marginLeft: "auto", display: "flex", gap: 8, color: C.muted, fontSize: 12 }}>
+                                                    ⌫ ⚟
+                                                </span>
+                                            </div>
+
+                                            {s === 2 && (
+                                                <div style={{ marginTop: 8, fontSize: 11, letterSpacing: ".06em", color: C.textDim, fontWeight: 600 }}>
+                                                    <TreeRow label="INSTALLED" badge="35" />
+                                                    <TreeRow label="RECOMMENDED" badge="6" />
+                                                    <div
+                                                        style={{
+                                                            height: 23,
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            padding: "0 10px",
+                                                            background: "#04395e",
+                                                            outline: `1px solid ${C.blue}`,
+                                                        }}
+                                                    >
+                                                        <span style={{ fontSize: 9, color: C.muted }}>›</span>
+                                                        MCP SERVERS - INSTALLED
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {s >= 3 && (
+                                                <div ref={set("extCard")} style={{ marginTop: 8, display: "flex", gap: 12, padding: "10px 12px" }}>
+                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                    <img
+                                                        alt="QuickDB"
+                                                        src="/images/quickdb-logo.png"
+                                                        style={{ width: 44, height: 44, flex: "none", borderRadius: 8, objectFit: "cover" }}
+                                                    />
+                                                    <div style={{ minWidth: 0, flex: 1 }}>
+                                                        <div style={{ display: "flex", alignItems: "baseline", gap: 8 }}>
+                                                            <span style={{ fontSize: 13.5, fontWeight: 600, color: C.textStrong }}>QuickDB</span>
+                                                            <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.muted }}>⇩ 465</span>
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                fontSize: 12,
+                                                                color: C.muted,
+                                                                marginTop: 2,
+                                                                overflow: "hidden",
+                                                                textOverflow: "ellipsis",
+                                                                whiteSpace: "nowrap",
+                                                            }}
+                                                        >
+                                                            Lightweight database browser for VS Code. Conn…
+                                                        </div>
+                                                        <div style={{ display: "flex", alignItems: "center", marginTop: 5 }}>
+                                                            <span style={{ fontSize: 12, color: "#bbbbbb", fontWeight: 600 }}>Nazmul Haque</span>
+                                                            {(s === 3 || s === 4) && (
+                                                                <span
+                                                                    style={{
+                                                                        marginLeft: "auto",
+                                                                        background: C.blue,
+                                                                        color: "#fff",
+                                                                        fontSize: 11.5,
+                                                                        padding: "2px 9px",
+                                                                        borderRadius: 2,
+                                                                    }}
+                                                                >
+                                                                    Install
+                                                                </span>
+                                                            )}
+                                                            {s === 5 && (
+                                                                <span style={{ marginLeft: "auto", color: C.muted, fontSize: 11.5 }}>Installing</span>
+                                                            )}
+                                                            {s >= 6 && <span style={{ marginLeft: "auto", color: C.muted, fontSize: 13 }}>⚙</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+
+                                    {sideQdb && (
+                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                                            <PanelTitle>
+                                                QUICKDB
+                                                <span style={{ marginLeft: "auto", fontSize: 14, color: C.muted }}>···</span>
+                                            </PanelTitle>
+                                            <div
+                                                style={{
+                                                    height: 26,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 7,
+                                                    padding: "0 12px",
+                                                    fontSize: 11,
+                                                    letterSpacing: ".06em",
+                                                    color: C.textDim,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <span style={{ fontSize: 9, color: C.muted }}>⌄</span>
+                                                CONNECTIONS
+                                                <span
+                                                    ref={set("addConn")}
+                                                    style={{ marginLeft: "auto", display: "flex", gap: 14, color: C.muted, fontSize: 13 }}
+                                                >
+                                                    ＋ ↻ ⌕
+                                                </span>
+                                            </div>
+
+                                            <div style={{ flex: "none", minHeight: 0, overflow: "hidden", maxHeight: 340 }}>
+                                                {s === 7 && (
+                                                    <div
+                                                        style={{
+                                                            margin: "34px auto 0",
+                                                            width: 236,
+                                                            padding: "22px 18px",
+                                                            borderRadius: 8,
+                                                            background: C.panel,
+                                                            border: "1px solid #333",
+                                                            textAlign: "center",
+                                                            position: "relative",
+                                                            overflow: "hidden",
+                                                        }}
+                                                    >
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                left: 0,
+                                                                right: 0,
+                                                                top: 0,
+                                                                height: 2,
+                                                                background: "linear-gradient(90deg,#0078d4,#8a5cf6)",
+                                                            }}
+                                                        />
+                                                        <div
+                                                            style={{
+                                                                width: 56,
+                                                                height: 26,
+                                                                margin: "0 auto 12px",
+                                                                borderRadius: 13,
+                                                                background: "#0b3a5e",
+                                                                display: "grid",
+                                                                placeItems: "center",
+                                                                color: C.blueLight,
+                                                            }}
+                                                        >
+                                                            <DbGlyph size={16} stroke="currentColor" full />
+                                                        </div>
+                                                        <div style={{ fontSize: 13, fontWeight: 600, color: C.textStrong }}>No Connections</div>
+                                                        <div style={{ fontSize: 11.5, lineHeight: 1.5, color: C.muted, marginTop: 5 }}>
+                                                            Explore SQLite, PostgreSQL, MySQL, Redis, or MongoDB databases.
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {s === 8 && (
+                                                    <div className="qd-fade">
+                                                        <div
+                                                            style={{
+                                                                height: 26,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                padding: "0 12px",
+                                                                background: C.panel,
+                                                                fontSize: 13,
+                                                                color: C.text,
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: 9, color: C.muted }}>›</span>
+                                                            <DbGlyph />
+                                                            Demo
+                                                            <span style={{ marginLeft: "auto", display: "flex", gap: 12, color: C.muted, fontSize: 12 }}>
+                                                                ▤ ✎ 🗑
+                                                            </span>
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                margin: "6px 0 0 172px",
+                                                                display: "inline-block",
+                                                                background: "#252526",
+                                                                border: "1px solid #454545",
+                                                                padding: "3px 8px",
+                                                                fontSize: 12,
+                                                                color: C.textDim,
+                                                                boxShadow: "0 3px 8px rgba(0,0,0,.5)",
+                                                            }}
+                                                        >
+                                                            Create database
+                                                        </div>
+                                                    </div>
+                                                )}
+
+                                                {s >= 9 && (
+                                                    <div style={{ fontSize: 13, color: C.textDim }}>
+                                                        <div
+                                                            style={{
+                                                                height: 26,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                padding: "0 12px",
+                                                                background: C.panel,
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: 9, color: C.muted }}>⌄</span>
+                                                            <DbGlyph />
+                                                            Demo
+                                                        </div>
+                                                        <div
+                                                            style={{
+                                                                height: 26,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                padding: "0 12px 0 24px",
+                                                                background: C.panel,
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: 9, color: C.muted }}>⌄</span>
+                                                            <DbGlyph />
+                                                            classicmodels
+                                                        </div>
+                                                        <div
+                                                            ref={set("findBox")}
+                                                            style={{
+                                                                margin: "3px 12px 3px 26px",
+                                                                height: 26,
+                                                                border: `1px solid ${C.line3}`,
+                                                                background: C.raised,
+                                                                borderRadius: 2,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 7,
+                                                                padding: "0 8px",
+                                                                fontSize: 12.5,
+                                                            }}
+                                                        >
+                                                            <span style={{ color: C.faint }}>⌕</span>
+                                                            <span ref={set("findText")} style={{ color: C.faint }}>
+                                                                Find table in database
+                                                            </span>
+                                                            {s === 9 && <Caret />}
+                                                        </div>
+                                                        {visibleTables.map((t) => (
+                                                            <div
+                                                                className="qd-hover"
+                                                                key={t[0]}
+                                                                ref={t[0] === "customers" ? set("custRow") : undefined}
+                                                                style={{
+                                                                    height: 26,
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 8,
+                                                                    padding: "0 12px 0 40px",
+                                                                }}
+                                                            >
+                                                                <span style={{ fontSize: 9, color: C.muted }}>›</span>
+                                                                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.muted} strokeWidth="1.5">
+                                                                    <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" />
+                                                                    <path d="M3.5 9.5h17M9 9.5v10M15 9.5v10" />
+                                                                </svg>
+                                                                {t[0]}
+                                                                <span style={{ marginLeft: "auto", fontSize: 11.5, color: C.faint }}>{t[1]}</span>
+                                                            </div>
+                                                        ))}
+                                                        <div
+                                                            style={{
+                                                                height: 26,
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                padding: "0 12px 0 24px",
+                                                            }}
+                                                        >
+                                                            <span style={{ fontSize: 9, color: C.muted }}>›</span>
+                                                            <DbGlyph />
+                                                            demo
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+
+                                            {/* tools */}
+                                            <div style={{ flex: 1, minHeight: 0, overflow: "hidden", borderTop: `1px solid ${C.line}`, marginTop: 8 }}>
+                                                <div
+                                                    style={{
+                                                        height: 26,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                        padding: "0 12px",
+                                                        fontSize: 11,
+                                                        letterSpacing: ".06em",
+                                                        color: C.textDim,
+                                                        fontWeight: 600,
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 9, color: C.muted }}>⌄</span>TOOLS
+                                                </div>
+                                                <div style={{ fontSize: 13, color: C.textDim }}>
+                                                    <div style={{ height: 24, display: "flex", alignItems: "center", gap: 8, padding: "0 12px 0 22px" }}>
+                                                        <span style={{ color: C.amber }}>▮▮</span>Dashboard
+                                                    </div>
+                                                    {TOOLS.map((g) => (
+                                                        <div key={g.name}>
+                                                            <div style={{ height: 24, display: "flex", alignItems: "center", gap: 7, padding: "0 12px 0 22px" }}>
+                                                                <span style={{ fontSize: 9, color: C.muted }}>⌄</span>
+                                                                <span style={{ color: g.tint }}>{g.icon}</span>
+                                                                {g.name}
+                                                                <span style={{ marginLeft: 6, fontSize: 11.5, color: C.faint }}>{g.count}</span>
+                                                            </div>
+                                                            {g.items.map((it) => (
+                                                                <div
+                                                                    key={it}
+                                                                    style={{
+                                                                        height: 24,
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: 8,
+                                                                        padding: "0 12px 0 40px",
+                                                                        color: C.textDim,
+                                                                    }}
+                                                                >
+                                                                    <span style={{ color: C.muted, fontSize: 11 }}>▫</span>
+                                                                    {it}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            <div
+                                                style={{
+                                                    flex: "none",
+                                                    borderTop: `1px solid ${C.line}`,
+                                                    fontSize: 11,
+                                                    letterSpacing: ".06em",
+                                                    color: C.textDim,
+                                                    fontWeight: 600,
+                                                }}
+                                            >
+                                                <div style={{ height: 26, display: "flex", alignItems: "center", gap: 7, padding: "0 12px" }}>
+                                                    <span style={{ fontSize: 9, color: C.muted }}>›</span>QUERY HISTORY
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        height: 26,
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                        padding: "0 12px",
+                                                        borderTop: `1px solid ${C.line}`,
+                                                    }}
+                                                >
+                                                    <span style={{ fontSize: 9, color: C.muted }}>›</span>SAVED QUERIES
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* editor area */}
+                            <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", background: C.panel, position: "relative" }}>
+                                {grid && (
+                                    <div
+                                        style={{
+                                            height: 36,
+                                            flex: "none",
+                                            display: "flex",
+                                            alignItems: "stretch",
+                                            background: C.chrome,
+                                            borderBottom: `1px solid ${C.line}`,
+                                        }}
+                                    >
+                                        <Tab active={!pay} name="customers" />
+                                        {pay && <Tab active name="payments" closeRef={set("closeTab")} />}
+                                        <div
+                                            style={{
+                                                marginLeft: "auto",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 16,
+                                                padding: "0 14px",
+                                                color: C.muted,
+                                                fontSize: 13,
+                                            }}
+                                        >
+                                            <span style={{ color: C.amber }}>✳</span>
+                                            <span>◫</span>
+                                            <span>···</span>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {mainWelcome && <WelcomePane />}
+                                {mainExt && <ExtensionPane step={s} installBtnRef={set("installBtn")} />}
+
+                                {grid && (
+                                    <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
+                                        <GridToolbar
+                                            changes={changes}
+                                            pasteActive={s >= 17}
+                                            pasteBtnRef={set("pasteBtn")}
+                                            saveBtnRef={set("saveBtn")}
+                                        />
+                                        <FilterBar filterOn={pay} filterValRef={set("filterVal")} />
+
+                                        <div style={{ flex: 1, minHeight: 0, position: "relative", overflow: "hidden" }}>
+                                            {!pay && (
+                                                <div>
+                                                    <div
+                                                        style={{
+                                                            display: "grid",
+                                                            gridTemplateColumns: CELL_COLS,
+                                                            height: 34,
+                                                            background: C.raised,
+                                                            borderBottom: `1px solid ${C.line2}`,
+                                                            fontSize: 12.5,
+                                                            color: C.textDim,
+                                                        }}
+                                                    >
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.line2}`, color: C.faint }}>
+                                                            #
+                                                        </div>
+                                                        <div style={th}>
+                                                            {typeTag("#0b3a5e", C.bluePale, "123")}
+                                                            {key}customerNumber{colMenu}
+                                                        </div>
+                                                        {["customerName", "contactLastName", "contactFirstName"].map((h) => (
+                                                            <div key={h} style={th}>
+                                                                {typeTag("#2f3a2a", C.green, "Aa")}
+                                                                {h}
+                                                                {colMenu}
+                                                            </div>
+                                                        ))}
+                                                        <div style={th}>
+                                                            {typeTag("#2f3a2a", C.green, "Aa")}phone{colMenu}
+                                                        </div>
+                                                        {["addressLine1", "addressLine2"].map((h) => (
+                                                            <div key={h} style={th}>
+                                                                {typeTag("#2f3a2a", C.green, "Aa")}
+                                                                {h}
+                                                                {colMenu}
+                                                            </div>
+                                                        ))}
+                                                        <div style={{ ...th, borderRight: "none" }}>
+                                                            {typeTag("#2f3a2a", C.green, "Aa")}city
+                                                        </div>
+                                                    </div>
+                                                    {rows.map((r, i) => (
+                                                        <div
+                                                            className="qd-row"
+                                                            key={`${r.num}-${i}`}
+                                                            style={{
+                                                                display: "grid",
+                                                                gridTemplateColumns: CELL_COLS,
+                                                                height: 31,
+                                                                borderBottom: `1px solid ${C.rowLine}`,
+                                                                fontSize: 12.5,
+                                                                color: C.cell,
+                                                            }}
+                                                        >
+                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.rowLine}`, color: C.faint, fontSize: 12 }}>
+                                                                {r.i}
+                                                            </div>
+                                                            <div style={{ ...td, fontWeight: 600, color: C.textStrong }}>{r.num}</div>
+                                                            <div style={td}>{r.name}</div>
+                                                            <div style={td}>{r.last}</div>
+                                                            <div style={td}>{r.first}</div>
+                                                            <div style={{ ...td, background: r.phoneBg, color: r.phoneFg }}>{r.phone}</div>
+                                                            <div style={td}>{r.a1}</div>
+                                                            <div style={td}>{r.a2}</div>
+                                                            <div style={{ ...td, borderRight: "none" }}>{r.city}</div>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            )}
+
+                                            {pay && <PaymentsGrid />}
+
+                                            {(s === 11 || s === 12) && (
+                                                <div
+                                                    ref={set("rangeBox")}
+                                                    style={{
+                                                        position: "absolute",
+                                                        left: 866,
+                                                        top: 34,
+                                                        width: 190,
+                                                        height: 31,
+                                                        border: `2px solid ${C.blue}`,
+                                                        background: "rgba(0,120,212,.07)",
+                                                        pointerEvents: "none",
+                                                    }}
+                                                >
+                                                    <div style={{ position: "absolute", left: 0, right: 0, top: 0, height: 29, background: "rgba(0,120,212,.16)" }} />
+                                                    <div style={{ position: "absolute", right: 6, bottom: 7, fontSize: 12, color: C.muted }}>⧉</div>
+                                                    <Handle style={{ left: -4, top: -4 }} />
+                                                    <Handle style={{ right: -4, top: -4 }} />
+                                                    <Handle style={{ left: -4, bottom: -4 }} />
+                                                    <Handle style={{ right: -4, bottom: -4, width: 8, height: 8, borderColor: "#fff" }} />
+                                                </div>
+                                            )}
+                                            {s === 11 && (
+                                                <div
+                                                    ref={set("rangeTip")}
+                                                    style={{
+                                                        position: "absolute",
+                                                        left: 1066,
+                                                        top: 40,
+                                                        padding: "6px 10px",
+                                                        background: "#252526",
+                                                        border: "1px solid #454545",
+                                                        fontSize: 12,
+                                                        color: C.textStrong,
+                                                        boxShadow: "0 4px 12px rgba(0,0,0,.55)",
+                                                        pointerEvents: "none",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {selN} cells · ⌘C copies as TSV
+                                                </div>
+                                            )}
+                                            {s === 12 && (
+                                                <div
+                                                    style={{
+                                                        position: "absolute",
+                                                        left: 1066,
+                                                        top: 150,
+                                                        padding: "6px 10px",
+                                                        background: "#252526",
+                                                        border: "1px solid #454545",
+                                                        font: `500 12px ${MONO}`,
+                                                        color: C.amberPale,
+                                                        boxShadow: "0 4px 12px rgba(0,0,0,.55)",
+                                                        pointerEvents: "none",
+                                                    }}
+                                                >
+                                                    40.32.2555 → 4 cells
+                                                </div>
+                                            )}
+
+                                            {s === 14 && <ForeignKeyPopover chipRef={set("fkChip")} rowRef={set("fkRow")} />}
+                                            {pastePanel && <PastePanel filled={s === 18} importBtnRef={set("importBtn")} />}
+                                        </div>
+
+                                        <Pagination
+                                            showing={
+                                                pay ? "Showing 1-4 of 4" : tail ? "Showing 113-129 of 129" : "Showing 1-27 of 122"
+                                            }
+                                        />
+                                    </div>
+                                )}
+
+                                {/* toast */}
+                                <div
+                                    ref={set("toast")}
+                                    style={{
+                                        position: "absolute",
+                                        right: 20,
+                                        bottom: 20,
+                                        minWidth: 420,
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 11,
+                                        padding: "12px 14px",
+                                        background: "#252526",
+                                        border: "1px solid #454545",
+                                        boxShadow: "0 12px 34px rgba(0,0,0,.6)",
+                                        fontSize: 13,
+                                        color: C.text,
+                                        opacity: 0,
+                                        transform: "translateY(10px)",
+                                        transition: "opacity .3s ease, transform .3s cubic-bezier(.22,1,.36,1)",
+                                        pointerEvents: "none",
+                                    }}
+                                >
+                                    <span style={{ color: C.blueLight }}>ⓘ</span>
+                                    <span ref={set("toastText")}>Connection &quot;Demo&quot; added.</span>
+                                    <span style={{ marginLeft: "auto", display: "flex", gap: 12, color: C.muted }}>⚙ ⌃ ✕</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* status bar */}
+                        <div
+                            style={{
+                                height: 24,
+                                flex: "none",
+                                display: "flex",
+                                alignItems: "center",
+                                gap: 16,
+                                padding: "0 10px",
+                                background: C.chrome,
+                                borderTop: `1px solid ${C.line}`,
+                                fontSize: 12,
+                                color: C.textDim,
+                            }}
+                        >
+                            <span>✕</span>
+                            <span>⇄ Launchpad</span>
+                            <span>⊗ 0 ⚠ 0</span>
+                            {s >= 8 && <span style={{ color: "#8ef0a8" }}>● QuickDB · Demo</span>}
+                            <span style={{ marginLeft: "auto", display: "flex", gap: 16 }}>
+                                <span>⚗</span>
+                                <span>((·)) Go Live</span>
+                                <span>🔔</span>
+                            </span>
+                        </div>
+
+                        <div
+                            aria-hidden
+                            ref={set("cur")}
+                            style={{
+                                position: "absolute",
+                                left: 0,
+                                top: 0,
+                                width: 18,
+                                height: 18,
+                                borderRadius: "50%",
+                                background: "#fff",
+                                boxShadow: "0 0 0 2px rgba(0,0,0,.5),0 6px 18px rgba(0,0,0,.6)",
+                                opacity: 0,
+                                pointerEvents: "none",
+                                transform: "translate(-50%,-50%)",
+                            }}
+                        />
+                    </div>
+                </div>
+
+                {/* hero overlay */}
+                <div
+                    ref={set("hero")}
+                    style={{
+                        position: "absolute",
+                        inset: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        padding: "5vh 24px",
+                        pointerEvents: "none",
+                        textAlign: "center",
+                    }}
+                >
+                    <div style={{ maxWidth: 960 }}>
+                        <div
+                            style={{
+                                display: "inline-flex",
+                                alignItems: "center",
+                                gap: 9,
+                                padding: "6px 13px",
+                                borderRadius: 99,
+                                border: "1px solid #2a2a36",
+                                background: "rgba(20,20,26,.7)",
+                                font: `400 11.5px ${MONO}`,
+                                color: "#8fc9ff",
+                                letterSpacing: ".04em",
+                            }}
+                        >
+                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.blue }} />
+                            QuickDB 1.2.6 — editor extension &amp; desktop app
+                        </div>
+                        <h1
+                            style={{
+                                margin: "18px 0 0",
+                                fontSize: "clamp(30px,4.1vw,58px)",
+                                lineHeight: 1.04,
+                                letterSpacing: "-.035em",
+                                fontWeight: 600,
+                                textWrap: "pretty",
+                            }}
+                        >
+                            Your whole database,
+                            <br />
+                            inside your editor.
+                        </h1>
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
+                        <div style={{ fontSize: "clamp(13px,1.2vw,16px)", color: C.muted, maxWidth: 540, textWrap: "pretty" }}>
+                            Browse and query 30+ engines without leaving the window you already have open.
+                        </div>
+                        <div className="qd-bob" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
+                            <div style={{ font: `400 10.5px ${MONO}`, letterSpacing: ".14em", color: C.dark }}>SCROLL</div>
+                            <div style={{ width: 1, height: 26, background: "linear-gradient(180deg,#6f6f6f,transparent)" }} />
+                        </div>
+                    </div>
+                </div>
+
+                {/* caption pill */}
+                <div
+                    ref={set("cap")}
+                    style={{
+                        position: "absolute",
+                        left: "50%",
+                        bottom: 30,
+                        transform: "translateX(-50%)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 13,
+                        padding: "10px 18px",
+                        borderRadius: 99,
+                        background: "rgba(14,14,19,.94)",
+                        border: "1px solid rgba(255,255,255,.09)",
+                        boxShadow: "0 20px 50px -20px rgba(0,0,0,.9)",
+                        opacity: 0,
+                        transition: "opacity .28s ease",
+                        pointerEvents: "none",
+                        whiteSpace: "nowrap",
+                    }}
+                >
+                    <span style={{ font: `500 11px ${MONO}`, letterSpacing: ".1em", color: C.blueLight }}>{capStep[0]}</span>
+                    <span style={{ width: 1, height: 14, background: "rgba(255,255,255,.14)" }} />
+                    <span style={{ fontSize: 13.5, color: C.text }}>{capStep[1]}</span>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+/* ────────────────────────────────────────────────────────────────
+   Small presentational pieces
+   ──────────────────────────────────────────────────────────────── */
+
+const ActIcon: FC<{ children: ReactNode }> = ({ children }) => (
+    <div style={{ width: 48, height: 48, display: "grid", placeItems: "center", color: C.faint }}>
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.4">
+            {children}
+        </svg>
+    </div>
+);
+
+const DbGlyph: FC<{ size?: number; stroke?: string; full?: boolean }> = ({
+    size = 13,
+    stroke = C.muted,
+    full = false,
+}) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={stroke} strokeWidth="1.6">
+        <ellipse cx="12" cy="6" rx="7" ry="2.6" />
+        <path d="M5 6v12c0 1.4 3.13 2.6 7 2.6s7-1.2 7-2.6V6" />
+        {full && <path d="M5 12c0 1.4 3.13 2.6 7 2.6s7-1.2 7-2.6" />}
+    </svg>
+);
+
+const Caret: FC = () => <span style={{ width: 1.5, height: 13, background: C.blueLight, marginLeft: 1 }} />;
+
+const Handle: FC<{ style?: CSSProperties }> = ({ style }) => (
+    <div
+        style={{
+            position: "absolute",
+            width: 7,
+            height: 7,
+            background: C.blue,
+            border: `1px solid ${C.textStrong}`,
+            ...style,
+        }}
+    />
+);
+
+const PanelTitle: FC<{ children: ReactNode }> = ({ children }) => (
+    <div
+        style={{
+            height: 34,
+            display: "flex",
+            alignItems: "center",
+            padding: "0 14px",
+            fontSize: 11,
+            letterSpacing: ".08em",
+            color: "#bbbbbb",
+            fontWeight: 600,
+        }}
+    >
+        {children}
+    </div>
+);
+
+const TreeRow: FC<{ label: string; badge: string }> = ({ label, badge }) => (
+    <div style={{ height: 23, display: "flex", alignItems: "center", gap: 8, padding: "0 10px" }}>
+        <span style={{ fontSize: 9, color: C.muted }}>›</span>
+        {label}
+        <span
+            style={{
+                marginLeft: "auto",
+                background: C.blue,
+                color: "#fff",
+                borderRadius: 9,
+                padding: "1px 7px",
+                fontSize: 10.5,
+                letterSpacing: 0,
+            }}
+        >
+            {badge}
+        </span>
+    </div>
+);
+
+const Tab: FC<{ active: boolean; name: string; closeRef?: (el: HTMLElement | null) => void }> = ({
+    active,
+    name,
+    closeRef,
+}) => (
+    <div
+        style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 9,
+            padding: "0 14px",
+            fontSize: 13,
+            color: active ? C.textStrong : C.muted,
+            background: active ? C.panel : C.chrome,
+            borderRight: `1px solid ${C.line}`,
+            borderTop: `1px solid ${active ? C.blue : "transparent"}`,
+        }}
+    >
+        <span style={{ color: C.muted, fontSize: 12 }}>▤</span>
+        {name}
+        <span ref={closeRef} style={{ color: C.muted, fontSize: 13 }}>
+            ✕
+        </span>
+    </div>
+);
+
+const Kbd: FC<{ children: ReactNode }> = ({ children }) => (
+    <span
+        style={{
+            minWidth: 22,
+            height: 20,
+            padding: "0 5px",
+            borderRadius: 4,
+            background: "#2a2a2a",
+            color: C.textDim,
+            fontSize: 11,
+            lineHeight: "20px",
+            textAlign: "center",
+        }}
+    >
+        {children}
+    </span>
+);
+
+const WelcomePane: FC = () => (
+    <div style={{ flex: 1, position: "relative", display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <div
+            style={{
+                position: "absolute",
+                left: "50%",
+                top: "47%",
+                transform: "translate(-50%,-50%)",
+                width: 300,
+                height: 300,
+                borderRadius: 44,
+                border: "18px solid #232323",
+            }}
+        />
+        <div
+            style={{
+                position: "relative",
+                marginTop: 270,
+                display: "grid",
+                gridTemplateColumns: "auto auto",
+                gap: "12px 60px",
+                alignItems: "center",
+            }}
+        >
+            {(
+                [
+                    ["Open Chat", ["⌃", "⌘", "I"]],
+                    ["Show All Commands", ["⇧", "⌘", "P"]],
+                    ["Open Recent", ["⌃", "R"]],
+                    ["Open File or Folder", ["⌘", "O"]],
+                    ["New Untitled Text File", ["⌘", "N"]],
+                ] as const
+            ).map(([label, keys]) => (
+                <Fragment key={label}>
+                    <div style={{ fontSize: 13.5, color: C.muted }}>{label}</div>
+                    <div style={{ display: "flex", gap: 5, justifyContent: "flex-end" }}>
+                        {keys.map((k) => (
+                            <Kbd key={k}>{k}</Kbd>
+                        ))}
+                    </div>
+                </Fragment>
+            ))}
+        </div>
+    </div>
+);
+
+const ExtensionPane: FC<{ step: number; installBtnRef: (el: HTMLElement | null) => void }> = ({
+    step,
+    installBtnRef,
+}) => (
+    <div style={{ flex: 1, minHeight: 0, overflow: "hidden", display: "flex" }}>
+        <div style={{ flex: 1, minWidth: 0, padding: "26px 40px 0 34px" }}>
+            <div style={{ display: "flex", gap: 26 }}>
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                    alt="QuickDB"
+                    src="/images/quickdb-logo.png"
+                    style={{ width: 128, height: 128, flex: "none", borderRadius: 14, objectFit: "cover" }}
+                />
+                <div style={{ minWidth: 0 }}>
+                    <div style={{ fontSize: 34, fontWeight: 600, letterSpacing: "-.02em", color: C.textStrong }}>QuickDB</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginTop: 8, fontSize: 13.5, color: "#bbbbbb" }}>
+                        <span>Nazmul Haque</span>
+                        <span style={{ color: C.muted }}>⇩ 465</span>
+                        <span style={{ color: C.dark, letterSpacing: 2 }}>☆☆☆☆☆</span>
+                    </div>
+                    <div style={{ fontSize: 14, color: C.textDim, marginTop: 12 }}>
+                        Lightweight database browser for VS Code. Connect to databases, browse tables, and run queries.
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 14, marginTop: 14 }}>
+                        {(step === 3 || step === 4) && (
+                            <div
+                                ref={installBtnRef}
+                                style={{ background: C.blue, color: "#fff", fontSize: 13, padding: "5px 14px", borderRadius: 2 }}
+                            >
+                                Install
+                            </div>
+                        )}
+                        {step === 5 && (
+                            <div style={{ background: "#2a2a2a", color: C.muted, fontSize: 13, padding: "5px 14px", borderRadius: 2 }}>
+                                Installing
+                            </div>
+                        )}
+                        {step >= 6 && (
+                            <div style={{ display: "flex", gap: 10 }}>
+                                <div style={{ background: "#2a2a2a", color: C.text, fontSize: 13, padding: "5px 14px", borderRadius: 2 }}>Disable</div>
+                                <div style={{ background: "#2a2a2a", color: C.text, fontSize: 13, padding: "5px 14px", borderRadius: 2 }}>
+                                    Uninstall ⌄
+                                </div>
+                            </div>
+                        )}
+                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 13, color: C.textDim }}>
+                            <span
+                                style={{
+                                    width: 15,
+                                    height: 15,
+                                    borderRadius: 2,
+                                    background: C.blue,
+                                    color: "#fff",
+                                    display: "grid",
+                                    placeItems: "center",
+                                    fontSize: 11,
+                                }}
+                            >
+                                ✓
+                            </span>
+                            Auto Update
+                        </div>
+                        <span style={{ color: C.muted, fontSize: 14 }}>⚙</span>
+                    </div>
+                    <div
+                        style={{
+                            display: "flex",
+                            gap: 22,
+                            marginTop: 22,
+                            fontSize: 13,
+                            color: C.muted,
+                            borderBottom: `1px solid ${C.line}`,
+                            paddingBottom: 8,
+                        }}
+                    >
+                        <span style={{ color: C.textStrong, borderBottom: `2px solid ${C.textStrong}`, paddingBottom: 8, marginBottom: -9 }}>
+                            DETAILS
+                        </span>
+                        <span>FEATURES</span>
+                    </div>
+                </div>
+            </div>
+
+            <div style={{ marginTop: 26, padding: "0 60px", textAlign: "center" }}>
+                {/* The design shipped a separate wordmark PNG here; the mark plus
+                    the product name in the page's own display face reads the same
+                    at this size without carrying a second near-duplicate asset. */}
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 10 }}>
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img alt="" src="/images/quickdb-logo.png" style={{ width: 30, height: 30, borderRadius: 6 }} />
+                    <span style={{ fontSize: 26, fontWeight: 700, letterSpacing: "-.03em", color: C.textStrong }}>QuickDB</span>
+                </div>
+                <div style={{ height: 1, background: C.line, margin: "22px 0" }} />
+                <div style={{ fontSize: 15, fontWeight: 700, color: C.textStrong }}>
+                    The Ultimate Database Management &amp; AI Integration Platform
+                </div>
+                <div style={{ fontSize: 13.5, lineHeight: 1.7, color: C.textDim, marginTop: 14, textWrap: "pretty" }}>
+                    An IDE-grade universal database client available as a <strong>VS Code extension</strong> and a{" "}
+                    <strong>standalone desktop app</strong> (Windows · macOS · Linux). Browse schemas, execute complex
+                    queries, design interactive dashboards, and supercharge your developer workflow with a built-in MCP
+                    server for AI tools.
+                </div>
+                <div style={{ display: "flex", justifyContent: "center", gap: 14, marginTop: 14, fontSize: 13.5, color: C.blueLight }}>
+                    {["Quick Start", "Features", "Databases", "MCP / AI", "Desktop"].map((t, i) => (
+                        <span key={t}>
+                            {i > 0 && <span style={{ color: "#5a5a5a", marginRight: 14 }}>·</span>}
+                            {t}
+                        </span>
+                    ))}
+                </div>
+                <div style={{ marginTop: 20, padding: "26px 0 30px", borderTop: `1px solid ${C.line}`, textAlign: "left" }}>
+                    <div style={{ fontSize: 14.5, fontWeight: 700, color: C.textStrong }}>Quick start</div>
+                    <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 16, marginTop: 14 }}>
+                        {(
+                            [
+                                ["01", "Open the QuickDB panel", "The database icon in the activity bar, or ⇧⌘D."],
+                                ["02", "Add a connection", "Pick an engine, paste a URL, or point at a file."],
+                                ["03", "Browse and query", "Click a table for rows, ⌘↵ to run a query."],
+                            ] as const
+                        ).map(([n, title, body]) => (
+                            <div key={n} style={{ border: `1px solid ${C.line}`, borderRadius: 6, padding: "14px 16px" }}>
+                                <div style={{ font: `400 11.5px ${MONO}`, color: C.blueLight }}>{n}</div>
+                                <div style={{ fontSize: 13, color: C.textStrong, marginTop: 7, fontWeight: 600 }}>{title}</div>
+                                <div style={{ fontSize: 12.5, lineHeight: 1.55, color: C.muted, marginTop: 5 }}>{body}</div>
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div style={{ width: 360, flex: "none", padding: "26px 30px 0 0" }}>
+            <div style={{ fontSize: 17, color: C.textStrong, fontWeight: 600 }}>Marketplace</div>
+            <div style={{ marginTop: 12, font: `400 12.5px ${MONO}`, color: C.textDim }}>
+                {(
+                    [
+                        ["Identifier", "quickdb.quickdb", true],
+                        ["Version", "1.2.6", false],
+                        ["Published", "6 months ago", true],
+                        ["Last Released", "11 hours ago", false],
+                    ] as const
+                ).map(([k, v, shade]) => (
+                    <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: "7px 10px", background: shade ? "#232323" : undefined }}>
+                        <span style={{ color: C.muted, fontFamily: UI }}>{k}</span>
+                        <span>{v}</span>
+                    </div>
+                ))}
+            </div>
+            <div style={{ fontSize: 17, color: C.textStrong, fontWeight: 600, marginTop: 26 }}>Categories</div>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8, marginTop: 12 }}>
+                {CATEGORIES.map((c) => (
+                    <span key={c} style={{ fontSize: 12, color: C.textDim, border: `1px solid ${C.line3}`, borderRadius: 3, padding: "3px 8px" }}>
+                        {c}
+                    </span>
+                ))}
+            </div>
+            <div style={{ fontSize: 17, color: C.textStrong, fontWeight: 600, marginTop: 26 }}>Resources</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 9, marginTop: 12, fontSize: 13, color: C.blueLight }}>
+                {["Repository", "Issues", "License", "Nazmul Haque", "Marketplace"].map((r) => (
+                    <span key={r}>{r}</span>
+                ))}
+            </div>
+        </div>
+    </div>
+);
+
+const GridToolbar: FC<{
+    changes: number;
+    pasteActive: boolean;
+    pasteBtnRef: (el: HTMLElement | null) => void;
+    saveBtnRef: (el: HTMLElement | null) => void;
+}> = ({ changes, pasteActive, pasteBtnRef, saveBtnRef }) => (
+    <div
+        style={{
+            height: 60,
+            flex: "none",
+            display: "flex",
+            alignItems: "center",
+            padding: "0 14px",
+            borderBottom: `1px solid ${C.line}`,
+            background: C.panel,
+        }}
+    >
+        <div style={{ display: "flex", flexDirection: "column", gap: 4, marginRight: 22 }}>
+            <div style={{ width: 19, height: 19, borderRadius: "50%", border: `1.4px solid ${C.dark}` }} />
+            <div style={{ width: 19, height: 19, borderRadius: "50%", border: `1.4px solid ${C.dark}`, background: "#2a2a2a" }} />
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 5, marginRight: 24, fontSize: 13, color: C.textDim }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>↻ Refresh</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 7 }}>✎ Edit Table</div>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 16, fontSize: 13, color: C.textDim }}>
+            <span>＋ Add</span>
+            <span
+                ref={pasteBtnRef}
+                style={{
+                    padding: "3px 8px",
+                    borderRadius: 3,
+                    background: pasteActive ? "rgba(0,120,212,.28)" : "transparent",
+                    color: pasteActive ? "#8fc9ff" : C.textDim,
+                }}
+            >
+                ⧉ Paste
+            </span>
+            <span style={{ color: C.dark }}>⧉ Clone</span>
+            <span style={{ color: C.dark }}>🗑 Delete</span>
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, marginLeft: 26, fontSize: 13 }}>
+            {changes > 0 ? (
+                <>
+                    <span
+                        ref={saveBtnRef}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 8,
+                            background: "#e9e9e9",
+                            color: "#1b1b1b",
+                            fontWeight: 600,
+                            padding: "4px 10px",
+                            borderRadius: 3,
+                        }}
+                    >
+                        Save
+                        <span style={{ background: "#1b1b1b", color: "#fff", borderRadius: 9, padding: "0 6px", fontSize: 11 }}>{changes}</span>
+                    </span>
+                    <span style={{ color: C.text }}>Discard</span>
+                </>
+            ) : (
+                <span style={{ display: "flex", gap: 14, color: C.dark }}>
+                    <span>Save</span>
+                    <span>Discard</span>
+                </span>
+            )}
+        </div>
+        <div style={{ display: "flex", marginLeft: 26, border: `1px solid ${C.line3}`, borderRadius: 3, overflow: "hidden", fontSize: 13 }}>
+            <span style={{ padding: "4px 12px", background: C.line3, color: "#fff" }}>Table</span>
+            {["Transpose", "Text", "Tree"].map((t) => (
+                <span key={t} style={{ padding: "4px 12px", color: C.textDim }}>
+                    {t}
+                </span>
+            ))}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, marginLeft: 26, fontSize: 13, color: C.textDim }}>
+            <span>⇱ CSV</span>
+            <span>⇱ JSON</span>
+        </div>
+        <div style={{ marginLeft: 22, fontSize: 11.5, color: C.faint, whiteSpace: "nowrap" }}>
+            Click Edit | Drag Select | Ctrl+S Save | Ctrl+N Add | Ctrl+G Go To Row
+        </div>
+    </div>
+);
+
+const FilterBar: FC<{ filterOn: boolean; filterValRef: (el: HTMLElement | null) => void }> = ({
+    filterOn,
+    filterValRef,
+}) => {
+    const seg: CSSProperties = {
+        height: 26,
+        display: "flex",
+        alignItems: "center",
+        gap: 24,
+        padding: "0 9px",
+        border: `1px solid ${C.line3}`,
+        background: C.raised,
+    };
+    return (
+        <div
+            style={{
+                height: 42,
+                flex: "none",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                padding: "0 14px",
+                borderBottom: `1px solid ${C.line}`,
+                background: C.panel,
+            }}
+        >
+            {filterOn && (
+                <div style={{ display: "flex", alignItems: "center", fontSize: 12.5, color: C.text }}>
+                    <span
+                        style={{
+                            width: 26,
+                            height: 26,
+                            display: "grid",
+                            placeItems: "center",
+                            border: `1px solid ${C.line3}`,
+                            borderRight: "none",
+                            background: C.raised,
+                            color: C.blueLight,
+                        }}
+                    >
+                        ✓
+                    </span>
+                    <span style={seg}>
+                        customerNumber…<span style={{ color: C.faint }}>⌄</span>
+                    </span>
+                    <span style={{ ...seg, borderLeft: "none" }}>
+                        =<span style={{ color: C.faint }}>⌄</span>
+                    </span>
+                    <span
+                        ref={filterValRef}
+                        style={{
+                            height: 26,
+                            width: 150,
+                            display: "flex",
+                            alignItems: "center",
+                            padding: "0 9px",
+                            border: `1px solid ${C.line3}`,
+                            borderLeft: "none",
+                            background: C.raised,
+                        }}
+                    >
+                        121<span style={{ marginLeft: "auto", color: C.faint }}>✕</span>
+                    </span>
+                </div>
+            )}
+            <div
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    height: 26,
+                    padding: "0 10px",
+                    border: `1px solid ${C.line3}`,
+                    borderRadius: 3,
+                    fontSize: 12.5,
+                    color: C.textDim,
+                }}
+            >
+                ⚟ Add filter
+            </div>
+            {filterOn && (
+                <div
+                    style={{
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 7,
+                        height: 26,
+                        padding: "0 10px",
+                        border: `1px solid ${C.line3}`,
+                        borderRadius: 3,
+                        fontSize: 11.5,
+                        color: C.textDim,
+                        lineHeight: 1.1,
+                    }}
+                >
+                    ⚟ 4 /<br />
+                    273
+                </div>
+            )}
+            <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", fontSize: 12.5 }}>
+                <span style={{ height: 26, width: 150, display: "flex", alignItems: "center", padding: "0 9px", border: `1px solid ${C.line3}`, background: C.raised, color: C.faint }}>
+                    Go to row
+                </span>
+                <span style={{ height: 26, width: 44, display: "flex", alignItems: "center", justifyContent: "center", border: `1px solid ${C.line3}`, borderLeft: "none", background: C.raised, color: C.faint }}>
+                    #
+                </span>
+                <span style={{ height: 26, padding: "0 12px", display: "flex", alignItems: "center", border: `1px solid ${C.line3}`, borderLeft: "none", background: "#2a2a2a", color: C.text }}>
+                    GO
+                </span>
+                <span
+                    style={{
+                        height: 26,
+                        width: 260,
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 8,
+                        padding: "0 9px",
+                        marginLeft: 16,
+                        border: `1px solid ${C.line3}`,
+                        background: C.raised,
+                        color: C.faint,
+                    }}
+                >
+                    ⌕ Search all columns…
+                </span>
+            </div>
+        </div>
+    );
+};
+
+const PaymentsGrid: FC = () => {
+    const th: CSSProperties = { display: "flex", alignItems: "center", gap: 7, padding: "0 9px", borderRight: `1px solid ${C.line2}` };
+    return (
+        <div>
+            <div
+                style={{
+                    display: "grid",
+                    gridTemplateColumns: PAY_COLS,
+                    height: 34,
+                    background: C.raised,
+                    borderBottom: `1px solid ${C.line2}`,
+                    fontSize: 12.5,
+                    color: C.textDim,
+                }}
+            >
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.line2}`, color: C.faint }}>#</div>
+                <div style={th}>
+                    <span style={{ fontSize: 9.5, background: "#0b3a5e", color: C.bluePale, borderRadius: 2, padding: "1.5px 3px" }}>123</span>
+                    <span style={{ color: C.amber }}>🔑</span>customerNumber
+                    <span style={{ marginLeft: "auto", color: C.faint }}>⚟ ⋮</span>
+                </div>
+                <div style={th}>
+                    <span style={{ fontSize: 9.5, background: "#2f3a2a", color: C.green, borderRadius: 2, padding: "1.5px 3px" }}>Aa</span>
+                    <span style={{ color: C.amber }}>🔑</span>checkNumber
+                    <span style={{ marginLeft: "auto", color: C.faint }}>⚟ ⋮</span>
+                </div>
+                <div style={th}>
+                    <span style={{ fontSize: 9.5, background: "#3a2f45", color: "#c9a8e8", borderRadius: 2, padding: "1.5px 3px" }}>17</span>
+                    paymentDate<span style={{ marginLeft: "auto", color: C.faint }}>⚟ ⋮</span>
+                </div>
+                <div style={{ ...th, borderRight: "none" }}>
+                    <span style={{ fontSize: 9.5, background: "#0b3a5e", color: C.bluePale, borderRadius: 2, padding: "1.5px 3px" }}>123</span>
+                    amount<span style={{ marginLeft: "auto", color: C.faint }}>⚟ ⋮</span>
+                </div>
+            </div>
+            {PAY_ROWS.map((p) => (
+                <div
+                    className="qd-row"
+                    key={p.chk}
+                    style={{ display: "grid", gridTemplateColumns: PAY_COLS, height: 31, borderBottom: `1px solid ${C.rowLine}`, fontSize: 12.5, color: C.cell }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.rowLine}`, color: C.faint, fontSize: 12 }}>{p.i}</div>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "0 9px", borderRight: `1px solid ${C.rowLine}` }}>
+                        <span style={{ fontSize: 9.5, background: "#3a3320", color: C.amber, borderRadius: 2, padding: "1.5px 3px" }}>FK</span>
+                        <span style={{ fontWeight: 600, color: C.textStrong }}>121</span>
+                    </div>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: `1px solid ${C.rowLine}` }}>{p.chk}</div>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: `1px solid ${C.rowLine}` }}>{p.date}</div>
+                    <div style={{ display: "flex", alignItems: "center", padding: "0 9px" }}>{p.amt}</div>
+                </div>
+            ))}
+            {EMPTY_ROWS.map((n) => (
+                <div
+                    key={n}
+                    style={{ display: "grid", gridTemplateColumns: PAY_COLS, height: 31, borderBottom: `1px solid ${C.rowLine}`, fontSize: 12, color: C.faint }}
+                >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.rowLine}` }}>{n}</div>
+                    <div style={{ borderRight: `1px solid ${C.rowLine}` }} />
+                    <div style={{ borderRight: `1px solid ${C.rowLine}` }} />
+                    <div style={{ borderRight: `1px solid ${C.rowLine}` }} />
+                    <div />
+                </div>
+            ))}
+        </div>
+    );
+};
+
+const ForeignKeyPopover: FC<{
+    chipRef: (el: HTMLElement | null) => void;
+    rowRef: (el: HTMLElement | null) => void;
+}> = ({ chipRef, rowRef }) => (
+    <>
+        <div style={{ position: "absolute", left: 56, top: 158, width: 200, height: 31, border: `2px solid ${C.blue}`, background: "rgba(0,120,212,.12)", pointerEvents: "none" }} />
+        <div
+            ref={chipRef}
+            style={{
+                position: "absolute",
+                left: 200,
+                top: 162,
+                display: "flex",
+                alignItems: "center",
+                gap: 6,
+                padding: "2px 6px",
+                borderRadius: 3,
+                background: "#04395e",
+                fontSize: 11,
+                color: C.bluePale,
+                pointerEvents: "none",
+            }}
+        >
+            <span>⑃ 2</span>
+            <span style={{ color: C.muted }}>⧉</span>
+        </div>
+        <div style={{ position: "absolute", left: 218, top: 196, width: 216, padding: "12px 0", background: "#252526", border: "1px solid #454545", boxShadow: "0 10px 28px rgba(0,0,0,.6)" }}>
+            <div style={{ padding: "0 14px 10px", fontSize: 12.5, color: C.textDim }}>Show rows referencing this</div>
+            <div ref={rowRef} style={{ margin: "0 8px", padding: "6px 8px", background: "#04395e", font: `400 12.5px ${MONO}`, color: C.textStrong }}>
+                payments.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
+            </div>
+            <div style={{ margin: "4px 8px 0", padding: "6px 8px", font: `400 12.5px ${MONO}`, color: C.textDim }}>
+                orders.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
+            </div>
+        </div>
+    </>
+);
+
+const PastePanel: FC<{ filled: boolean; importBtnRef: (el: HTMLElement | null) => void }> = ({
+    filled,
+    importBtnRef,
+}) => (
+    <div
+        style={{
+            position: "absolute",
+            right: 24,
+            bottom: 16,
+            width: 566,
+            background: C.panel,
+            border: `1px solid ${C.line3}`,
+            borderRadius: 6,
+            boxShadow: "0 20px 50px rgba(0,0,0,.6)",
+            display: "flex",
+            flexDirection: "column",
+        }}
+    >
+        <div style={{ height: 38, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", borderBottom: `1px solid ${C.line2}`, fontSize: 13, color: C.text }}>
+            <span style={{ color: C.blueLight }}>⧉</span>Paste Playground
+            <span style={{ marginLeft: "auto", display: "flex", gap: 14, color: C.muted }}>▤ ✕</span>
+        </div>
+        <div
+            style={{
+                margin: "12px 14px",
+                height: 104,
+                border: `1px solid ${C.line3}`,
+                background: C.raised,
+                borderRadius: 3,
+                padding: "9px 11px",
+                position: "relative",
+                font: `400 12px/1.5 ${MONO}`,
+                color: C.cell,
+                overflow: "hidden",
+            }}
+        >
+            {filled ? (
+                <div>
+                    495,Diecast Collectables,Franco,Valarie,6175552555,6251 Ingle Ln.,,Boston,MA,51003,USA,1188,85100.00
+                    <br />
+                    496,Kelly&apos;s Gift Shop,Snowden,Tony,+64 9 5555500,Arenales 1938 3&apos;A&apos;,,Auckland,,,New Zealand,1612,110000.00
+                    <span style={{ display: "inline-block", width: 1.5, height: 12, background: C.blueLight, verticalAlign: -2 }} />
+                </div>
+            ) : (
+                <div style={{ fontFamily: UI, fontSize: 12.5, color: C.faint }}>Paste CSV, TSV, or JSON array of objects here…</div>
+            )}
+            <div
+                style={{
+                    position: "absolute",
+                    right: 8,
+                    top: 8,
+                    font: `600 9.5px ${UI}`,
+                    letterSpacing: ".08em",
+                    color: C.faint,
+                    border: `1px solid ${C.line3}`,
+                    padding: "2px 5px",
+                    borderRadius: 2,
+                }}
+            >
+                INPUT
+            </div>
+        </div>
+        <div style={{ margin: "0 14px", border: `1px solid ${C.line2}`, borderRadius: 3, overflow: "hidden" }}>
+            <div style={{ height: 30, display: "flex", alignItems: "center", gap: 10, padding: "0 10px", background: "#232323", fontSize: 11, letterSpacing: ".06em", color: C.textDim, fontWeight: 600 }}>
+                PREVIEW
+                <span style={{ display: "flex", alignItems: "center", gap: 6, letterSpacing: 0, fontWeight: 400, fontSize: 11.5, color: C.textDim }}>
+                    <span style={{ width: 13, height: 13, borderRadius: 2, background: C.blue, color: "#fff", display: "grid", placeItems: "center", fontSize: 9 }}>✓</span>
+                    Auto-generate IDs (Clear PKs)
+                </span>
+                <span style={{ marginLeft: "auto", letterSpacing: 0, fontWeight: 400, fontSize: 11.5, color: C.muted }}>
+                    {filled ? 7 : 0} records detected
+                </span>
+            </div>
+            {filled ? (
+                <div style={{ height: 246, overflow: "hidden" }}>
+                    <div
+                        style={{
+                            display: "grid",
+                            gridTemplateColumns: "108px 168px 130px 128px",
+                            height: 28,
+                            background: C.panel,
+                            borderBottom: `1px solid ${C.line2}`,
+                            fontSize: 11.5,
+                            color: C.textDim,
+                        }}
+                    >
+                        {["customerNumber", "customerName", "contactLastName", "contactFirstName"].map((h, i) => (
+                            <div key={h} style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: i < 3 ? `1px solid ${C.line2}` : undefined }}>
+                                {h}
+                            </div>
+                        ))}
+                    </div>
+                    {PREVIEW_ROWS.map((pr) => (
+                        <div key={pr.n} style={{ display: "grid", gridTemplateColumns: "108px 168px 130px 128px", height: 30, borderBottom: `1px solid ${C.rowLine}`, fontSize: 12, color: C.cell }}>
+                            <div style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: `1px solid ${C.rowLine}`, color: C.faint }}>NULL</div>
+                            <div style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: `1px solid ${C.rowLine}`, overflow: "hidden", whiteSpace: "nowrap" }}>{pr.n}</div>
+                            <div style={{ display: "flex", alignItems: "center", padding: "0 9px", borderRight: `1px solid ${C.rowLine}` }}>{pr.l}</div>
+                            <div style={{ display: "flex", alignItems: "center", padding: "0 9px" }}>{pr.f}</div>
+                        </div>
+                    ))}
+                </div>
+            ) : (
+                <div style={{ height: 246, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.dark }}>
+                    <div style={{ width: 26, height: 22, border: "1.4px solid #5a5a5a", borderRadius: 3 }} />
+                    <div style={{ fontSize: 12.5 }}>Pasted data will appear here</div>
+                </div>
+            )}
+        </div>
+        <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
+            <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.45 }}>
+                Target Table
+                <br />
+                <span style={{ color: C.muted }}>13 columns available</span>
+            </div>
+            <div style={{ marginLeft: "auto", fontSize: 12.5, color: C.text, padding: "5px 12px", border: `1px solid ${C.line3}`, borderRadius: 3 }}>Cancel</div>
+            <div
+                ref={importBtnRef}
+                style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: 7,
+                    fontSize: 12.5,
+                    fontWeight: 600,
+                    padding: "5px 12px",
+                    borderRadius: 3,
+                    background: filled ? "#e9e9e9" : "#2a2a2a",
+                    color: filled ? "#1b1b1b" : C.dark,
+                }}
+            >
+                ⇱ Import Data
+            </div>
+        </div>
+    </div>
+);
+
+const Pagination: FC<{ showing: string }> = ({ showing }) => (
+    <div
+        style={{
+            height: 34,
+            flex: "none",
+            display: "flex",
+            alignItems: "center",
+            gap: 10,
+            padding: "0 14px",
+            borderTop: `1px solid ${C.line}`,
+            background: C.panel,
+            fontSize: 12.5,
+            color: C.textDim,
+        }}
+    >
+        <span style={{ color: C.muted }}>Rows per page:</span>
+        <span style={{ height: 24, padding: "0 9px", display: "flex", alignItems: "center", gap: 20, border: `1px solid ${C.line3}`, borderRadius: 3, background: C.raised }}>
+            Auto (27)<span style={{ color: C.faint }}>⌄</span>
+        </span>
+        <span style={{ marginLeft: "auto", color: C.muted }}>{showing}</span>
+        <span style={{ display: "flex", alignItems: "center", gap: 6, marginLeft: 14, color: C.muted }}>
+            <span>‹</span>
+            {[1, 2, 3, 4, 5].map((n) => (
+                <span
+                    key={n}
+                    style={{
+                        minWidth: 22,
+                        height: 22,
+                        display: "grid",
+                        placeItems: "center",
+                        background: n === 1 ? C.blue : undefined,
+                        color: n === 1 ? "#fff" : undefined,
+                        borderRadius: 3,
+                    }}
+                >
+                    {n}
+                </span>
+            ))}
+            <span>›</span>
+        </span>
+    </div>
+);
+
+export default QuickDBStory;

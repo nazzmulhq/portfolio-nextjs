@@ -1640,6 +1640,188 @@ body {
 }
 
 /* ════════════════════════════════════════════════════════════════
+   QUICKDB LANDING — scroll story
+   The story renders a mock of VS Code's dark theme, so its colours
+   are fixed rather than themed: it should read the same in the
+   site's light mode, the way a screenshot would. Only the rules
+   that need pseudo-selectors or keyframes live here — the mock's
+   own styling is inline, mirroring the source design component.
+   ════════════════════════════════════════════════════════════════ */
+
+.qd-root {
+    background: #08080b;
+    color: #e7e7ef;
+    font-family: var(--font-grotesk), var(--font-sans);
+}
+
+/* Row hover inside the data grid and the table tree. */
+.qd-root .qd-row:hover,
+.qd-root .qd-hover:hover {
+    background: #232323;
+}
+
+.qd-fade {
+    animation: qd-fade-in 0.3s ease both;
+}
+@keyframes qd-fade-in {
+    from {
+        opacity: 0;
+    }
+    to {
+        opacity: 1;
+    }
+}
+
+.qd-bob {
+    animation: qd-bob 2.4s ease-in-out infinite;
+}
+@keyframes qd-bob {
+    0%,
+    100% {
+        transform: translateY(0);
+    }
+    50% {
+        transform: translateY(6px);
+    }
+}
+
+/* ── compact (phone) telling of the same 19 beats ── */
+
+.qd-compact-hero {
+    padding: 5rem 1.25rem 2.5rem;
+    text-align: center;
+}
+.qd-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.55rem;
+    padding: 0.375rem 0.8rem;
+    border-radius: 99px;
+    border: 1px solid #2a2a36;
+    background: rgba(20, 20, 26, 0.7);
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+    color: #8fc9ff;
+}
+.qd-pill-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #0078d4;
+}
+.qd-h1 {
+    margin: 1.1rem 0 0;
+    font-size: clamp(2rem, 9vw, 2.75rem);
+    line-height: 1.05;
+    letter-spacing: -0.035em;
+    font-weight: 600;
+    text-wrap: pretty;
+}
+.qd-lede {
+    margin: 0.9rem auto 0;
+    max-width: 30rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #9d9d9d;
+    text-wrap: pretty;
+}
+
+.qd-steps {
+    margin: 0;
+    padding: 0 1.25rem 1rem;
+    list-style: none;
+}
+.qd-step {
+    display: flex;
+    align-items: baseline;
+    gap: 0.85rem;
+    padding: 0.7rem 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.07);
+}
+.qd-step-n {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.6875rem;
+    letter-spacing: 0.1em;
+    color: #4daafc;
+    flex: none;
+}
+.qd-step-t {
+    font-size: 0.9rem;
+    line-height: 1.45;
+    color: #cccccc;
+}
+
+/* ── closing call to action (shared) ── */
+
+.qd-cta {
+    position: relative;
+    padding: 16vh 1.5rem 14vh;
+    text-align: center;
+    background: linear-gradient(180deg, #08080b, #0d0d14);
+}
+.qd-cta-h {
+    margin: 0;
+    font-size: clamp(1.6rem, 3.2vw, 2.75rem);
+    letter-spacing: -0.03em;
+    font-weight: 600;
+}
+.qd-cta-p {
+    margin: 0.9rem auto 0;
+    max-width: 30rem;
+    font-size: 0.95rem;
+    line-height: 1.6;
+    color: #9d9d9d;
+    text-wrap: pretty;
+}
+.qd-cta-row {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-top: 2.1rem;
+}
+.qd-btn {
+    padding: 0.8rem 1.5rem;
+    border-radius: 8px;
+    font-size: 0.875rem;
+    transition:
+        background 0.3s ease,
+        border-color 0.3s ease,
+        color 0.3s ease;
+}
+.qd-btn-primary {
+    background: #0078d4;
+    color: #fff;
+    font-weight: 600;
+}
+.qd-btn-primary:hover {
+    background: #1a8ae4;
+    color: #fff;
+}
+.qd-btn-ghost {
+    border: 1px solid #2a2a36;
+    color: #cccccc;
+}
+.qd-btn-ghost:hover {
+    border-color: #4a4a5a;
+    color: #fff;
+}
+.qd-cmd {
+    margin-top: 1.6rem;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: #6f6f6f;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .qd-fade,
+    .qd-bob {
+        animation: none !important;
+    }
+}
+
+/* ════════════════════════════════════════════════════════════════
    CV PRINT LAYOUT
    ════════════════════════════════════════════════════════════════ */
 @page {
