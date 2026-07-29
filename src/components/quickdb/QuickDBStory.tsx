@@ -113,6 +113,16 @@ const CURSOR_W = (13 / 19) * CURSOR_H;
  */
 const CLOSE_AT = 0.66;
 
+/**
+ * Fraction into step 10 ("customers · 122 rows") at which the customers tab
+ * actually opens. The same problem as CLOSE_AT, mirrored: `grid = s >= 10`
+ * flipped the main pane from the welcome logo straight to the open tab the
+ * instant step 10 began, before the cursor had even arrived at the
+ * `customers` row in the sidebar tree to click it. Held at the same value as
+ * CLOSE_AT so both read as the same dwell-before-click timing.
+ */
+const OPEN_AT = 0.66;
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | null) => {
@@ -123,6 +133,7 @@ const QuickDBStory: FC = () => {
     const [selN, setSelN] = useState(0);
     const [findDone, setFindDone] = useState(false);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
+    const [tableOpen, setTableOpen] = useState(false);
 
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
@@ -139,6 +150,7 @@ const QuickDBStory: FC = () => {
         step: 1,
         selN: 0,
         paymentsOpen: false,
+        tableOpen: false,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -442,14 +454,28 @@ const QuickDBStory: FC = () => {
             // cursor holds still where it clicked rather than jumping.
             const paymentsOpen = s === 15 || (s === 16 && e.frac < CLOSE_AT);
 
-            if (s !== e.step || n !== e.selN || paymentsOpen !== e.paymentsOpen) {
+            // Mirror of paymentsOpen: the customers tab stays CLOSED through
+            // the first part of step 10, so the cursor visibly arrives at the
+            // customers row in the sidebar tree and "clicks" it before the
+            // tab appears, instead of the tab being open before the cursor
+            // even sets off toward the row.
+            const tableOpen = s > 10 || (s === 10 && e.frac >= OPEN_AT);
+
+            if (
+                s !== e.step ||
+                n !== e.selN ||
+                paymentsOpen !== e.paymentsOpen ||
+                tableOpen !== e.tableOpen
+            ) {
                 const changedStep = s !== e.step;
                 e.step = s;
                 e.selN = n;
                 e.paymentsOpen = paymentsOpen;
+                e.tableOpen = tableOpen;
                 setStep(s);
                 setSelN(n);
                 setPaymentsOpen(paymentsOpen);
+                setTableOpen(tableOpen);
                 if (changedStep) applyStep(s);
             }
         };
@@ -482,7 +508,9 @@ const QuickDBStory: FC = () => {
     // of step 16 so there's something for the cursor to close (see tick()).
     const pay = paymentsOpen;
     const tail = s === 19;
-    const grid = s >= 10;
+    // Not just s >= 10: the tab stays closed into the first part of step 10
+    // so the cursor visibly clicks the customers row first (see tick()).
+    const grid = tableOpen;
     const filtering = s === 9 && findDone;
     const dirty = s === 12;
     const filled = s >= 12 && !tail;
@@ -513,7 +541,10 @@ const QuickDBStory: FC = () => {
     const sideExt = s >= 2 && s <= 6;
     const sideQdb = s >= 7;
     const sideAny = s >= 2;
-    const mainWelcome = s <= 3 || (s >= 7 && s <= 9);
+    // Extends into step 10 until tableOpen flips: without that, the welcome
+    // pane would disappear (grid still false, mainWelcome already false) and
+    // the pane briefly shows neither — an empty gap between logo and grid.
+    const mainWelcome = s <= 3 || (s >= 7 && s <= 9) || (s === 10 && !grid);
     const mainExt = s >= 4 && s <= 6;
     const pastePanel = s >= 17 && s <= 18;
 
