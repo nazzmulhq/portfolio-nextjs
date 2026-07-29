@@ -86,7 +86,9 @@ type RefKey =
     | "saveBtn"
     | "rangeBox"
     | "rangeTip"
-    | "closeTab";
+    | "closeTab"
+    | "editCell"
+    | "undoBtn";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -124,6 +126,43 @@ const CLOSE_AT = 0.66;
 const OPEN_AT = 0.66;
 
 /**
+ * Row index (into CUST) that step 10's edit/save/undo/save-again beat runs
+ * against — CUST[8] is customerNumber 129, "Mini Wheels Co.", contactLastName
+ * "Murphy". Picked because it sits inside the first page of an unfiltered
+ * customers grid, away from the phone fill-down demo's own rows (steps
+ * 11–13 touch indices 1–4), so the two beats never collide.
+ */
+const EDIT_ROW = 8;
+const EDIT_VALUE = "Haque";
+
+/**
+ * The tab-open beat (OPEN_AT) already claims the first 66% of step 10; the
+ * remaining 34% is split into five equal phases for edit → save → undo →
+ * save-again. Each phase's content change is caused by the click the
+ * *previous* phase spent traveling toward — the same "cursor arrives, then
+ * the state flips" ordering as OPEN_AT/CLOSE_AT, just four beats instead of
+ * one. All three controls sit in the same toolbar/grid area, so GLIDE_EASE
+ * still converges well inside each ~6.8%-of-a-step window at a normal
+ * scroll pace.
+ *
+ *   1  original value, untouched    — cursor heads to the cell
+ *   2  dirty, showing EDIT_VALUE    — cursor heads to Save
+ *   3  saved, showing EDIT_VALUE    — cursor heads to Undo
+ *   4  dirty, reverted to original  — cursor heads to Save
+ *   5  saved, reverted (final)      — Undo stays lit from here on
+ */
+const EDIT_PHASE_BOUNDS = [0.728, 0.796, 0.864, 0.932] as const;
+
+const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
+    if (step !== 10 || frac < OPEN_AT) return 0;
+    if (frac < EDIT_PHASE_BOUNDS[0]) return 1;
+    if (frac < EDIT_PHASE_BOUNDS[1]) return 2;
+    if (frac < EDIT_PHASE_BOUNDS[2]) return 3;
+    if (frac < EDIT_PHASE_BOUNDS[3]) return 4;
+    return 5;
+};
+
+/**
  * Per-frame lerp factor driving the cursor toward its aim point — the
  * standard "ease toward a target" pattern (newPos += (aim - pos) * GLIDE_EASE
  * each frame), so travel naturally decelerates into the target rather than
@@ -145,6 +184,12 @@ const QuickDBStory: FC = () => {
     const [findDone, setFindDone] = useState(false);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
     const [tableOpen, setTableOpen] = useState(false);
+    const [editPhase, setEditPhase] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
+    // One-way latch: real editors keep undo history around after a save, so
+    // once this beat has made its first edit, Undo stays available (and lit)
+    // for the rest of the story rather than greying out again once phase
+    // settles back to a "saved, nothing pending" state.
+    const [hasEditHistory, setHasEditHistory] = useState(false);
 
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
@@ -162,6 +207,8 @@ const QuickDBStory: FC = () => {
         selN: 0,
         paymentsOpen: false,
         tableOpen: false,
+        editPhase: 0 as 0 | 1 | 2 | 3 | 4 | 5,
+        hasEditHistory: false,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -205,6 +252,29 @@ const QuickDBStory: FC = () => {
                 };
             };
 
+            // Step 10's tail (past the tab-open threshold) hands the cursor
+            // between the edited cell, Save and Undo as the edit/save/undo/
+            // save-again beat plays out. Each target is the control whose
+            // click causes the *next* phase's content change — see
+            // editPhaseFor's phase-by-phase comment.
+            if (s === 10 && e.editPhase > 0) {
+                const target: RefKey =
+                    e.editPhase === 1
+                        ? "editCell"
+                        : e.editPhase === 2
+                          ? "saveBtn"
+                          : e.editPhase === 3
+                            ? "undoBtn"
+                            : "saveBtn";
+                const node = el(target);
+                if (node) {
+                    const a = toDesign(node);
+                    if (a) {
+                        e.aim = a;
+                        return;
+                    }
+                }
+            }
             // Step 14 hands off from the FK chip to the popover row midway.
             if (s === 14) {
                 const node = e.frac < 0.45 ? el("fkChip") : el("fkRow");
@@ -472,21 +542,36 @@ const QuickDBStory: FC = () => {
             // even sets off toward the row.
             const tableOpen = s > 10 || (s === 10 && e.frac >= OPEN_AT);
 
+            // Edit → save → undo → save-again, in step 10's tail. See
+            // editPhaseFor's comment for what each phase shows and where the
+            // cursor heads next. hasEditHistory is a one-way latch: once the
+            // first dirty phase (2) is reached it never resets, so Undo stays
+            // lit for the rest of the story rather than greying out again
+            // once this beat settles back to "saved, nothing pending".
+            const editPhase = editPhaseFor(s, e.frac);
+            const hasEditHistory = e.hasEditHistory || editPhase >= 2;
+
             if (
                 s !== e.step ||
                 n !== e.selN ||
                 paymentsOpen !== e.paymentsOpen ||
-                tableOpen !== e.tableOpen
+                tableOpen !== e.tableOpen ||
+                editPhase !== e.editPhase ||
+                hasEditHistory !== e.hasEditHistory
             ) {
                 const changedStep = s !== e.step;
                 e.step = s;
                 e.selN = n;
                 e.paymentsOpen = paymentsOpen;
                 e.tableOpen = tableOpen;
+                e.editPhase = editPhase;
+                e.hasEditHistory = hasEditHistory;
                 setStep(s);
                 setSelN(n);
                 setPaymentsOpen(paymentsOpen);
                 setTableOpen(tableOpen);
+                setEditPhase(editPhase);
+                setHasEditHistory(hasEditHistory);
                 if (changedStep) applyStep(s);
             }
         };
@@ -526,16 +611,28 @@ const QuickDBStory: FC = () => {
     const dirty = s === 12;
     const filled = s >= 12 && !tail;
     const fillVal = CUST[0][4];
-    const changes = s === 12 ? 4 : s === 19 ? 7 : 0;
+    // editPhase 2 and 4 are this beat's two "pending change" states — dirty-
+    // Haque (just edited) and dirty-Murphy (just undone). 1 change either way,
+    // same as the fill-down demo shows a flat count rather than a per-cell
+    // diff.
+    const changes = s === 12 ? 4 : s === 19 ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
+    const editShowingValue = editPhase === 2 || editPhase === 3;
+    const editDirty = editPhase === 2 || editPhase === 4;
 
     const src = tail ? TAIL : CUST;
     const rows = src.map((c, i) => {
         const swap = filled && i >= 1 && i <= 4;
+        const isEditRow = s === 10 && !tail && i === EDIT_ROW;
         return {
             i: tail ? 113 + i : i + 1,
             num: c[0],
             name: c[1],
-            last: c[2],
+            last: isEditRow && editShowingValue ? EDIT_VALUE : c[2],
+            lastBg: isEditRow && editDirty ? "rgba(226,177,60,.16)" : "transparent",
+            // Matches the row's own ambient text colour (C.cell) when not
+            // dirty — this cell has no colour override the rest of the time.
+            lastFg: isEditRow && editDirty ? C.amberPale : C.cell,
+            lastRef: isEditRow ? "editCell" : undefined,
             first: c[3],
             phone: swap ? fillVal : c[4],
             phoneBg: swap && dirty ? "rgba(226,177,60,.16)" : "transparent",
@@ -547,7 +644,21 @@ const QuickDBStory: FC = () => {
     });
 
     const visibleTables = TABLES.filter((t) => !filtering || t[0].startsWith("cust"));
-    const capStep = STEPS[s - 1] ?? STEPS[0];
+    // Overrides only what the caption pill displays — the underlying step
+    // number (and everything keyed off it) is untouched, so this doesn't
+    // carry the renumbering risk a real new step would: every other
+    // conditional in this file keeps reading the same s === 10 it always did.
+    const EDIT_CAPTIONS: Record<number, string> = {
+        1: "Click into a cell to edit it",
+        2: "Edited — contactLastName → “Haque”",
+        3: "Saved",
+        4: "Undo — reverts the edit",
+        5: "Saved again",
+    };
+    const capStep =
+        s === 10 && editPhase > 0
+            ? (["10", EDIT_CAPTIONS[editPhase]] as const)
+            : (STEPS[s - 1] ?? STEPS[0]);
 
     const sideExt = s >= 2 && s <= 6;
     const sideQdb = s >= 7;
@@ -1307,9 +1418,11 @@ const QuickDBStory: FC = () => {
                                     <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column" }}>
                                         <GridToolbar
                                             changes={changes}
+                                            hasEditHistory={hasEditHistory}
                                             pasteActive={s >= 17}
                                             pasteBtnRef={set("pasteBtn")}
                                             saveBtnRef={set("saveBtn")}
+                                            undoBtnRef={set("undoBtn")}
                                         />
                                         <FilterBar filterOn={pay} filterValRef={set("filterVal")} />
 
@@ -1376,7 +1489,12 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                             <div style={{ ...td, fontWeight: 600, color: C.textStrong }}>{r.num}</div>
                                                             <div style={td}>{r.name}</div>
-                                                            <div style={td}>{r.last}</div>
+                                                            <div
+                                                                ref={r.lastRef ? set(r.lastRef as RefKey) : undefined}
+                                                                style={{ ...td, background: r.lastBg, color: r.lastFg }}
+                                                            >
+                                                                {r.last}
+                                                            </div>
                                                             <div style={td}>{r.first}</div>
                                                             <div style={{ ...td, background: r.phoneBg, color: r.phoneFg }}>{r.phone}</div>
                                                             <div style={td}>{r.a1}</div>
@@ -1964,10 +2082,12 @@ const ExportGlyph: FC = () => (
 
 const GridToolbar: FC<{
     changes: number;
+    hasEditHistory: boolean;
     pasteActive: boolean;
     pasteBtnRef: (el: HTMLElement | null) => void;
     saveBtnRef: (el: HTMLElement | null) => void;
-}> = ({ changes, pasteActive, pasteBtnRef, saveBtnRef }) => (
+    undoBtnRef: (el: HTMLElement | null) => void;
+}> = ({ changes, hasEditHistory, pasteActive, pasteBtnRef, saveBtnRef, undoBtnRef }) => (
     // One row, not two stacked pairs: the history buttons sit side by side and
     // Refresh / Edit Table run inline, matching the product's own toolbar.
     //
@@ -1988,14 +2108,17 @@ const GridToolbar: FC<{
         }}
     >
         <div style={{ display: "flex", alignItems: "center", gap: 6, marginRight: 20, flexShrink: 0 }}>
-            {/* Undo lights up once there's something to undo, matching the
-                real extension; redo stays dim throughout the story since
-                nothing here is ever undone. */}
+            {/* Undo lights up once there's something to undo — either a
+                pending change right now, or (from the edit/save/undo/save
+                beat in step 10 on) any edit ever made, matching how real
+                undo history outlives a save. Redo stays dim throughout the
+                story since nothing here is ever redone. */}
             {["↺", "↻"].map((g, i) => {
-                const active = i === 0 && changes > 0;
+                const active = i === 0 && (changes > 0 || hasEditHistory);
                 return (
                     <span
                         key={g}
+                        ref={i === 0 ? undoBtnRef : undefined}
                         style={{
                             width: 20,
                             height: 20,
