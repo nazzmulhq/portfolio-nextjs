@@ -276,15 +276,66 @@ export const TOASTS: Record<number, string> = {
 export const STEP_COUNT = 20;
 
 /**
- * Scroll progress at which step 1 begins, and the span each step occupies.
- * PSTEP is (1 - P0) / STEP_COUNT, so the last step's window ends right at
- * the scrollable range's edge (p maxes at 1.0) with no dead scroll room
- * after it and no step clipped short before it. Recompute this if
- * STEP_COUNT changes — it does not derive itself, to keep the actual
- * per-step scroll distance easy to eyeball from the two literals.
+ * Step 10 carries far more than the other 19: the tab-open beat, then a
+ * four-part edit/save/undo/save-again sequence whose first part alone runs
+ * a ~2.5s focus/delete/type animation (after the cursor finishes gliding in
+ * from the sidebar tree — close to a second by itself). It needs real extra
+ * *scroll track*, not just a bigger percentage of the 19 other steps' track.
+ *
+ * The first version of this tried giving step 10 a bigger share of the
+ * original fixed-height (1400vh) track — dividing the SAME total space
+ * differently rather than adding to it. That doesn't work: with a fixed
+ * total, growing step 10's share necessarily *shrinks* PSTEP (the width of
+ * one "normal" step) for every other step too, and even at the extreme of
+ * giving step 10 the whole track, its slice tops out at a fraction of the
+ * page that's still short of the pixels the animation needs at a normal
+ * scroll speed — the total page height was simply never big enough to
+ * hold both. So the track height itself now scales with step 10's weight
+ * (see TRACK_VH below): the other 19 steps keep the *exact* pixel width
+ * they had before (UNIT_VH each, unchanged, already tuned and verified),
+ * and step 10's extra weight adds new track length on top rather than
+ * carving it out of theirs.
  */
-export const P0 = 0.11;
-export const PSTEP = 0.0445;
+export const STEP10_WEIGHT = 8;
+
+/** The original fixed track height, and how many equal-width steps it was
+ *  divided into before step 10 needed to be wider than the rest. */
+const ORIGINAL_TRACK_VH = 1400;
+/** One "normal" step's share of that track, in vh — fixed regardless of
+ *  STEP10_WEIGHT, since this is the pixel width every non-10 step keeps. */
+const UNIT_VH = ORIGINAL_TRACK_VH / STEP_COUNT;
+/** Absolute vh consumed by the intro zoom-in before step 1's content
+ *  starts (P0's original meaning, fixed rather than stretched — that
+ *  animation is unrelated to step 10 and already tuned on its own). */
+const P0_VH = 0.11 * ORIGINAL_TRACK_VH;
+
+const TOTAL_UNITS = STEP_COUNT - 1 + STEP10_WEIGHT;
+/** New total track height: the intro, plus 19 normal-width steps, plus
+ *  step 10 at STEP10_WEIGHT times normal width. Exported so the track
+ *  element's own CSS height can be driven by this instead of a literal. */
+export const TRACK_VH = P0_VH + UNIT_VH * TOTAL_UNITS;
+
+/** P0 and PSTEP re-expressed as fractions of the new, taller TRACK_VH —
+ *  same quantities as before in vh terms, just a smaller share of a
+ *  bigger whole, which is what keeps every non-10 step's actual pixel
+ *  width unchanged. */
+export const P0 = P0_VH / TRACK_VH;
+export const PSTEP = UNIT_VH / TRACK_VH;
+
+/**
+ * Scroll fraction at which each step begins — STEP_STARTS[n - 1] is step
+ * n's start, STEP_STARTS[STEP_COUNT] is 1.0 (the end of the last step).
+ * Precomputed once here rather than re-derived from a flat step index on
+ * every scroll tick, since step 10's extra width means "step n's start" is
+ * no longer just P0 + (n - 1) * PSTEP for n > 10.
+ */
+export const STEP_STARTS: readonly number[] = (() => {
+    const starts = [P0];
+    for (let n = 1; n <= STEP_COUNT; n++) {
+        starts.push(starts[n - 1] + PSTEP * (n === 10 ? STEP10_WEIGHT : 1));
+    }
+    return starts;
+})();
 
 /** The screen is laid out in a fixed 1920-wide space and scaled to fit. */
 export const DESIGN_W = 1920;

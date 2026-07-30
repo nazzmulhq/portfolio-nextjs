@@ -10,13 +10,14 @@ import {
     P0,
     PAY_ROWS,
     PREVIEW_ROWS,
-    PSTEP,
+    STEP_STARTS,
     STEPS,
     TABLES,
     TAIL,
     TARGETS,
     TOASTS,
     TOOLS,
+    TRACK_VH,
 } from "./landingData";
 
 /* ────────────────────────────────────────────────────────────────
@@ -120,10 +121,17 @@ const CLOSE_AT = 0.66;
  * actually opens. The same problem as CLOSE_AT, mirrored: `grid = s >= 10`
  * flipped the main pane from the welcome logo straight to the open tab the
  * instant step 10 began, before the cursor had even arrived at the
- * `customers` row in the sidebar tree to click it. Held at the same value as
- * CLOSE_AT so both read as the same dwell-before-click timing.
+ * `customers` row in the sidebar tree to click it.
+ *
+ * No longer the same literal value as CLOSE_AT: step 10 is now STEP10_WEIGHT
+ * (8x) wider than every other step (see landingData.ts) so the slow
+ * delete/type animation in phase 1 has real room to play out. That extra
+ * width is spent entirely on phase 1 — this tab-open dwell already worked
+ * fine at its old absolute size (46.2vh, i.e. 66% of the old 70vh-wide
+ * step), so it keeps that exact same vh here, just as a smaller fraction
+ * (46.2 / 560) of the new, wider step.
  */
-const OPEN_AT = 0.66;
+const OPEN_AT = 0.0825;
 
 /**
  * Row index (into CUST) that step 10's edit/save/undo/save-again beat runs
@@ -136,22 +144,28 @@ const EDIT_ROW = 8;
 const EDIT_VALUE = "Haque";
 
 /**
- * The tab-open beat (OPEN_AT) already claims the first 66% of step 10; the
- * remaining 34% is split into five phases for edit → save → undo →
- * save-again. Each phase's content change is caused by the click the
- * *previous* phase spent traveling toward — the same "cursor arrives, then
- * the state flips" ordering as OPEN_AT/CLOSE_AT, just four beats instead of
- * one.
+ * The tab-open beat (OPEN_AT) claims step 10's first 46.2vh; everything
+ * after that is split into five phases for edit → save → undo → save-again.
+ * Each phase's content change is caused by the click the *previous* phase
+ * spent traveling toward — the same "cursor arrives, then the state flips"
+ * ordering as OPEN_AT/CLOSE_AT, just four beats instead of one.
  *
  * Phase 1 is uneven with the rest on purpose: it now runs a real focus →
  * backspace-out → retype animation (see runEditTypeAnim), which doesn't
  * start until the cursor has actually *arrived* at the cell (gated on
  * glide's own "near" check, not a fixed delay — the cursor is gliding here
  * from the sidebar tree, a long enough hop that a fixed delay would either
- * fire early or waste time), then takes ~1.25s more to play out. Phase 1
- * gets 60% of the remaining budget; phases 2-5 (each a single click, no
- * animation of their own) split the rest evenly. There's no way to
- * *guarantee* enough wall-clock time inside a scroll-fraction window for
+ * fire early or waste time), then takes ~2.2s more to play out at a pace
+ * slow enough to actually read each letter, not just register that text is
+ * changing.
+ *
+ * Phases 2-5 (each a single click, no animation of their own) already had
+ * enough room at their old absolute size (~1.5vh apiece, out of the old
+ * 70vh-wide step 10) — so rather than growing everything proportionally
+ * when step 10 became STEP10_WEIGHT (8x) wider, they keep those exact old
+ * vh widths, and *all* of the new space step 10 gained goes to phase 1,
+ * which is the only phase that actually needed more. There's still no way
+ * to *guarantee* enough wall-clock time inside a scroll-fraction window for
  * every possible scroll speed — the fallback is that phase 2 renders
  * EDIT_VALUE outright regardless of animation progress, so outrunning it
  * just skips straight to the finished word instead of freezing mid-type.
@@ -163,13 +177,18 @@ const EDIT_VALUE = "Haque";
  *      content atomically, not by backspacing)     — cursor heads to Save
  *   5  saved, reverted (final)                    — Undo stays lit from here on
  */
-const EDIT_PHASE_BOUNDS = [0.864, 0.898, 0.932, 0.966] as const;
+const EDIT_PHASE_BOUNDS = [0.989375, 0.992, 0.99475, 0.997375] as const;
 
-/** Wall-clock timing for phase 1's focus/delete/type animation, ms. */
-const EDIT_FOCUS_DELAY = 250;
-const EDIT_DELETE_PER_CHAR = 65;
-const EDIT_THINK_PAUSE = 180;
-const EDIT_TYPE_PER_CHAR = 85;
+/**
+ * Wall-clock timing for phase 1's focus/delete/type animation, ms. Slower
+ * than a first pass at this: 65ms/char delete and 85ms/char type registered
+ * as "the text is flickering" on a real scroll-through rather than as
+ * individual keystrokes landing.
+ */
+const EDIT_FOCUS_DELAY = 400;
+const EDIT_DELETE_PER_CHAR = 120;
+const EDIT_THINK_PAUSE = 350;
+const EDIT_TYPE_PER_CHAR = 150;
 
 const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
     if (step !== 10 || frac < OPEN_AT) return 0;
@@ -596,9 +615,16 @@ const QuickDBStory: FC = () => {
             const cap = el("cap");
             if (cap) cap.style.opacity = p >= P0 * 0.55 ? "1" : "0";
 
-            const raw = (p - P0) / PSTEP;
-            const s = Math.max(1, Math.min(STEPS.length, Math.floor(raw) + 1));
-            e.frac = clamp01(raw - Math.floor(raw));
+            // Steps aren't equal width any more (step 10 is STEP10_WEIGHT
+            // times wider than the rest — see landingData.ts), so "which
+            // step, and how far into it" is a lookup against STEP_STARTS
+            // rather than a flat division. Only 20 entries; a linear scan
+            // on a scroll-throttled tick is free.
+            let s = 1;
+            while (s < STEPS.length && p >= STEP_STARTS[s]) s++;
+            const stepStart = STEP_STARTS[s - 1];
+            const stepEnd = STEP_STARTS[s];
+            e.frac = clamp01((p - stepStart) / (stepEnd - stepStart));
             e.visible = p >= 0.06 && p <= 0.995;
             aimCursor(s);
 
@@ -817,7 +843,7 @@ const QuickDBStory: FC = () => {
         <div
             className="qd-track"
             ref={set("track")}
-            style={{ position: "relative", height: "1400vh" }}
+            style={{ position: "relative", height: `${TRACK_VH}vh` }}
         >
             <div
                 style={{
