@@ -9,6 +9,11 @@
    ════════════════════════════════════════════════════════════════ */
 
 :root {
+    --font-geist-sans: "Geist", sans-serif;
+    --font-plex-mono: "IBM Plex Mono", monospace;
+    --font-archivo: "Archivo", sans-serif;
+    --font-grotesk: "Space Grotesk", sans-serif;
+
     color-scheme: dark;
 
     --canvas: #05060a;

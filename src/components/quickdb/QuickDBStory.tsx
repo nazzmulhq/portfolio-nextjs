@@ -89,7 +89,10 @@ type RefKey =
     | "rangeTip"
     | "closeTab"
     | "editCell"
-    | "undoBtn";
+    | "undoBtn"
+    | "curArrow"
+    | "curPointer"
+    | "pasteArea";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -114,7 +117,7 @@ const CURSOR_W = (13 / 19) * CURSOR_H;
  * dip reads as a click on the ✕ rather than the tab vanishing on its own the
  * instant the step changes.
  */
-const CLOSE_AT = 0.66;
+const CLOSE_AT = 0.50;
 
 /**
  * Fraction into step 10 ("customers · 122 rows") at which the customers tab
@@ -131,7 +134,7 @@ const CLOSE_AT = 0.66;
  * step), so it keeps that exact same vh here, just as a smaller fraction
  * (46.2 / 560) of the new, wider step.
  */
-const OPEN_AT = 0.0825;
+const OPEN_AT = 0.12;
 
 /**
  * Row index (into CUST) that step 10's edit/save/undo/save-again beat runs
@@ -177,18 +180,9 @@ const EDIT_VALUE = "Haque";
  *      content atomically, not by backspacing)     — cursor heads to Save
  *   5  saved, reverted (final)                    — Undo stays lit from here on
  */
-const EDIT_PHASE_BOUNDS = [0.989375, 0.992, 0.99475, 0.997375] as const;
+const EDIT_PHASE_BOUNDS = [0.45, 0.65, 0.80, 0.95] as const;
 
-/**
- * Wall-clock timing for phase 1's focus/delete/type animation, ms. Slower
- * than a first pass at this: 65ms/char delete and 85ms/char type registered
- * as "the text is flickering" on a real scroll-through rather than as
- * individual keystrokes landing.
- */
-const EDIT_FOCUS_DELAY = 400;
-const EDIT_DELETE_PER_CHAR = 120;
-const EDIT_THINK_PAUSE = 350;
-const EDIT_TYPE_PER_CHAR = 150;
+// Removed wall-clock timers for phase 1; it is now strictly scroll-driven.
 
 const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
     if (step !== 10 || frac < OPEN_AT) return 0;
@@ -200,19 +194,15 @@ const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
 };
 
 /**
- * Per-frame lerp factor driving the cursor toward its aim point — the
- * standard "ease toward a target" pattern (newPos += (aim - pos) * GLIDE_EASE
- * each frame), so travel naturally decelerates into the target rather than
- * arriving at a constant speed and stopping abruptly. Lower is slower: at
- * 0.18 a full-width traverse settled in ~40 frames (~650ms); at 0.11 the same
- * traverse takes ~65 frames (~1.1s), which reads as a deliberate move across
- * the window rather than a snap.
+ * GLIDE_EASE: set to 0.28 so the cursor rapidly and smoothly glides to the target
+ * element as soon as you scroll into the step/sub-phase. This ensures the mouse
+ * pointer ALWAYS arrives first at the element before any click pulse, hover, or action triggers.
  */
-const GLIDE_EASE = 0.11;
+const GLIDE_EASE = 0.28;
 
 const QuickDBStory: FC = () => {
-    const refs = useRef({} as Record<RefKey, HTMLElement | null>);
-    const set = (k: RefKey) => (el: HTMLElement | null) => {
+    const refs = useRef({} as Record<RefKey, HTMLElement | SVGElement | null>);
+    const set = (k: RefKey) => (el: HTMLElement | SVGElement | null) => {
         refs.current[k] = el;
     };
 
@@ -221,6 +211,8 @@ const QuickDBStory: FC = () => {
     const [findDone, setFindDone] = useState(false);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
     const [tableOpen, setTableOpen] = useState(false);
+    const [pastHover, setPastHover] = useState(false);
+    const [pastClick, setPastClick] = useState(false);
     const [editPhase, setEditPhase] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
     // One-way latch: real editors keep undo history around after a save, so
     // once this beat has made its first edit, Undo stays available (and lit)
@@ -235,9 +227,27 @@ const QuickDBStory: FC = () => {
     const [editCellText, setEditCellText] = useState("");
     const [editAnimStarted, setEditAnimStartedState] = useState(false);
 
+    const findDoneRef = useRef(findDone);
+    const paymentsOpenRef = useRef(paymentsOpen);
+    const tableOpenRef = useRef(tableOpen);
+    const pastHoverRef = useRef(pastHover);
+    const pastClickRef = useRef(pastClick);
+    const editPhaseRef = useRef(editPhase);
+    const hasEditHistoryRef = useRef(hasEditHistory);
+    findDoneRef.current = findDone;
+    paymentsOpenRef.current = paymentsOpen;
+    tableOpenRef.current = tableOpen;
+    pastHoverRef.current = pastHover;
+    pastClickRef.current = pastClick;
+    editPhaseRef.current = editPhase;
+    hasEditHistoryRef.current = hasEditHistory;
+
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
     const eng = useRef({
+        targetP: 0,
+        smoothP: 0,
+        animatingP: false,
         p: 0,
         frac: 0,
         visible: false,
@@ -251,11 +261,12 @@ const QuickDBStory: FC = () => {
         selN: 0,
         paymentsOpen: false,
         tableOpen: false,
+        pastHover: false,
+        pastClick: false,
         editPhase: 0 as 0 | 1 | 2 | 3 | 4 | 5,
         hasEditHistory: false,
         editCellText: "",
         editAnimStarted: false,
-        editAnimTimers: [] as ReturnType<typeof setTimeout>[],
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -288,7 +299,7 @@ const QuickDBStory: FC = () => {
         const resolveAim = (s: number) => {
             const scr = el("screen");
             if (!scr) return;
-            const toDesign = (node: HTMLElement) => {
+            const toDesign = (node: Element) => {
                 const sr = scr.getBoundingClientRect();
                 const r = node.getBoundingClientRect();
                 const k = sr.width / DESIGN_W || 1;
@@ -384,15 +395,31 @@ const QuickDBStory: FC = () => {
             e.cx += dx * GLIDE_EASE;
             e.cy += dy * GLIDE_EASE;
             const near = Math.abs(dx) < 24 && Math.abs(dy) < 24;
-            // The cell-edit animation starts the moment the cursor actually
-            // gets here, not on a guess at how long that glide takes.
-            if (near && e.step === 10 && e.editPhase === 1 && !e.editAnimStarted) {
-                runEditTypeAnim();
+            
+            // Toggle cursor style: Pointer Hand when near target, Arrow when gliding across empty canvas
+            const arr = el("curArrow");
+            const ptr = el("curPointer");
+            if (arr && ptr) {
+                if (near) {
+                    arr.style.display = "none";
+                    ptr.style.display = "block";
+                } else {
+                    arr.style.display = "block";
+                    ptr.style.display = "none";
+                }
             }
+
             // A brief dip while parked reads as the click. Shallower than the
             // dot's 0.62: an arrow shrinking that far reads as broken rather
             // than pressed, because its silhouette carries the meaning.
-            const pulse = near && e.frac > 0.58 && e.frac < 0.74 ? 0.84 : 1;
+            const isClickWindow =
+                e.step === 10
+                    ? (e.frac > 0.06 && e.frac < 0.11) ||
+                      (e.frac > 0.50 && e.frac < 0.54) ||
+                      (e.frac > 0.70 && e.frac < 0.74) ||
+                      (e.frac > 0.85 && e.frac < 0.89)
+                    : e.frac > 0.40 && e.frac < 0.65;
+            const pulse = near && isClickWindow ? 0.84 : 1;
             cur.style.left = `${e.cx.toFixed(1)}px`;
             cur.style.top = `${e.cy.toFixed(1)}px`;
             cur.style.opacity = e.visible ? "1" : "0";
@@ -475,60 +502,7 @@ const QuickDBStory: FC = () => {
             e.typeRaf = requestAnimationFrame(typeLoop);
         };
 
-        /* ── step 10's cell edit: focus, backspace out, retype ──────
-           A one-shot wall-clock sequence rather than a scroll-frac-driven
-           one — FIELDS' typeLoop is a good fit for "type into a search box"
-           because that's continuous and reversible, but this is "replace
-           one committed value with another", a linear delete-then-type
-           sequence with no reverse direction. A chain of setTimeouts reads
-           more directly than forcing that shape through the rAF loop. */
-        const originalLast = CUST[EDIT_ROW][2];
 
-        // Triggered from glide() once the cursor is actually near the cell —
-        // not on a fixed delay after phase 1 begins, since the cursor is
-        // gliding here from the sidebar tree and how long that takes depends
-        // on where it started. EDIT_FOCUS_DELAY here is just the small
-        // "settle after arriving" pause before backspacing starts.
-        const runEditTypeAnim = () => {
-            if (e.editAnimStarted) return;
-            e.editAnimStarted = true;
-            setEditAnimStartedState(true);
-            const setText = (t: string) => {
-                e.editCellText = t;
-                setEditCellText(t);
-            };
-            setText(originalLast);
-            let t = EDIT_FOCUS_DELAY;
-            for (let i = originalLast.length - 1; i >= 0; i--) {
-                e.editAnimTimers.push(setTimeout(() => setText(originalLast.slice(0, i)), t));
-                t += EDIT_DELETE_PER_CHAR;
-            }
-            t += EDIT_THINK_PAUSE;
-            for (let i = 1; i <= EDIT_VALUE.length; i++) {
-                e.editAnimTimers.push(setTimeout(() => setText(EDIT_VALUE.slice(0, i)), t));
-                t += EDIT_TYPE_PER_CHAR;
-            }
-        };
-
-        // Only clears pending timers — used when the frac moves past phase 1
-        // (forward into 2+, where nothing reads editCellText anymore) so a
-        // fast scroll doesn't leave a background timer chain still ticking.
-        const stopEditTypeAnim = () => {
-            e.editAnimTimers.forEach(clearTimeout);
-            e.editAnimTimers = [];
-        };
-
-        // Full reset, additionally clearing the started flag and text — used
-        // when the frac drops back to phase 0 (scrolled back before the tab
-        // even opens), so scrolling forward again replays the animation from
-        // the start rather than resuming mid-word or showing stale text.
-        const resetEditTypeAnim = () => {
-            stopEditTypeAnim();
-            e.editAnimStarted = false;
-            e.editCellText = "";
-            setEditAnimStartedState(false);
-            setEditCellText("");
-        };
 
         /* ── per-step chrome (icon highlight + toast) ───────────── */
         const applyStep = (s: number) => {
@@ -540,8 +514,8 @@ const QuickDBStory: FC = () => {
                     if (c2) c2.style.opacity = e.p >= P0 * 0.55 ? "1" : "0";
                 });
             }
-            const mark = (node: HTMLElement | null, on: boolean) => {
-                if (!node) return;
+            const mark = (node: HTMLElement | SVGElement | Element | null, on: boolean) => {
+                if (!node || !("style" in node)) return;
                 node.style.color = on ? C.textStrong : C.faint;
                 node.style.boxShadow = on ? `inset 2px 0 0 0 ${C.blue}` : "none";
             };
@@ -664,19 +638,56 @@ const QuickDBStory: FC = () => {
             // once this beat settles back to "saved, nothing pending".
             const editPhase = editPhaseFor(s, e.frac);
             const hasEditHistory = e.hasEditHistory || editPhase >= 2;
+            const isPastHover = e.frac > 0.4;
+            const isPastClick = e.frac > 0.45;
 
-            // Leaving phase 1 in either direction resets fully rather than
-            // just stopping the timers: scrolling back into phase 1 later
-            // (from 2+ just as much as from 0) should replay the animation
-            // from "Murphy", not resume a frozen mid-word snapshot from
-            // whenever it was last interrupted.
-            if (editPhase !== 1 && e.editAnimStarted) resetEditTypeAnim();
+            // Scroll-driven typing animation for phase 1
+            if (s === 10 && editPhase === 1) {
+                const start = OPEN_AT;
+                const end = EDIT_PHASE_BOUNDS[0];
+                const f = clamp01((e.frac - start) / (end - start));
+                const originalLast = CUST[EDIT_ROW][2];
+
+                let text = originalLast;
+                if (f < 0.20) {
+                    text = originalLast;
+                } else if (f < 0.50) {
+                    const p = (f - 0.20) / 0.30;
+                    const keep = Math.round((1 - p) * originalLast.length);
+                    text = originalLast.slice(0, Math.max(0, keep));
+                } else if (f < 0.60) {
+                    text = "";
+                } else {
+                    const p = (f - 0.60) / 0.40;
+                    const len = Math.round(p * EDIT_VALUE.length);
+                    text = EDIT_VALUE.slice(0, Math.min(EDIT_VALUE.length, len));
+                }
+
+                if (text !== e.editCellText) {
+                    e.editCellText = text;
+                    setEditCellText(text);
+                }
+                
+                if (!e.editAnimStarted) {
+                    e.editAnimStarted = true;
+                    setEditAnimStartedState(true);
+                }
+            } else if (editPhase !== 1) {
+                if (e.editAnimStarted) {
+                    e.editAnimStarted = false;
+                    e.editCellText = "";
+                    setEditAnimStartedState(false);
+                    setEditCellText("");
+                }
+            }
 
             if (
                 s !== e.step ||
                 n !== e.selN ||
                 paymentsOpen !== e.paymentsOpen ||
                 tableOpen !== e.tableOpen ||
+                isPastHover !== e.pastHover ||
+                isPastClick !== e.pastClick ||
                 editPhase !== e.editPhase ||
                 hasEditHistory !== e.hasEditHistory
             ) {
@@ -685,14 +696,18 @@ const QuickDBStory: FC = () => {
                 e.selN = n;
                 e.paymentsOpen = paymentsOpen;
                 e.tableOpen = tableOpen;
+                e.pastHover = isPastHover;
+                e.pastClick = isPastClick;
                 e.editPhase = editPhase;
                 e.hasEditHistory = hasEditHistory;
-                setStep(s);
-                setSelN(n);
-                setPaymentsOpen(paymentsOpen);
-                setTableOpen(tableOpen);
-                setEditPhase(editPhase);
-                setHasEditHistory(hasEditHistory);
+                if (s !== step) setStep(s);
+                if (n !== selN) setSelN(n);
+                if (tableOpen !== tableOpenRef.current) setTableOpen(tableOpen);
+                if (paymentsOpen !== paymentsOpenRef.current) setPaymentsOpen(paymentsOpen);
+                if (isPastHover !== pastHoverRef.current) setPastHover(isPastHover);
+                if (isPastClick !== pastClickRef.current) setPastClick(isPastClick);
+                if (editPhase !== editPhaseRef.current) setEditPhase(editPhase);
+                if (hasEditHistory !== hasEditHistoryRef.current) setHasEditHistory(hasEditHistory);
                 if (changedStep) applyStep(s);
             }
         };
@@ -716,7 +731,6 @@ const QuickDBStory: FC = () => {
             if (e.raf) cancelAnimationFrame(e.raf);
             if (e.typeRaf) cancelAnimationFrame(e.typeRaf);
             if (e.toastTimer) clearTimeout(e.toastTimer);
-            e.editAnimTimers.forEach(clearTimeout);
         };
     }, []);
 
@@ -727,20 +741,20 @@ const QuickDBStory: FC = () => {
     const pay = paymentsOpen;
     // Step 20 is the save landing: same tail rows as step 19 (the pasted
     // records are still the last thing in the table), but now committed.
-    const tail = s === 19 || s === 20;
-    const imported = s === 20;
+    const tail = (s === 19 && pastClick) || s === 20;
+    const imported = s === 20 && pastClick;
     // Not just s >= 10: the tab stays closed into the first part of step 10
     // so the cursor visibly clicks the customers row first (see tick()).
     const grid = tableOpen;
     const filtering = s === 9 && findDone;
-    const dirty = s === 12;
+    const dirty = s === 12 && !pastClick;
     const filled = s >= 12 && !tail;
     const fillVal = CUST[0][4];
     // editPhase 2 and 4 are this beat's two "pending change" states — dirty-
     // Haque (just edited) and dirty-Murphy (just undone). 1 change either way,
     // same as the fill-down demo shows a flat count rather than a per-cell
     // diff.
-    const changes = s === 12 ? 4 : s === 19 ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
+    const changes = (s === 12 && !pastClick) ? 4 : (s === 19 && pastClick) || (s === 20 && !pastClick) ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
     const editFocused = editPhase === 1;
     const editShowingValue = editPhase === 2 || editPhase === 3;
     const editDirty = editPhase === 2 || editPhase === 4;
@@ -753,7 +767,8 @@ const QuickDBStory: FC = () => {
         // preview's "Auto-generate IDs" checkbox is what fills these in) —
         // blank through step 19's "staged" view, sequential once step 20
         // shows the committed table. i=10 is TAIL's first ID-less row.
-        const num = c[0] === "" && imported ? 497 + (i - 10) : c[0];
+        const isNewId = c[0] === "" && imported;
+        const num = isNewId ? 497 + (i - 10) : c[0];
         // Phase 1: the live delete/type animation once it's actually
         // started (editAnimStarted), c[2] ("Murphy", untouched) before
         // that — editCellText is "" both before the animation starts and
@@ -771,6 +786,7 @@ const QuickDBStory: FC = () => {
         return {
             i: tail ? 113 + i : i + 1,
             num,
+            isNewId,
             name: c[1],
             last,
             lastBg: isEditRow && editDirty ? "rgba(226,177,60,.16)" : "transparent",
@@ -786,6 +802,7 @@ const QuickDBStory: FC = () => {
             a1: c[5],
             a2: c[6],
             city: c[7],
+            staged: tail && c[0] === "" && !imported,
         };
     });
 
@@ -804,7 +821,9 @@ const QuickDBStory: FC = () => {
     const capStep =
         s === 10 && editPhase > 0
             ? (["10", EDIT_CAPTIONS[editPhase]] as const)
-            : (STEPS[s - 1] ?? STEPS[0]);
+            : s === 20 && !pastClick
+              ? (STEPS[18] ?? STEPS[0])
+              : (STEPS[s - 1] ?? STEPS[0]);
 
     const sideExt = s >= 2 && s <= 6;
     const sideQdb = s >= 7;
@@ -814,7 +833,7 @@ const QuickDBStory: FC = () => {
     // the pane briefly shows neither — an empty gap between logo and grid.
     const mainWelcome = s <= 3 || (s >= 7 && s <= 9) || (s === 10 && !grid);
     const mainExt = s >= 4 && s <= 6;
-    const pastePanel = s >= 17 && s <= 18;
+    const pastePanel = (s === 17 && pastClick) || s === 18 || (s === 19 && !pastClick);
 
     const th: CSSProperties = {
         display: "flex",
@@ -1565,7 +1584,7 @@ const QuickDBStory: FC = () => {
                                         <GridToolbar
                                             changes={changes}
                                             hasEditHistory={hasEditHistory}
-                                            pasteActive={s >= 17}
+                                            pasteActive={s > 17 || (s === 17 && pastHover)}
                                             pasteBtnRef={set("pasteBtn")}
                                             saveBtnRef={set("saveBtn")}
                                             undoBtnRef={set("undoBtn")}
@@ -1724,7 +1743,7 @@ const QuickDBStory: FC = () => {
                                             )}
 
                                             {s === 14 && <ForeignKeyPopover chipRef={set("fkChip")} rowRef={set("fkRow")} />}
-                                            {pastePanel && <PastePanel filled={s === 18} importBtnRef={set("importBtn")} />}
+                                            {pastePanel && <PastePanel filled={s > 18 || (s === 18 && pastClick)} hoverImport={s === 19 && pastHover} pasteAreaRef={set("pasteArea")} importBtnRef={set("importBtn")} />}
                                         </div>
 
                                         <Pagination
@@ -1818,7 +1837,9 @@ const QuickDBStory: FC = () => {
                                 filter: "drop-shadow(0 3px 7px rgba(0,0,0,.7))",
                             }}
                         >
+                            {/* Default Arrow Pointer */}
                             <svg
+                                ref={set("curArrow")}
                                 height={CURSOR_H}
                                 style={{ display: "block", overflow: "visible" }}
                                 viewBox="0 0 13 19"
@@ -1831,6 +1852,26 @@ const QuickDBStory: FC = () => {
                                     strokeLinejoin="round"
                                     strokeWidth="1.1"
                                 />
+                            </svg>
+                            {/* Interactive Hand Pointer */}
+                            <svg
+                                ref={set("curPointer")}
+                                height={26}
+                                style={{ display: "none", overflow: "visible", filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.4))" }}
+                                viewBox="0 0 24 28"
+                                width={22}
+                            >
+                                <path
+                                    d="M 8 2.5 C 8 0.8, 13 0.8, 13 2.5 L 13 8.5 C 13 7.2, 16.8 7.2, 16.8 8.8 L 16.8 10 C 16.8 8.8, 20.2 8.8, 20.2 10.5 L 20.2 11.5 C 20.2 10.5, 23 10.5, 23 12.5 C 23 18.5, 18.5 24.5, 12.5 24.5 C 8 24.5, 4.2 21.5, 3.2 17.5 L 1.2 14.2 C 0.1 12.5, 2.1 10.5, 3.8 11.8 C 5.5 13.2, 6.8 14.2, 8 14.2 L 8 2.5 Z"
+                                    fill="#ffffff"
+                                    stroke="#000000"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth="1.8"
+                                />
+                                <path d="M 13 8.5 L 13 13" stroke="#000000" strokeLinecap="round" strokeWidth="1.4" />
+                                <path d="M 16.8 10 L 16.8 14" stroke="#000000" strokeLinecap="round" strokeWidth="1.4" />
+                                <path d="M 20.2 11.5 L 20.2 14.5" stroke="#000000" strokeLinecap="round" strokeWidth="1.4" />
                             </svg>
                         </div>
                     </div>
@@ -2334,9 +2375,10 @@ const GridToolbar: FC<{
             ) : (
                 // Disabled, but still shaped like the buttons they become once
                 // there are edits to commit.
-                ["Save", "Discard"].map((t) => (
+                ["Save", "Discard"].map((t, idx) => (
                     <span
                         key={t}
+                        ref={idx === 0 ? saveBtnRef : undefined}
                         style={{ padding: "4px 10px", borderRadius: 3, background: "#252525", color: C.dark }}
                     >
                         {t}
@@ -2670,10 +2712,12 @@ const ForeignKeyPopover: FC<{
     </>
 );
 
-const PastePanel: FC<{ filled: boolean; importBtnRef: (el: HTMLElement | null) => void }> = ({
-    filled,
-    importBtnRef,
-}) => (
+const PastePanel: FC<{
+    filled: boolean;
+    hoverImport?: boolean;
+    pasteAreaRef?: (el: HTMLElement | SVGElement | null) => void;
+    importBtnRef: (el: HTMLElement | SVGElement | null) => void;
+}> = ({ filled, hoverImport, pasteAreaRef, importBtnRef }) => (
     <div
         style={{
             position: "absolute",
@@ -2693,6 +2737,7 @@ const PastePanel: FC<{ filled: boolean; importBtnRef: (el: HTMLElement | null) =
             <span style={{ marginLeft: "auto", display: "flex", gap: 14, color: C.muted }}>▤ ✕</span>
         </div>
         <div
+            ref={pasteAreaRef}
             style={{
                 margin: "12px 14px",
                 height: 104,
@@ -2795,8 +2840,8 @@ const PastePanel: FC<{ filled: boolean; importBtnRef: (el: HTMLElement | null) =
                     fontWeight: 600,
                     padding: "5px 12px",
                     borderRadius: 3,
-                    background: filled ? "#e9e9e9" : "#2a2a2a",
-                    color: filled ? "#1b1b1b" : C.dark,
+                    background: !filled ? "#2a2a2a" : hoverImport ? "#0078d4" : "#e9e9e9",
+                    color: !filled ? C.dark : hoverImport ? "#fff" : "#1b1b1b",
                 }}
             >
                 ⇱ Import Data

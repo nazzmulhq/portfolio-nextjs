@@ -1,5 +1,4 @@
 import type { Metadata, Viewport } from "next";
-import { Archivo, Geist, IBM_Plex_Mono } from "next/font/google";
 import { GoogleAnalytics } from "@next/third-parties/google";
 import ScrollReveal from "@src/components/ScrollReveal";
 import "./globals.css";
@@ -13,29 +12,6 @@ export const viewport: Viewport = {
         { media: "(prefers-color-scheme: light)", color: "#f4f6fa" },
     ],
 };
-
-const geistSans = Geist({
-    variable: "--font-geist-sans",
-    subsets: ["latin"],
-    display: "swap",
-});
-
-// Data/utility face — Plex Mono's engineered detailing suits the spec-sheet
-// labels better than a neutral mono.
-const plexMono = IBM_Plex_Mono({
-    variable: "--font-plex-mono",
-    subsets: ["latin"],
-    display: "swap",
-    weight: ["400", "500", "600"],
-});
-
-// Display face — a wide grotesque that holds up at poster sizes.
-const archivo = Archivo({
-    variable: "--font-archivo",
-    subsets: ["latin"],
-    display: "swap",
-    weight: ["600", "700", "800", "900"],
-});
 
 // Analytics ships in production builds only — `next dev` would otherwise report
 // every local page view as real traffic. This is a build-time constant, so the
@@ -143,10 +119,11 @@ export default function RootLayout({
         <html lang="en" suppressHydrationWarning>
             <head>
                 <script dangerouslySetInnerHTML={{ __html: themeInit }} />
+                <link rel="preconnect" href="https://fonts.googleapis.com" />
+                <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+                <link href="https://fonts.googleapis.com/css2?family=Archivo:wght@600..900&family=Geist:wght@100..900&family=IBM+Plex+Mono:wght@400;500;600&family=Space+Grotesk:wght@300..700&display=swap" rel="stylesheet" />
             </head>
-            <body
-                className={`${geistSans.variable} ${plexMono.variable} ${archivo.variable} antialiased overflow-x-hidden`}
-            >
+            <body className="antialiased overflow-x-hidden">
                 <div aria-hidden className="scroll-progress" />
                 <ScrollReveal />
                 {children}

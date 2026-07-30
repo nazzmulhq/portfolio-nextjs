@@ -1,15 +1,5 @@
 import type { Metadata } from "next";
-import { Space_Grotesk } from "next/font/google";
 import QuickDBLanding from "@src/components/quickdb/QuickDBLanding";
-
-// Self-hosted at build time by next/font, so the static export makes no
-// runtime request to Google's CDN.
-const grotesk = Space_Grotesk({
-    subsets: ["latin"],
-    weight: ["400", "500", "600", "700"],
-    variable: "--font-grotesk",
-    display: "swap",
-});
 
 export const metadata: Metadata = {
     title: "QuickDB — your whole database, inside your editor",
@@ -47,7 +37,7 @@ export default function QuickDBPage() {
     // story renders a mock of VS Code's dark theme, so a light mode would only
     // recolour the page around an image that stays dark either way.
     return (
-        <div className={grotesk.variable}>
+        <div>
             <script
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(appSchema) }}
                 type="application/ld+json"

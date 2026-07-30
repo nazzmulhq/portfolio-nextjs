@@ -53,10 +53,8 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     15: "filterVal",
     16: "closeTab",
     17: "pasteBtn",
-    18: "importBtn",
+    18: "pasteArea",
     19: "importBtn",
-    // Nothing left to click once the import lands — cursor stays parked at
-    // Save, which is greyed out now that there's nothing pending.
     20: "saveBtn",
 };
 
@@ -299,8 +297,9 @@ export const STEP_COUNT = 20;
 export const STEP10_WEIGHT = 8;
 
 /** The original fixed track height, and how many equal-width steps it was
- *  divided into before step 10 needed to be wider than the rest. */
-const ORIGINAL_TRACK_VH = 1400;
+ *  divided into before step 10 needed to be wider than the rest. 
+ *  Increased from 1400 to 3500 to require more physical scrolling, slowing down the pace. */
+const ORIGINAL_TRACK_VH = 3500;
 /** One "normal" step's share of that track, in vh — fixed regardless of
  *  STEP10_WEIGHT, since this is the pixel width every non-10 step keeps. */
 const UNIT_VH = ORIGINAL_TRACK_VH / STEP_COUNT;
