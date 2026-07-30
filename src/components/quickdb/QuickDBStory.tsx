@@ -137,21 +137,39 @@ const EDIT_VALUE = "Haque";
 
 /**
  * The tab-open beat (OPEN_AT) already claims the first 66% of step 10; the
- * remaining 34% is split into five equal phases for edit → save → undo →
+ * remaining 34% is split into five phases for edit → save → undo →
  * save-again. Each phase's content change is caused by the click the
  * *previous* phase spent traveling toward — the same "cursor arrives, then
  * the state flips" ordering as OPEN_AT/CLOSE_AT, just four beats instead of
- * one. All three controls sit in the same toolbar/grid area, so GLIDE_EASE
- * still converges well inside each ~6.8%-of-a-step window at a normal
- * scroll pace.
+ * one.
  *
- *   1  original value, untouched    — cursor heads to the cell
- *   2  dirty, showing EDIT_VALUE    — cursor heads to Save
- *   3  saved, showing EDIT_VALUE    — cursor heads to Undo
- *   4  dirty, reverted to original  — cursor heads to Save
- *   5  saved, reverted (final)      — Undo stays lit from here on
+ * Phase 1 is uneven with the rest on purpose: it now runs a real focus →
+ * backspace-out → retype animation (see runEditTypeAnim), which doesn't
+ * start until the cursor has actually *arrived* at the cell (gated on
+ * glide's own "near" check, not a fixed delay — the cursor is gliding here
+ * from the sidebar tree, a long enough hop that a fixed delay would either
+ * fire early or waste time), then takes ~1.25s more to play out. Phase 1
+ * gets 60% of the remaining budget; phases 2-5 (each a single click, no
+ * animation of their own) split the rest evenly. There's no way to
+ * *guarantee* enough wall-clock time inside a scroll-fraction window for
+ * every possible scroll speed — the fallback is that phase 2 renders
+ * EDIT_VALUE outright regardless of animation progress, so outrunning it
+ * just skips straight to the finished word instead of freezing mid-type.
+ *
+ *   1  focus → delete "Murphy" → type EDIT_VALUE  — cursor heads to the cell
+ *   2  dirty, showing EDIT_VALUE                  — cursor heads to Save
+ *   3  saved, showing EDIT_VALUE                  — cursor heads to Undo
+ *   4  dirty, reverted to original (instant — a real Ctrl+Z restores
+ *      content atomically, not by backspacing)     — cursor heads to Save
+ *   5  saved, reverted (final)                    — Undo stays lit from here on
  */
-const EDIT_PHASE_BOUNDS = [0.728, 0.796, 0.864, 0.932] as const;
+const EDIT_PHASE_BOUNDS = [0.864, 0.898, 0.932, 0.966] as const;
+
+/** Wall-clock timing for phase 1's focus/delete/type animation, ms. */
+const EDIT_FOCUS_DELAY = 250;
+const EDIT_DELETE_PER_CHAR = 65;
+const EDIT_THINK_PAUSE = 180;
+const EDIT_TYPE_PER_CHAR = 85;
 
 const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
     if (step !== 10 || frac < OPEN_AT) return 0;
@@ -190,6 +208,13 @@ const QuickDBStory: FC = () => {
     // for the rest of the story rather than greying out again once phase
     // settles back to a "saved, nothing pending" state.
     const [hasEditHistory, setHasEditHistory] = useState(false);
+    // Live text for phase 1's focus/delete/type animation, plus whether it
+    // has started. Both needed, not just the text: "" is also the genuine
+    // mid-animation state right after "Murphy" is fully backspaced, so
+    // rendering can't tell "not started" from "deliberately empty" by
+    // looking at the text alone.
+    const [editCellText, setEditCellText] = useState("");
+    const [editAnimStarted, setEditAnimStartedState] = useState(false);
 
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
@@ -209,6 +234,9 @@ const QuickDBStory: FC = () => {
         tableOpen: false,
         editPhase: 0 as 0 | 1 | 2 | 3 | 4 | 5,
         hasEditHistory: false,
+        editCellText: "",
+        editAnimStarted: false,
+        editAnimTimers: [] as ReturnType<typeof setTimeout>[],
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -337,6 +365,11 @@ const QuickDBStory: FC = () => {
             e.cx += dx * GLIDE_EASE;
             e.cy += dy * GLIDE_EASE;
             const near = Math.abs(dx) < 24 && Math.abs(dy) < 24;
+            // The cell-edit animation starts the moment the cursor actually
+            // gets here, not on a guess at how long that glide takes.
+            if (near && e.step === 10 && e.editPhase === 1 && !e.editAnimStarted) {
+                runEditTypeAnim();
+            }
             // A brief dip while parked reads as the click. Shallower than the
             // dot's 0.62: an arrow shrinking that far reads as broken rather
             // than pressed, because its silhouette carries the meaning.
@@ -421,6 +454,61 @@ const QuickDBStory: FC = () => {
             if (e.typeRaf) return;
             e.typeTs = 0;
             e.typeRaf = requestAnimationFrame(typeLoop);
+        };
+
+        /* ── step 10's cell edit: focus, backspace out, retype ──────
+           A one-shot wall-clock sequence rather than a scroll-frac-driven
+           one — FIELDS' typeLoop is a good fit for "type into a search box"
+           because that's continuous and reversible, but this is "replace
+           one committed value with another", a linear delete-then-type
+           sequence with no reverse direction. A chain of setTimeouts reads
+           more directly than forcing that shape through the rAF loop. */
+        const originalLast = CUST[EDIT_ROW][2];
+
+        // Triggered from glide() once the cursor is actually near the cell —
+        // not on a fixed delay after phase 1 begins, since the cursor is
+        // gliding here from the sidebar tree and how long that takes depends
+        // on where it started. EDIT_FOCUS_DELAY here is just the small
+        // "settle after arriving" pause before backspacing starts.
+        const runEditTypeAnim = () => {
+            if (e.editAnimStarted) return;
+            e.editAnimStarted = true;
+            setEditAnimStartedState(true);
+            const setText = (t: string) => {
+                e.editCellText = t;
+                setEditCellText(t);
+            };
+            setText(originalLast);
+            let t = EDIT_FOCUS_DELAY;
+            for (let i = originalLast.length - 1; i >= 0; i--) {
+                e.editAnimTimers.push(setTimeout(() => setText(originalLast.slice(0, i)), t));
+                t += EDIT_DELETE_PER_CHAR;
+            }
+            t += EDIT_THINK_PAUSE;
+            for (let i = 1; i <= EDIT_VALUE.length; i++) {
+                e.editAnimTimers.push(setTimeout(() => setText(EDIT_VALUE.slice(0, i)), t));
+                t += EDIT_TYPE_PER_CHAR;
+            }
+        };
+
+        // Only clears pending timers — used when the frac moves past phase 1
+        // (forward into 2+, where nothing reads editCellText anymore) so a
+        // fast scroll doesn't leave a background timer chain still ticking.
+        const stopEditTypeAnim = () => {
+            e.editAnimTimers.forEach(clearTimeout);
+            e.editAnimTimers = [];
+        };
+
+        // Full reset, additionally clearing the started flag and text — used
+        // when the frac drops back to phase 0 (scrolled back before the tab
+        // even opens), so scrolling forward again replays the animation from
+        // the start rather than resuming mid-word or showing stale text.
+        const resetEditTypeAnim = () => {
+            stopEditTypeAnim();
+            e.editAnimStarted = false;
+            e.editCellText = "";
+            setEditAnimStartedState(false);
+            setEditCellText("");
         };
 
         /* ── per-step chrome (icon highlight + toast) ───────────── */
@@ -551,6 +639,13 @@ const QuickDBStory: FC = () => {
             const editPhase = editPhaseFor(s, e.frac);
             const hasEditHistory = e.hasEditHistory || editPhase >= 2;
 
+            // Leaving phase 1 in either direction resets fully rather than
+            // just stopping the timers: scrolling back into phase 1 later
+            // (from 2+ just as much as from 0) should replay the animation
+            // from "Murphy", not resume a frozen mid-word snapshot from
+            // whenever it was last interrupted.
+            if (editPhase !== 1 && e.editAnimStarted) resetEditTypeAnim();
+
             if (
                 s !== e.step ||
                 n !== e.selN ||
@@ -595,6 +690,7 @@ const QuickDBStory: FC = () => {
             if (e.raf) cancelAnimationFrame(e.raf);
             if (e.typeRaf) cancelAnimationFrame(e.typeRaf);
             if (e.toastTimer) clearTimeout(e.toastTimer);
+            e.editAnimTimers.forEach(clearTimeout);
         };
     }, []);
 
@@ -619,6 +715,7 @@ const QuickDBStory: FC = () => {
     // same as the fill-down demo shows a flat count rather than a per-cell
     // diff.
     const changes = s === 12 ? 4 : s === 19 ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
+    const editFocused = editPhase === 1;
     const editShowingValue = editPhase === 2 || editPhase === 3;
     const editDirty = editPhase === 2 || editPhase === 4;
 
@@ -631,15 +728,30 @@ const QuickDBStory: FC = () => {
         // blank through step 19's "staged" view, sequential once step 20
         // shows the committed table. i=10 is TAIL's first ID-less row.
         const num = c[0] === "" && imported ? 497 + (i - 10) : c[0];
+        // Phase 1: the live delete/type animation once it's actually
+        // started (editAnimStarted), c[2] ("Murphy", untouched) before
+        // that — editCellText is "" both before the animation starts and
+        // mid-delete once "Murphy" is genuinely fully backspaced, so the
+        // text alone can't tell those two states apart.
+        const last = isEditRow
+            ? editFocused
+                ? editAnimStarted
+                    ? editCellText
+                    : c[2]
+                : editShowingValue
+                  ? EDIT_VALUE
+                  : c[2]
+            : c[2];
         return {
             i: tail ? 113 + i : i + 1,
             num,
             name: c[1],
-            last: isEditRow && editShowingValue ? EDIT_VALUE : c[2],
+            last,
             lastBg: isEditRow && editDirty ? "rgba(226,177,60,.16)" : "transparent",
             // Matches the row's own ambient text colour (C.cell) when not
             // dirty — this cell has no colour override the rest of the time.
             lastFg: isEditRow && editDirty ? C.amberPale : C.cell,
+            lastFocused: isEditRow && editFocused,
             lastRef: isEditRow ? "editCell" : undefined,
             first: c[3],
             phone: swap ? fillVal : c[4],
@@ -1499,9 +1611,18 @@ const QuickDBStory: FC = () => {
                                                             <div style={td}>{r.name}</div>
                                                             <div
                                                                 ref={r.lastRef ? set(r.lastRef as RefKey) : undefined}
-                                                                style={{ ...td, background: r.lastBg, color: r.lastFg }}
+                                                                style={{
+                                                                    ...td,
+                                                                    background: r.lastFocused ? C.raised : r.lastBg,
+                                                                    color: r.lastFg,
+                                                                    // inset shadow, not border: a real border would grow
+                                                                    // the box and shove every cell after it sideways for
+                                                                    // as long as phase 1 runs.
+                                                                    boxShadow: r.lastFocused ? `inset 0 0 0 1.5px ${C.blueLight}` : "none",
+                                                                }}
                                                             >
                                                                 {r.last}
+                                                                {r.lastFocused && <Caret />}
                                                             </div>
                                                             <div style={td}>{r.first}</div>
                                                             <div style={{ ...td, background: r.phoneBg, color: r.phoneFg }}>{r.phone}</div>
