@@ -2162,7 +2162,7 @@ const QuickDBStory: FC = () => {
                             return (
                                 <button
                                     key={nav.label}
-                                    onClick={() => jumpToStep(10)}
+                                    onClick={() => jumpToStep(1)}
                                     style={{
                                         display: "inline-flex",
                                         alignItems: "center",
@@ -2222,33 +2222,6 @@ const QuickDBStory: FC = () => {
                             </button>
                         );
                     })}
-                </div>
-
-                {/* caption pill */}
-                <div
-                    ref={set("cap")}
-                    style={{
-                        position: "absolute",
-                        left: "50%",
-                        bottom: 30,
-                        transform: "translateX(-50%)",
-                        display: "flex",
-                        alignItems: "center",
-                        gap: 13,
-                        padding: "10px 18px",
-                        borderRadius: 99,
-                        background: "rgba(14,14,19,.94)",
-                        border: "1px solid rgba(255,255,255,.09)",
-                        boxShadow: "0 20px 50px -20px rgba(0,0,0,.9)",
-                        opacity: 0,
-                        transition: "opacity .28s ease",
-                        pointerEvents: "none",
-                        whiteSpace: "nowrap",
-                    }}
-                >
-                    <span style={{ font: `500 11px ${MONO}`, letterSpacing: ".1em", color: C.blueLight }}>{capStep[0]}</span>
-                    <span style={{ width: 1, height: 14, background: "rgba(255,255,255,.14)" }} />
-                    <span style={{ fontSize: 13.5, color: C.text }}>{capStep[1]}</span>
                 </div>
             </div>
         </div>
