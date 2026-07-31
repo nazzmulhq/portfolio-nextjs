@@ -64,10 +64,13 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
 
             <section className="qd-cta" id="install">
 
-                {/* Ultra-Clean Modern Dark Ambient Background */}
-                <div className="qd-clean-bg" aria-hidden="true">
-                    <div className="qd-clean-spotlight" />
-                    <div className="qd-clean-grid" />
+                {/* Ultra-Premium Minimalist Background */}
+                <div className="qd-premium-bg" aria-hidden="true">
+                    {/* Dark, subtle animated radial gradient base */}
+                    <div className="qd-premium-glow" />
+                    
+                    {/* Noise texture for matte cinematic finish */}
+                    <div className="qd-premium-noise" />
                 </div>
 
                 {/* QuickDB Brand Logo */}
