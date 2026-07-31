@@ -2025,8 +2025,14 @@ const QuickDBStory: FC = () => {
                                 const isMajor = stepNum === 1 || stepNum % 3 === 1 || stepNum === 20;
 
                                 const norm = stepIdx / (STEPS.length - 1); // 0 to 1
-                                const arcX = Math.sin(norm * Math.PI) * -150; // Symmetrical full circle arc curve depth
-                                const rotAngle = (0.5 - norm) * 38; // Dynamic tangent rotation sweep
+                                // True Geometric Circle Radius Equation (Radius R = 440px)
+                                const radius = 440;
+                                const maxDy = 370; // Half height span
+                                const dyPixel = (norm - 0.5) * 2 * maxDy; // -370 to +370
+                                const dxTop = radius - Math.sqrt(radius * radius - maxDy * maxDy);
+                                const dxCurrent = radius - Math.sqrt(Math.max(0, radius * radius - dyPixel * dyPixel));
+                                const arcX = -(dxTop - dxCurrent); // True circular arc offset
+                                const rotAngle = (Math.atan2(-dyPixel, Math.sqrt(Math.max(1, radius * radius - dyPixel * dyPixel))) * 180) / Math.PI; // Exact circle tangent angle
 
                                 const tickWidth = isCurrent ? 40 : isMajor ? 22 : 14;
                                 const tickColor = isCurrent
