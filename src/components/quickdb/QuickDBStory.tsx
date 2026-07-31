@@ -1985,70 +1985,26 @@ const QuickDBStory: FC = () => {
                     </div>
                 </div>
 
-                {/* ── Right-side Curved Clock Scale Timeline (Masterpiece 3D Bezel Dial) ── */}
+                {/* ── Right-side Curved Clock Scale Timeline (Ultra-Clean & Minimal) ── */}
                 {s >= 1 && (
                     <div
                         aria-label="Step Clock Dial Timeline"
                         style={{
                             position: "absolute",
-                            right: 20,
+                            right: 24,
                             top: "50%",
                             transform: "translateY(-50%)",
-                            height: 820,
-                            width: 480,
+                            height: 760,
+                            width: 400,
                             zIndex: 46,
-                            pointerEvents: "auto",
+                            pointerEvents: "none",
                             display: "flex",
                             flexDirection: "column",
                             justifyContent: "space-between",
                             userSelect: "none",
                         }}
                     >
-                        {/* 3D Dual Concentric SVG Bezel Tracks */}
-                        <svg
-                            style={{
-                                position: "absolute",
-                                right: 0,
-                                top: 0,
-                                width: 480,
-                                height: 820,
-                                pointerEvents: "none",
-                                zIndex: 1,
-                            }}
-                        >
-                            {/* Outer Bezel Track */}
-                            <path
-                                d="M 475 15 Q 115 410 475 805"
-                                fill="none"
-                                stroke="rgba(255, 255, 255, 0.08)"
-                                strokeWidth="1"
-                                strokeDasharray="2 4"
-                            />
-                            {/* Inner Main Arc Track */}
-                            <path
-                                d="M 455 15 Q 95 410 455 805"
-                                fill="none"
-                                stroke="rgba(255, 255, 255, 0.16)"
-                                strokeWidth="1.5"
-                                strokeDasharray="3 3"
-                            />
-                            {/* Active Glowing Progress Segment */}
-                            <path
-                                d="M 455 15 Q 95 410 455 805"
-                                fill="none"
-                                stroke="url(#qdArcGlow)"
-                                strokeWidth="3"
-                                strokeDasharray="90 700"
-                                strokeDashoffset={-((s - 1) / 19) * 670}
-                                style={{ transition: "stroke-dashoffset 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}
-                            />
-                            <defs>
-                                <linearGradient id="qdArcGlow" x1="0%" y1="0%" x2="100%" y2="100%">
-                                    <stop offset="0%" stopColor="#0078d4" />
-                                    <stop offset="100%" stopColor="#4daafc" />
-                                </linearGradient>
-                            </defs>
-                        </svg>
+
 
                         {STEPS.map(([stepStr], stepIdx) => {
                             const stepNum = stepIdx + 1;
@@ -2056,39 +2012,37 @@ const QuickDBStory: FC = () => {
                             const isMajor = stepNum === 1 || stepNum % 3 === 1 || stepNum === 20;
 
                             const norm = stepIdx / (STEPS.length - 1); // 0 to 1
-                            const arcX = Math.sin(norm * Math.PI) * -180; // 180px circle arc depth
-                            const rotAngle = (0.5 - norm) * 40; // Dynamic 40deg tangent rotation sweep
+                            const arcX = Math.sin(norm * Math.PI) * -110; // Clean 110px curve depth
+                            const rotAngle = (0.5 - norm) * 26; // Dynamic 26deg rotation sweep
 
-                            const tickWidth = isCurrent ? 52 : isMajor ? 30 : 16;
+                            const tickWidth = isCurrent ? 42 : isMajor ? 24 : 14;
                             const tickColor = isCurrent
                                 ? "#4daafc"
                                 : isMajor
-                                  ? "rgba(255, 255, 255, 0.52)"
-                                  : "rgba(255, 255, 255, 0.18)";
+                                  ? "rgba(255, 255, 255, 0.45)"
+                                  : "rgba(255, 255, 255, 0.16)";
 
                             return (
-                                <div key={stepNum} style={{ display: "flex", flexDirection: "column", gap: 7, zIndex: 2 }}>
+                                <div key={stepNum} style={{ display: "flex", flexDirection: "column", gap: 6, zIndex: 2, pointerEvents: "none" }}>
                                     {/* Main Step Item */}
                                     <div
-                                        onClick={() => jumpToStep(stepNum)}
-                                        title={`Step ${stepNum}: ${STEP_DETAILS[stepNum]?.title ?? ""}`}
                                         style={{
                                             position: "relative",
                                             display: "flex",
                                             alignItems: "center",
                                             justifyContent: "flex-end",
-                                            height: 22,
-                                            cursor: "pointer",
+                                            height: 20,
+                                            pointerEvents: "none",
                                             transform: `translateX(${arcX.toFixed(1)}px) rotate(${rotAngle.toFixed(1)}deg)`,
                                             transformOrigin: "right center",
-                                            transition: "all 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
+                                            transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                                         }}
                                     >
-                                        {/* Active Step Floating Glassmorphic Callout */}
+                                        {/* Active Step Floating Title & Description (Clean Minimal Callout) */}
                                         {isCurrent && (
                                             <div
                                                 style={{
-                                                    marginRight: 24,
+                                                    marginRight: 18,
                                                     textAlign: "right",
                                                     display: "flex",
                                                     flexDirection: "column",
@@ -2102,38 +2056,27 @@ const QuickDBStory: FC = () => {
                                                     style={{
                                                         display: "inline-flex",
                                                         alignItems: "center",
-                                                        gap: 7,
-                                                        fontSize: 12.5,
-                                                        font: `600 12.5px ${MONO}`,
+                                                        gap: 6,
+                                                        fontSize: 12,
+                                                        font: `600 12px ${MONO}`,
                                                         letterSpacing: ".06em",
                                                         color: "#8fc9ff",
-                                                        background: "rgba(10, 15, 26, 0.88)",
-                                                        border: "1px solid rgba(0, 120, 212, 0.5)",
-                                                        padding: "4px 11px",
-                                                        borderRadius: 8,
-                                                        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
-                                                        backdropFilter: "blur(12px)",
+                                                        textShadow: "0 0 12px rgba(0, 120, 212, 0.9)",
                                                         whiteSpace: "nowrap",
                                                     }}
                                                 >
-                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 10px #4daafc" }} />
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 8px #4daafc" }} />
                                                     {String(stepNum).padStart(2, "0")} · {STEP_DETAILS[stepNum]?.title ?? ""}
                                                 </div>
                                                 {STEP_DETAILS[stepNum]?.description && (
                                                     <div
                                                         style={{
-                                                            marginTop: 5,
-                                                            marginBottom: 2,
+                                                            marginTop: 4,
                                                             fontSize: 11.5,
-                                                            color: "rgba(255, 255, 255, 0.82)",
-                                                            maxWidth: 280,
-                                                            lineHeight: 1.42,
-                                                            background: "rgba(10, 15, 26, 0.72)",
-                                                            padding: "5px 10px",
-                                                            borderRadius: 7,
-                                                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                                                            backdropFilter: "blur(8px)",
-                                                            boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                                                            color: "rgba(255, 255, 255, 0.74)",
+                                                            maxWidth: 260,
+                                                            lineHeight: 1.4,
+                                                            textShadow: "0 1px 4px rgba(0,0,0,0.9)",
                                                         }}
                                                     >
                                                         {STEP_DETAILS[stepNum].description}
@@ -2142,98 +2085,50 @@ const QuickDBStory: FC = () => {
                                             </div>
                                         )}
 
-                                        {/* Major Step Label & Dot Indicator */}
+                                        {/* Major Step Number Label */}
                                         {!isCurrent && isMajor && (
-                                            <div
+                                            <span
                                                 style={{
-                                                    marginRight: 12,
-                                                    display: "inline-flex",
-                                                    alignItems: "center",
-                                                    gap: 5,
+                                                    marginRight: 10,
+                                                    fontSize: 10,
+                                                    font: `600 10px ${MONO}`,
+                                                    color: "rgba(255, 255, 255, 0.4)",
+                                                    whiteSpace: "nowrap",
                                                     transform: `rotate(${-rotAngle.toFixed(1)}deg)`,
                                                     transition: "all 0.2s ease",
+                                                    pointerEvents: "none",
                                                 }}
                                             >
-                                                <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255, 255, 255, 0.35)" }} />
-                                                <span
-                                                    style={{
-                                                        fontSize: 10,
-                                                        font: `600 10px ${MONO}`,
-                                                        color: "rgba(255, 255, 255, 0.45)",
-                                                        whiteSpace: "nowrap",
-                                                    }}
-                                                >
-                                                    {String(stepNum).padStart(2, "0")}
-                                                </span>
-                                            </div>
+                                                {String(stepNum).padStart(2, "0")}
+                                            </span>
                                         )}
 
-                                        {/* Pulsing Active Node Dot at tip of active tick */}
-                                        {isCurrent && (
+                                        {/* Tick Line (100% Click Accuracy Hit Wrapper & Crisp Scale Bar) */}
+                                        <div
+                                            onClick={() => jumpToStep(stepNum)}
+                                            title={`Step ${stepNum}: ${STEP_DETAILS[stepNum]?.title ?? ""}`}
+                                            style={{
+                                                display: "flex",
+                                                alignItems: "center",
+                                                justifyContent: "flex-end",
+                                                padding: "5px 0",
+                                                cursor: "pointer",
+                                                pointerEvents: "auto",
+                                            }}
+                                        >
                                             <div
+                                                className="qd-tick-bar"
                                                 style={{
-                                                    position: "absolute",
-                                                    right: -5,
-                                                    width: 10,
-                                                    height: 10,
-                                                    borderRadius: "50%",
-                                                    background: "#4daafc",
-                                                    boxShadow: "0 0 16px #0078d4, 0 0 8px #4daafc",
-                                                    zIndex: 10,
+                                                    width: tickWidth,
+                                                    height: isCurrent ? 3 : isMajor ? 1.8 : 1.2,
+                                                    borderRadius: 0,
+                                                    background: isCurrent ? "linear-gradient(90deg, #0078d4, #4daafc)" : tickColor,
+                                                    boxShadow: isCurrent ? "0 0 14px #0078d4, 0 0 5px #4daafc" : "none",
+                                                    transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                                                 }}
                                             />
-                                        )}
-
-                                        {/* Tick Line */}
-                                        <div
-                                            style={{
-                                                width: tickWidth,
-                                                height: isCurrent ? 3.5 : isMajor ? 2 : 1.2,
-                                                borderRadius: 2,
-                                                background: isCurrent ? "linear-gradient(90deg, #0078d4, #4daafc)" : tickColor,
-                                                boxShadow: isCurrent ? "0 0 16px #0078d4, 0 0 6px #4daafc" : "none",
-                                                transition: "all 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
-                                            }}
-                                        />
+                                        </div>
                                     </div>
-
-                                    {/* 2 Precision Sub-Ticks between steps */}
-                                    {stepIdx < STEPS.length - 1 && (() => {
-                                        const subNorm1 = (stepIdx + 0.33) / (STEPS.length - 1);
-                                        const subArcX1 = Math.sin(subNorm1 * Math.PI) * -180;
-                                        const subRotAngle1 = (0.5 - subNorm1) * 40;
-
-                                        const subNorm2 = (stepIdx + 0.66) / (STEPS.length - 1);
-                                        const subArcX2 = Math.sin(subNorm2 * Math.PI) * -180;
-                                        const subRotAngle2 = (0.5 - subNorm2) * 40;
-
-                                        return (
-                                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "flex-end",
-                                                        height: 2,
-                                                        transform: `translateX(${subArcX1.toFixed(1)}px) rotate(${subRotAngle1.toFixed(1)}deg)`,
-                                                        transformOrigin: "right center",
-                                                    }}
-                                                >
-                                                    <div style={{ width: 8, height: 1, background: "rgba(255,255,255,0.13)", borderRadius: 1 }} />
-                                                </div>
-                                                <div
-                                                    style={{
-                                                        display: "flex",
-                                                        justifyContent: "flex-end",
-                                                        height: 2,
-                                                        transform: `translateX(${subArcX2.toFixed(1)}px) rotate(${subRotAngle2.toFixed(1)}deg)`,
-                                                        transformOrigin: "right center",
-                                                    }}
-                                                >
-                                                    <div style={{ width: 8, height: 1, background: "rgba(255,255,255,0.13)", borderRadius: 1 }} />
-                                                </div>
-                                            </div>
-                                        );
-                                    })()}
                                 </div>
                             );
                         })}
