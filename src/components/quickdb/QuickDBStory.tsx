@@ -1985,179 +1985,258 @@ const QuickDBStory: FC = () => {
                     </div>
                 </div>
 
-                {/* ── Right-side "How It Works" Info Card ── */}
+                {/* ── Right-side Curved Clock Scale Timeline (Masterpiece 3D Bezel Dial) ── */}
                 {s >= 1 && (
                     <div
+                        aria-label="Step Clock Dial Timeline"
                         style={{
                             position: "absolute",
-                            right: 28,
-                            top: 96,
-                            width: 330,
-                            borderRadius: 16,
-                            background: "rgba(13, 15, 23, 0.92)",
-                            border: "1px solid rgba(255, 255, 255, 0.15)",
-                            boxShadow: "0 24px 60px -10px rgba(0, 0, 0, 0.88), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
-                            backdropFilter: "blur(20px)",
-                            zIndex: 45,
+                            right: 20,
+                            top: "50%",
+                            transform: "translateY(-50%)",
+                            height: 820,
+                            width: 480,
+                            zIndex: 46,
                             pointerEvents: "auto",
-                            overflow: "hidden",
                             display: "flex",
                             flexDirection: "column",
-                            transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                            justifyContent: "space-between",
+                            userSelect: "none",
                         }}
                     >
-                        {/* Step progress bar header */}
-                        <div style={{ height: 3, background: "rgba(255, 255, 255, 0.08)", width: "100%", position: "relative" }}>
-                            <div
-                                style={{
-                                    height: "100%",
-                                    background: "linear-gradient(90deg, #0078d4, #8a5cf6)",
-                                    width: `${(s / 20) * 100}%`,
-                                    transition: "width 0.32s cubic-bezier(0.16, 1, 0.3, 1)",
-                                }}
+                        {/* 3D Dual Concentric SVG Bezel Tracks */}
+                        <svg
+                            style={{
+                                position: "absolute",
+                                right: 0,
+                                top: 0,
+                                width: 480,
+                                height: 820,
+                                pointerEvents: "none",
+                                zIndex: 1,
+                            }}
+                        >
+                            {/* Outer Bezel Track */}
+                            <path
+                                d="M 475 15 Q 115 410 475 805"
+                                fill="none"
+                                stroke="rgba(255, 255, 255, 0.08)"
+                                strokeWidth="1"
+                                strokeDasharray="2 4"
                             />
-                        </div>
+                            {/* Inner Main Arc Track */}
+                            <path
+                                d="M 455 15 Q 95 410 455 805"
+                                fill="none"
+                                stroke="rgba(255, 255, 255, 0.16)"
+                                strokeWidth="1.5"
+                                strokeDasharray="3 3"
+                            />
+                            {/* Active Glowing Progress Segment */}
+                            <path
+                                d="M 455 15 Q 95 410 455 805"
+                                fill="none"
+                                stroke="url(#qdArcGlow)"
+                                strokeWidth="3"
+                                strokeDasharray="90 700"
+                                strokeDashoffset={-((s - 1) / 19) * 670}
+                                style={{ transition: "stroke-dashoffset 0.3s cubic-bezier(0.16, 1, 0.3, 1)" }}
+                            />
+                            <defs>
+                                <linearGradient id="qdArcGlow" x1="0%" y1="0%" x2="100%" y2="100%">
+                                    <stop offset="0%" stopColor="#0078d4" />
+                                    <stop offset="100%" stopColor="#4daafc" />
+                                </linearGradient>
+                            </defs>
+                        </svg>
 
-                        <div style={{ padding: "16px 18px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
-                            {/* Header Badges */}
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                                <span
-                                    style={{
-                                        fontSize: 10,
-                                        font: `600 10px ${MONO}`,
-                                        letterSpacing: ".08em",
-                                        color: "#8fc9ff",
-                                        background: "rgba(0, 120, 212, 0.22)",
-                                        border: "1px solid rgba(0, 120, 212, 0.45)",
-                                        padding: "2.5px 8.5px",
-                                        borderRadius: 99,
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                    }}
-                                >
-                                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#0078d4" }} />
-                                    STEP {s} / 20
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: 9.5,
-                                        font: `600 9.5px ${MONO}`,
-                                        letterSpacing: ".06em",
-                                        color: C.amberPale,
-                                        background: "rgba(255, 255, 255, 0.08)",
-                                        border: "1px solid rgba(255, 255, 255, 0.12)",
-                                        padding: "2.5px 8px",
-                                        borderRadius: 99,
-                                    }}
-                                >
-                                    {STEP_DETAILS[s]?.category ?? "DATA VIEW"}
-                                </span>
-                            </div>
+                        {STEPS.map(([stepStr], stepIdx) => {
+                            const stepNum = stepIdx + 1;
+                            const isCurrent = s === stepNum;
+                            const isMajor = stepNum === 1 || stepNum % 3 === 1 || stepNum === 20;
 
-                            {/* Title */}
-                            <div style={{ fontSize: 15.5, fontWeight: 600, color: C.textStrong, lineHeight: 1.28, marginTop: 1 }}>
-                                {STEP_DETAILS[s]?.title ?? capStep[1]}
-                            </div>
+                            const norm = stepIdx / (STEPS.length - 1); // 0 to 1
+                            const arcX = Math.sin(norm * Math.PI) * -180; // 180px circle arc depth
+                            const rotAngle = (0.5 - norm) * 40; // Dynamic 40deg tangent rotation sweep
 
-                            {/* Description */}
-                            <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
-                                {STEP_DETAILS[s]?.description}
-                            </div>
+                            const tickWidth = isCurrent ? 52 : isMajor ? 30 : 16;
+                            const tickColor = isCurrent
+                                ? "#4daafc"
+                                : isMajor
+                                  ? "rgba(255, 255, 255, 0.52)"
+                                  : "rgba(255, 255, 255, 0.18)";
 
-                            {/* Mechanism Detail Box */}
-                            <div
-                                style={{
-                                    padding: "9px 11px",
-                                    borderRadius: 8,
-                                    background: "rgba(255, 255, 255, 0.04)",
-                                    borderLeft: `3px solid ${C.blue}`,
-                                    fontSize: 11.5,
-                                    color: C.textDim,
-                                    lineHeight: 1.48,
-                                }}
-                            >
-                                <span style={{ fontWeight: 600, color: C.blueLight, marginRight: 5 }}>⚡ How it works:</span>
-                                {STEP_DETAILS[s]?.mechanism}
-                            </div>
+                            return (
+                                <div key={stepNum} style={{ display: "flex", flexDirection: "column", gap: 7, zIndex: 2 }}>
+                                    {/* Main Step Item */}
+                                    <div
+                                        onClick={() => jumpToStep(stepNum)}
+                                        title={`Step ${stepNum}: ${STEP_DETAILS[stepNum]?.title ?? ""}`}
+                                        style={{
+                                            position: "relative",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "flex-end",
+                                            height: 22,
+                                            cursor: "pointer",
+                                            transform: `translateX(${arcX.toFixed(1)}px) rotate(${rotAngle.toFixed(1)}deg)`,
+                                            transformOrigin: "right center",
+                                            transition: "all 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
+                                        }}
+                                    >
+                                        {/* Active Step Floating Glassmorphic Callout */}
+                                        {isCurrent && (
+                                            <div
+                                                style={{
+                                                    marginRight: 24,
+                                                    textAlign: "right",
+                                                    display: "flex",
+                                                    flexDirection: "column",
+                                                    alignItems: "flex-end",
+                                                    pointerEvents: "none",
+                                                    transform: `rotate(${-rotAngle.toFixed(1)}deg)`,
+                                                    transformOrigin: "right center",
+                                                }}
+                                            >
+                                                <div
+                                                    style={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 7,
+                                                        fontSize: 12.5,
+                                                        font: `600 12.5px ${MONO}`,
+                                                        letterSpacing: ".06em",
+                                                        color: "#8fc9ff",
+                                                        background: "rgba(10, 15, 26, 0.88)",
+                                                        border: "1px solid rgba(0, 120, 212, 0.5)",
+                                                        padding: "4px 11px",
+                                                        borderRadius: 8,
+                                                        boxShadow: "0 8px 24px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.15)",
+                                                        backdropFilter: "blur(12px)",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 10px #4daafc" }} />
+                                                    {String(stepNum).padStart(2, "0")} · {STEP_DETAILS[stepNum]?.title ?? ""}
+                                                </div>
+                                                {STEP_DETAILS[stepNum]?.description && (
+                                                    <div
+                                                        style={{
+                                                            marginTop: 5,
+                                                            marginBottom: 2,
+                                                            fontSize: 11.5,
+                                                            color: "rgba(255, 255, 255, 0.82)",
+                                                            maxWidth: 280,
+                                                            lineHeight: 1.42,
+                                                            background: "rgba(10, 15, 26, 0.72)",
+                                                            padding: "5px 10px",
+                                                            borderRadius: 7,
+                                                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                                                            backdropFilter: "blur(8px)",
+                                                            boxShadow: "0 4px 16px rgba(0,0,0,0.6)",
+                                                        }}
+                                                    >
+                                                        {STEP_DETAILS[stepNum].description}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
 
-                            {/* Quick Milestone Sub-Step Badges */}
-                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
-                                {DATA_VIEW_SUBSTEPS.map((sub) => {
-                                    const isCurrent = s === sub.step;
-                                    return (
-                                        <button
-                                            key={sub.label}
-                                            onClick={() => jumpToStep(sub.step)}
+                                        {/* Major Step Label & Dot Indicator */}
+                                        {!isCurrent && isMajor && (
+                                            <div
+                                                style={{
+                                                    marginRight: 12,
+                                                    display: "inline-flex",
+                                                    alignItems: "center",
+                                                    gap: 5,
+                                                    transform: `rotate(${-rotAngle.toFixed(1)}deg)`,
+                                                    transition: "all 0.2s ease",
+                                                }}
+                                            >
+                                                <span style={{ width: 3, height: 3, borderRadius: "50%", background: "rgba(255, 255, 255, 0.35)" }} />
+                                                <span
+                                                    style={{
+                                                        fontSize: 10,
+                                                        font: `600 10px ${MONO}`,
+                                                        color: "rgba(255, 255, 255, 0.45)",
+                                                        whiteSpace: "nowrap",
+                                                    }}
+                                                >
+                                                    {String(stepNum).padStart(2, "0")}
+                                                </span>
+                                            </div>
+                                        )}
+
+                                        {/* Pulsing Active Node Dot at tip of active tick */}
+                                        {isCurrent && (
+                                            <div
+                                                style={{
+                                                    position: "absolute",
+                                                    right: -5,
+                                                    width: 10,
+                                                    height: 10,
+                                                    borderRadius: "50%",
+                                                    background: "#4daafc",
+                                                    boxShadow: "0 0 16px #0078d4, 0 0 8px #4daafc",
+                                                    zIndex: 10,
+                                                }}
+                                            />
+                                        )}
+
+                                        {/* Tick Line */}
+                                        <div
                                             style={{
-                                                padding: "2.5px 7px",
-                                                borderRadius: 99,
-                                                border: isCurrent ? "1px solid rgba(0, 120, 212, 0.6)" : "1px solid rgba(255, 255, 255, 0.08)",
-                                                background: isCurrent ? "rgba(0, 120, 212, 0.3)" : "rgba(255, 255, 255, 0.03)",
-                                                color: isCurrent ? "#ffffff" : C.textDim,
-                                                fontSize: 10,
-                                                fontWeight: isCurrent ? 600 : 400,
-                                                cursor: "pointer",
-                                                whiteSpace: "nowrap",
-                                                transition: "all 0.16s ease",
+                                                width: tickWidth,
+                                                height: isCurrent ? 3.5 : isMajor ? 2 : 1.2,
+                                                borderRadius: 2,
+                                                background: isCurrent ? "linear-gradient(90deg, #0078d4, #4daafc)" : tickColor,
+                                                boxShadow: isCurrent ? "0 0 16px #0078d4, 0 0 6px #4daafc" : "none",
+                                                transition: "all 0.24s cubic-bezier(0.16, 1, 0.3, 1)",
                                             }}
-                                        >
-                                            {sub.label} #{sub.step}
-                                        </button>
-                                    );
-                                })}
-                            </div>
+                                        />
+                                    </div>
 
-                            {/* Prev / Next Step Controls */}
-                            <div
-                                style={{
-                                    display: "flex",
-                                    alignItems: "center",
-                                    justifyContent: "space-between",
-                                    marginTop: 4,
-                                    paddingTop: 10,
-                                    borderTop: `1px solid ${C.line}`,
-                                }}
-                            >
-                                <button
-                                    onClick={() => jumpToStep(Math.max(1, s - 1))}
-                                    disabled={s <= 1}
-                                    style={{
-                                        background: "rgba(255, 255, 255, 0.05)",
-                                        border: "1px solid rgba(255, 255, 255, 0.1)",
-                                        borderRadius: 6,
-                                        color: s > 1 ? C.text : C.faint,
-                                        fontSize: 11.5,
-                                        cursor: s > 1 ? "pointer" : "default",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                        padding: "4px 10px",
-                                    }}
-                                >
-                                    ← Prev Step
-                                </button>
-                                <button
-                                    onClick={() => jumpToStep(Math.min(20, s + 1))}
-                                    disabled={s >= 20}
-                                    style={{
-                                        background: s < 20 ? "rgba(0, 120, 212, 0.25)" : "rgba(255, 255, 255, 0.05)",
-                                        border: s < 20 ? "1px solid rgba(0, 120, 212, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
-                                        borderRadius: 6,
-                                        color: s < 20 ? "#8fc9ff" : C.faint,
-                                        fontSize: 11.5,
-                                        fontWeight: 600,
-                                        cursor: s < 20 ? "pointer" : "default",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                        padding: "4px 10px",
-                                    }}
-                                >
-                                    Next Step →
-                                </button>
-                            </div>
-                        </div>
+                                    {/* 2 Precision Sub-Ticks between steps */}
+                                    {stepIdx < STEPS.length - 1 && (() => {
+                                        const subNorm1 = (stepIdx + 0.33) / (STEPS.length - 1);
+                                        const subArcX1 = Math.sin(subNorm1 * Math.PI) * -180;
+                                        const subRotAngle1 = (0.5 - subNorm1) * 40;
+
+                                        const subNorm2 = (stepIdx + 0.66) / (STEPS.length - 1);
+                                        const subArcX2 = Math.sin(subNorm2 * Math.PI) * -180;
+                                        const subRotAngle2 = (0.5 - subNorm2) * 40;
+
+                                        return (
+                                            <div style={{ display: "flex", flexDirection: "column", gap: 3 }}>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        justifyContent: "flex-end",
+                                                        height: 2,
+                                                        transform: `translateX(${subArcX1.toFixed(1)}px) rotate(${subRotAngle1.toFixed(1)}deg)`,
+                                                        transformOrigin: "right center",
+                                                    }}
+                                                >
+                                                    <div style={{ width: 8, height: 1, background: "rgba(255,255,255,0.13)", borderRadius: 1 }} />
+                                                </div>
+                                                <div
+                                                    style={{
+                                                        display: "flex",
+                                                        justifyContent: "flex-end",
+                                                        height: 2,
+                                                        transform: `translateX(${subArcX2.toFixed(1)}px) rotate(${subRotAngle2.toFixed(1)}deg)`,
+                                                        transformOrigin: "right center",
+                                                    }}
+                                                >
+                                                    <div style={{ width: 8, height: 1, background: "rgba(255,255,255,0.13)", borderRadius: 1 }} />
+                                                </div>
+                                            </div>
+                                        );
+                                    })()}
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 
