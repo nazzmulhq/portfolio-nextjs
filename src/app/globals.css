@@ -1707,13 +1707,13 @@ body {
     font-family: var(--font-plex-mono), ui-monospace, monospace;
     font-size: 0.6875rem;
     letter-spacing: 0.04em;
-    color: #8fc9ff;
+    color: var(--accent-2);
 }
 .qd-pill-dot {
     width: 6px;
     height: 6px;
     border-radius: 50%;
-    background: #0078d4;
+    background: var(--accent);
 }
 .qd-h1 {
     margin: 1.1rem 0 0;
@@ -1748,7 +1748,7 @@ body {
     font-family: var(--font-plex-mono), ui-monospace, monospace;
     font-size: 0.6875rem;
     letter-spacing: 0.1em;
-    color: #4daafc;
+    color: var(--accent);
     flex: none;
 }
 .qd-step-t {
@@ -1937,9 +1937,9 @@ body {
     font-family: var(--font-plex-mono), ui-monospace, monospace;
     font-size: 0.72rem;
     font-weight: 500;
-    color: #8fc9ff;
-    background: rgba(0, 120, 212, 0.12);
-    border: 1px solid rgba(0, 120, 212, 0.3);
+    color: var(--accent-2);
+    background: rgba(63, 221, 159, 0.12);
+    border: 1px solid rgba(63, 221, 159, 0.3);
     padding: 3px 10px;
     border-radius: 6px;
     letter-spacing: 0.03em;
@@ -1947,16 +1947,16 @@ body {
     transition: all 0.2s ease;
 }
 .qd-engine-tag:hover {
-    border-color: rgba(77, 170, 252, 0.6);
+    border-color: rgba(63, 221, 159, 0.6);
     color: #ffffff;
-    background: rgba(0, 120, 212, 0.25);
+    background: rgba(63, 221, 159, 0.25);
 }
 .qd-hl-cmd {
-    color: #8fc9ff;
+    color: var(--accent-2);
     font-weight: 600;
 }
 .qd-hl-pkg {
-    color: #4daafc;
+    color: var(--accent);
     font-weight: 600;
 }
 .qd-btn {
@@ -1974,16 +1974,16 @@ body {
     text-decoration: none;
 }
 .qd-btn-primary {
-    background: linear-gradient(135deg, #0078d4, #005a9e);
-    color: #ffffff;
-    box-shadow: 0 4px 22px rgba(0, 120, 212, 0.5), 0 0 35px rgba(0, 120, 212, 0.25);
-    border: 1px solid rgba(77, 170, 252, 0.45);
+    background: linear-gradient(135deg, var(--accent-strong), var(--accent));
+    color: var(--accent-contrast);
+    box-shadow: 0 4px 22px rgba(63, 221, 159, 0.5), 0 0 35px rgba(63, 221, 159, 0.25);
+    border: 1px solid rgba(63, 221, 159, 0.45);
 }
-.qd-btn-primary:hover {
-    background: linear-gradient(135deg, #0086ed, #0066b3);
-    color: #ffffff;
+.qd-btn-primary:hover, .qd-btn-primary:active {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: var(--accent-contrast);
     transform: translateY(-3px) scale(1.02);
-    box-shadow: 0 8px 32px rgba(0, 120, 212, 0.65), 0 0 50px rgba(0, 120, 212, 0.4);
+    box-shadow: 0 8px 32px rgba(63, 221, 159, 0.65), 0 0 50px rgba(63, 221, 159, 0.4);
 }
 .qd-btn-shimmer {
     position: absolute;
@@ -2006,9 +2006,9 @@ body {
     color: #e2f1ff;
     backdrop-filter: blur(10px);
 }
-.qd-btn-ghost:hover {
+.qd-btn-ghost:hover, .qd-btn-ghost:active {
     background: rgba(255, 255, 255, 0.09);
-    border-color: rgba(0, 120, 212, 0.5);
+    border-color: rgba(63, 221, 159, 0.5);
     color: #ffffff;
     transform: translateY(-2px);
 }
@@ -2022,18 +2022,18 @@ body {
     max-width: 440px;
     border-radius: 12px;
     background: rgba(8, 12, 20, 0.92);
-    border: 1px solid rgba(0, 120, 212, 0.35);
+    border: 1px solid rgba(63, 221, 159, 0.35);
     box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
     backdrop-filter: blur(16px);
     overflow: hidden;
     cursor: pointer;
     transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
 }
-.qd-cmd-card:hover {
-    border-color: rgba(77, 170, 252, 0.65);
+.qd-cmd-card:hover, .qd-cmd-card:active {
+    border-color: rgba(63, 221, 159, 0.65);
     background: rgba(12, 18, 28, 0.96);
     transform: translateY(-3px);
-    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 120, 212, 0.3);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.9), 0 0 25px rgba(63, 221, 159, 0.3);
 }
 .qd-cmd-card.is-copied {
     border-color: rgba(74, 222, 128, 0.65);
@@ -2075,16 +2075,16 @@ body {
     gap: 4px;
     font-family: var(--font-plex-mono), ui-monospace, monospace;
     font-size: 0.75rem;
-    color: #70c0ff;
+    color: var(--accent);
     transition: color 0.2s ease;
 }
 .qd-cmd-copy-text {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    color: #70c0ff;
+    color: var(--accent);
 }
-.qd-cmd-card:hover .qd-cmd-copy-text {
+.qd-cmd-card:hover .qd-cmd-copy-text, .qd-cmd-card:active .qd-cmd-copy-text {
     color: #ffffff;
 }
 .qd-cmd-copied {
@@ -2100,7 +2100,7 @@ body {
     font-size: 0.82rem;
 }
 .qd-cmd-prompt {
-    color: #4daafc;
+    color: var(--accent);
     font-weight: 700;
     user-select: none;
 }
@@ -2113,7 +2113,7 @@ body {
 .qd-cmd-cursor {
     width: 7px;
     height: 15px;
-    background: #4daafc;
+    background: var(--accent);
     display: inline-block;
     animation: qd-blink 1s step-end infinite;
 }
