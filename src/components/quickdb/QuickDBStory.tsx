@@ -2005,11 +2005,11 @@ const QuickDBStory: FC = () => {
                             aria-label="Step Clock Dial Timeline"
                             style={{
                                 position: "absolute",
-                                right: 24,
+                                right: 20,
                                 top: "50%",
                                 transform: "translateY(-50%)",
                                 height: 760,
-                                width: 400,
+                                width: 380,
                                 zIndex: 46,
                                 pointerEvents: "none",
                                 display: "flex",
@@ -2025,10 +2025,10 @@ const QuickDBStory: FC = () => {
                                 const isMajor = stepNum === 1 || stepNum % 3 === 1 || stepNum === 20;
 
                                 const norm = stepIdx / (STEPS.length - 1); // 0 to 1
-                                const arcX = Math.sin(norm * Math.PI) * -140; // Mathematically true geometric semicircle arc depth
-                                const rotAngle = (0.5 - norm) * 36; // True 180° semicircle tangent sweep angle
+                                const arcX = Math.sin(norm * Math.PI) * -150; // Symmetrical full circle arc curve depth
+                                const rotAngle = (0.5 - norm) * 38; // Dynamic tangent rotation sweep
 
-                                const tickWidth = isCurrent ? 44 : isMajor ? 26 : 15;
+                                const tickWidth = isCurrent ? 40 : isMajor ? 22 : 14;
                                 const tickColor = isCurrent
                                     ? "#4daafc"
                                     : isMajor
@@ -2051,11 +2051,11 @@ const QuickDBStory: FC = () => {
                                                 transition: "all 0.22s cubic-bezier(0.16, 1, 0.3, 1)",
                                             }}
                                         >
-                                            {/* Active Step Floating Title & Description (100% High-Visibility Dark Glass Badge) */}
+                                            {/* Active Step Floating Title & Description (Pixel-Perfect Dark Glass Badge) */}
                                             {isCurrent && (
                                                 <div
                                                     style={{
-                                                        marginRight: 20,
+                                                        marginRight: 18,
                                                         textAlign: "right",
                                                         display: "flex",
                                                         flexDirection: "column",
@@ -2068,40 +2068,53 @@ const QuickDBStory: FC = () => {
                                                     <div
                                                         style={{
                                                             background: "rgba(8, 12, 20, 0.94)",
-                                                            border: "1px solid rgba(0, 120, 212, 0.55)",
-                                                            padding: "7px 13px",
-                                                            borderRadius: 10,
-                                                            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.95), 0 0 16px rgba(0, 120, 212, 0.35)",
-                                                            backdropFilter: "blur(14px)",
+                                                            border: "1px solid rgba(0, 120, 212, 0.5)",
+                                                            padding: "8px 13px",
+                                                            borderRadius: 8,
+                                                            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.92), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+                                                            backdropFilter: "blur(16px)",
                                                             display: "flex",
                                                             flexDirection: "column",
                                                             alignItems: "flex-end",
-                                                            gap: 4,
-                                                            maxWidth: 290,
+                                                            gap: 5,
+                                                            maxWidth: 275,
                                                         }}
                                                     >
                                                         <div
                                                             style={{
-                                                                display: "inline-flex",
+                                                                display: "flex",
                                                                 alignItems: "center",
-                                                                gap: 6,
+                                                                gap: 7,
                                                                 fontSize: 12.5,
-                                                                font: `600 12.5px ${MONO}`,
-                                                                letterSpacing: ".06em",
-                                                                color: "#60b5ff",
-                                                                textShadow: "0 0 12px rgba(0, 120, 212, 0.9)",
-                                                                whiteSpace: "nowrap",
+                                                                fontWeight: 600,
+                                                                textAlign: "right",
                                                             }}
                                                         >
-                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 10px #4daafc, 0 0 4px #ffffff" }} />
-                                                            {String(stepNum).padStart(2, "0")} · {STEP_DETAILS[stepNum]?.title ?? ""}
+                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 8px #4daafc", flexShrink: 0 }} />
+                                                            <span
+                                                                style={{
+                                                                    font: `600 10.5px ${MONO}`,
+                                                                    background: "rgba(0, 120, 212, 0.3)",
+                                                                    border: "1px solid rgba(77, 170, 252, 0.4)",
+                                                                    color: "#8fc9ff",
+                                                                    padding: "1px 5px",
+                                                                    borderRadius: 4,
+                                                                    lineHeight: 1.2,
+                                                                    flexShrink: 0,
+                                                                }}
+                                                            >
+                                                                {String(stepNum).padStart(2, "0")}
+                                                            </span>
+                                                            <span style={{ color: "#ffffff", letterSpacing: ".02em", textShadow: "0 0 10px rgba(0, 120, 212, 0.6)" }}>
+                                                                {STEP_DETAILS[stepNum]?.title ?? ""}
+                                                            </span>
                                                         </div>
                                                         {STEP_DETAILS[stepNum]?.description && (
                                                             <div
                                                                 style={{
                                                                     fontSize: 11.5,
-                                                                    color: "#e2f1ff",
-                                                                    lineHeight: 1.4,
+                                                                    color: "rgba(226, 241, 255, 0.85)",
+                                                                    lineHeight: 1.45,
                                                                     textAlign: "right",
                                                                 }}
                                                             >
@@ -2112,13 +2125,13 @@ const QuickDBStory: FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Major Step Number Label (Solid Luminous White with High-Contrast Drop Shadow) */}
+                                            {/* Major Step Number Label (Solid Luminous White) */}
                                             {!isCurrent && isMajor && (
                                                 <span
                                                     style={{
                                                         marginRight: 10,
-                                                        fontSize: 10.5,
-                                                        font: `600 10.5px ${MONO}`,
+                                                        fontSize: 10,
+                                                        font: `600 10px ${MONO}`,
                                                         color: "#ffffff",
                                                         textShadow: "0 1px 8px #000000, 0 0 4px #000000, 0 0 2px #000000",
                                                         whiteSpace: "nowrap",
@@ -2131,7 +2144,7 @@ const QuickDBStory: FC = () => {
                                                 </span>
                                             )}
 
-                                            {/* Tick Line (High-Visibility Scale Bar) */}
+                                            {/* Tick Line (Compact High-Visibility Scale Bar) */}
                                             <div
                                                 onClick={() => jumpToStep(stepNum)}
                                                 title={`Step ${stepNum}: ${STEP_DETAILS[stepNum]?.title ?? ""}`}
