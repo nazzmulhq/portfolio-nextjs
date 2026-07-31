@@ -228,20 +228,7 @@ const QuickDBStory: FC = () => {
     const [editCellText, setEditCellText] = useState("");
     const [editAnimStarted, setEditAnimStartedState] = useState(false);
 
-    const findDoneRef = useRef(findDone);
-    const paymentsOpenRef = useRef(paymentsOpen);
-    const tableOpenRef = useRef(tableOpen);
-    const pastHoverRef = useRef(pastHover);
-    const pastClickRef = useRef(pastClick);
-    const editPhaseRef = useRef(editPhase);
-    const hasEditHistoryRef = useRef(hasEditHistory);
-    findDoneRef.current = findDone;
-    paymentsOpenRef.current = paymentsOpen;
-    tableOpenRef.current = tableOpen;
-    pastHoverRef.current = pastHover;
-    pastClickRef.current = pastClick;
-    editPhaseRef.current = editPhase;
-    hasEditHistoryRef.current = hasEditHistory;
+
 
     const jumpToStep = (stepNum: number) => {
         const track = refs.current.track;
@@ -749,6 +736,14 @@ const QuickDBStory: FC = () => {
                 hasEditHistory !== e.hasEditHistory
             ) {
                 const changedStep = s !== e.step;
+                const changedSelN = n !== e.selN;
+                const changedTableOpen = tableOpen !== e.tableOpen;
+                const changedPaymentsOpen = paymentsOpen !== e.paymentsOpen;
+                const changedPastHover = isPastHover !== e.pastHover;
+                const changedPastClick = isPastClick !== e.pastClick;
+                const changedEditPhase = editPhase !== e.editPhase;
+                const changedHasEditHistory = hasEditHistory !== e.hasEditHistory;
+
                 e.step = s;
                 e.selN = n;
                 e.paymentsOpen = paymentsOpen;
@@ -757,14 +752,15 @@ const QuickDBStory: FC = () => {
                 e.pastClick = isPastClick;
                 e.editPhase = editPhase;
                 e.hasEditHistory = hasEditHistory;
-                if (s !== step) setStep(s);
-                if (n !== selN) setSelN(n);
-                if (tableOpen !== tableOpenRef.current) setTableOpen(tableOpen);
-                if (paymentsOpen !== paymentsOpenRef.current) setPaymentsOpen(paymentsOpen);
-                if (isPastHover !== pastHoverRef.current) setPastHover(isPastHover);
-                if (isPastClick !== pastClickRef.current) setPastClick(isPastClick);
-                if (editPhase !== editPhaseRef.current) setEditPhase(editPhase);
-                if (hasEditHistory !== hasEditHistoryRef.current) setHasEditHistory(hasEditHistory);
+
+                if (changedStep) setStep(s);
+                if (changedSelN) setSelN(n);
+                if (changedTableOpen) setTableOpen(tableOpen);
+                if (changedPaymentsOpen) setPaymentsOpen(paymentsOpen);
+                if (changedPastHover) setPastHover(isPastHover);
+                if (changedPastClick) setPastClick(isPastClick);
+                if (changedEditPhase) setEditPhase(editPhase);
+                if (changedHasEditHistory) setHasEditHistory(hasEditHistory);
                 if (changedStep) applyStep(s);
             }
         };
@@ -804,10 +800,10 @@ const QuickDBStory: FC = () => {
     // so the cursor visibly clicks the customers row first (see tick()).
     const grid = tableOpen;
     const filtering = s === 9 && findDone;
-    const dirty = s === 12;
+    const dirty = s === 12 && !pastClick;
     const filled = s >= 12 && !tail;
     const fillVal = CUST[0][4];
-    const changes = (s === 18 && pastClick) || (s === 19 && !pastClick) ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
+    const changes = (s === 18 && pastClick) || (s === 19 && !pastClick) ? 7 : (s === 12 && !pastClick) ? 4 : editPhase === 2 || editPhase === 4 ? 1 : 0;
     const editFocused = editPhase === 1;
     const editShowingValue = editPhase === 2 || editPhase === 3;
     const editDirty = editPhase === 2 || editPhase === 4;

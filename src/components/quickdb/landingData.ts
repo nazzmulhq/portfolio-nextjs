@@ -221,7 +221,9 @@ export const FIELDS: readonly TypedField[] = [
 ];
 
 /** customers rows: [number, name, lastName, firstName, phone, addr1, addr2, city] */
-export const CUST: readonly (readonly [number, string, string, string, string, string, string, string])[] = [
+export type CustomerRow = readonly [number, string, string, string, string, string, string, string];
+
+export const CUST: readonly CustomerRow[] = [
     [103, "Atelier graphique", "Schmitt", "Carine", "40.32.2555", "54, rue Royale", "", "Nantes"],
     [112, "Signal Gift Stores", "King", "Jean", "7025551838", "8489 Strong St.", "", "Las Vegas"],
     [114, "Australian Collectors, Co.", "Ferguson", "Peter", "03 9520 4555", "636 St Kilda Road", "Level 3", "Melbourne"],
@@ -252,7 +254,9 @@ export const CUST: readonly (readonly [number, string, string, string, string, s
 ] as const;
 
 /** Rows shown after the paste import lands (step 19). */
-export const TAIL: readonly (readonly [number | string, string, string, string, string, string, string, string])[] = [
+export type TailRow = readonly [number | string, string, string, string, string, string, string, string];
+
+export const TAIL: readonly TailRow[] = [
     [475, "West Coast Collectables Co.", "Thompson", "Steve", "3105553722", "3675 Furth Circle", "", "Burbank"],
     [477, "Mit Vergnügen & Co.", "Moos", "Hanna", "0621-08555", "Forsterstr. 57", "", "Mannheim"],
     [480, "Kremlin Collectables, Co.", "Semenov", "Alexander", "+7 812 293 0521", "2 Pobedy Square", "", "Saint Petersburg"],
@@ -369,7 +373,9 @@ export const CATEGORIES: readonly string[] = [
     "Chat",
 ] as const;
 
-export const PAY_ROWS: readonly { i: number; chk: string; date: string; amt: string }[] = [
+export interface PayRow { i: number; chk: string; date: string; amt: string }
+
+export const PAY_ROWS: readonly PayRow[] = [
     { i: 1, chk: "DB889831", date: "2003-02-15T18:00:00.000Z", amt: "50218.95" },
     { i: 2, chk: "FD317790", date: "2003-10-27T18:00:00.000Z", amt: "1491.38" },
     { i: 3, chk: "KI831359", date: "2004-11-03T18:00:00.000Z", amt: "17876.32" },
@@ -380,7 +386,9 @@ export const EMPTY_ROWS: readonly number[] = [
     5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22,
 ] as const;
 
-export const PREVIEW_ROWS: readonly { n: string; l: string; f: string }[] = [
+export interface PreviewRow { n: string; l: string; f: string }
+
+export const PREVIEW_ROWS: readonly PreviewRow[] = [
     { n: "Raanan Stores, Inc", l: "Altagar,G M", f: "Raanan" },
     { n: "Iberia Gift Imports", l: "Corp.", f: "Roel" },
     { n: "Motor Mint Distributors…", l: "Salazar", f: "Rosa" },
