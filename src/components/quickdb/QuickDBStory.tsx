@@ -315,7 +315,7 @@ const QuickDBStory: FC = () => {
 
     useEffect(() => {
         const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const narrow = window.matchMedia("(max-width: 767px)").matches;
+        const narrow = window.matchMedia("(max-width: 1023px)").matches;
         // The story is a 1920px-wide artefact. Below the breakpoint the compact
         // version is what is on screen, so there is nothing here to drive.
         if (reduced || narrow) return undefined;
@@ -2654,17 +2654,24 @@ const GridToolbar: FC<{
             <span
                 ref={pasteBtnRef}
                 style={{
-                    padding: "3.5px 9px",
+                    display: "inline-flex",
+                    alignItems: "center",
+                    gap: 6,
+                    padding: "3.5px 10px",
                     borderRadius: 4,
-                    background: pasteActive ? "rgba(0, 120, 212, 0.38)" : "transparent",
+                    background: pasteActive ? "#0078d4" : "transparent",
                     color: pasteActive ? "#ffffff" : C.textDim,
-                    border: pasteActive ? "1px solid rgba(0, 120, 212, 0.6)" : "1px solid transparent",
-                    boxShadow: pasteActive ? "0 0 12px rgba(0, 120, 212, 0.45)" : "none",
+                    border: pasteActive ? "1px solid #2b88d8" : "1px solid transparent",
+                    boxShadow: pasteActive ? "0 2px 10px rgba(0, 120, 212, 0.45)" : "none",
                     fontWeight: pasteActive ? 600 : 400,
                     transition: "all 0.18s ease",
                 }}
             >
-                ⧉ Paste
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="8" y="8" width="12" height="12" rx="2" />
+                    <path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2" />
+                </svg>
+                Paste
             </span>
             <span style={{ color: C.dark }}>⧉ Clone</span>
             <span style={{ color: C.dark }}>🗑 Delete</span>
