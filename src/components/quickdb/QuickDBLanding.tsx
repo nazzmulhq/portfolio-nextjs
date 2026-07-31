@@ -1,4 +1,6 @@
-import { FC } from "react";
+"use client";
+
+import { FC, useState } from "react";
 import { STEPS } from "./landingData";
 import QuickDBStory from "./QuickDBStory";
 
@@ -28,7 +30,7 @@ const CompactStory: FC = () => (
                 inside your editor.
             </h1>
             <p className="qd-lede">
-                Browse and query 30+ engines without leaving the window you already have open.
+                Browse and query 80+ engines without leaving the window you already have open.
             </p>
         </div>
 
@@ -43,44 +45,123 @@ const CompactStory: FC = () => (
     </div>
 );
 
-const QuickDBLanding: FC<IQuickDBLanding> = () => (
-    <div className="qd-root">
-        <div className="hidden md:block">
-            <QuickDBStory />
-        </div>
+const QuickDBLanding: FC<IQuickDBLanding> = () => {
+    const [copied, setCopied] = useState(false);
 
-        <CompactStory />
+    const handleCopy = () => {
+        navigator.clipboard.writeText(INSTALL_CMD);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
+    };
 
-        <section className="qd-cta" id="install">
-            <h2 className="qd-cta-h">Install, connect, browse.</h2>
-            <p className="qd-cta-p">
-                Schema, rows and query history live next to the code that depends on them.
-            </p>
-            <div className="qd-cta-row">
-                <a
-                    className="qd-btn qd-btn-primary"
-                    href="https://marketplace.visualstudio.com/items?itemName=quickdb.quickdb"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                >
-                    Install QuickDB
-                </a>
-                {/* The design pointed this at "#docs", which assumed a docs
-                    section further down the page. There isn't one on this
-                    route, so it goes to the repository rather than being a
-                    dead anchor. */}
-                <a
-                    className="qd-btn qd-btn-ghost"
-                    href="https://github.com/nazzmulhq"
-                    rel="noopener noreferrer"
-                    target="_blank"
-                >
-                    Read the docs
-                </a>
+    return (
+        <div className="qd-root">
+            <div className="hidden md:block">
+                <QuickDBStory />
             </div>
-            <div className="qd-cmd">{INSTALL_CMD}</div>
-        </section>
-    </div>
-);
+
+            <CompactStory />
+
+            <section className="qd-cta" id="install">
+                {/* Top Border Laser Beam */}
+                <div className="qd-top-border-beam" />
+
+                {/* Golden/Silver Eclipse Arc Corona Background */}
+                <div className="qd-eclipse-container">
+                    <div className="qd-eclipse-glow-flare" />
+                    <div className="qd-eclipse-dark-dome" />
+                </div>
+
+                {/* Floating Particle Glow Nodes */}
+                <div className="qd-particle qd-p1" />
+                <div className="qd-particle qd-p2" />
+                <div className="qd-particle qd-p3" />
+                <div className="qd-particle qd-p4" />
+
+                <h2 className="qd-cta-h">Install, connect, browse.</h2>
+                <p className="qd-cta-p">
+                    Schema, rows and query history live next to the code that depends on them.
+                </p>
+                
+                {/* Image-Based Action Buttons Grid */}
+                <div className="qd-img-btn-section">
+                    <div className="qd-img-btn-row">
+                        <a
+                            className="qd-img-btn qd-img-btn-mint"
+                            href="vscode:extension/quickdb.quickdb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <span>INSTALL IN VS CODE</span>
+                        </a>
+                        <a
+                            className="qd-img-btn qd-img-btn-dark"
+                            href="https://marketplace.visualstudio.com/items?itemName=quickdb.quickdb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"/><path d="M18 8l4 4-4 4"/></svg>
+                            <span>MARKETPLACE</span>
+                        </a>
+                        <a
+                            className="qd-img-btn qd-img-btn-dark"
+                            href="https://open-vsx.org/extension/quickdb/quickdb"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                        >
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <span>OPEN VSX</span>
+                        </a>
+                    </div>
+                    <div className="qd-img-btn-row">
+                        <a className="qd-img-btn qd-img-btn-dark" href="/">
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            <span>PORTFOLIO</span>
+                        </a>
+                    </div>
+                </div>
+
+                {/* Engine Support Tags Row */}
+                <div className="qd-engine-tags">
+                    {["SQLite", "PostgreSQL", "MySQL", "Redis", "MongoDB", "80+ Engines"].map((engine) => (
+                        <span key={engine} className="qd-engine-tag">
+                            {engine}
+                        </span>
+                    ))}
+                </div>
+
+                {/* macOS Terminal Command Card */}
+                <div className={`qd-cmd-card ${copied ? "is-copied" : ""}`} onClick={handleCopy} title="Click to copy command">
+                    <div className="qd-cmd-header">
+                        <div className="qd-cmd-dots">
+                            <span className="qd-cmd-dot qd-cmd-dot-red" />
+                            <span className="qd-cmd-dot qd-cmd-dot-yellow" />
+                            <span className="qd-cmd-dot qd-cmd-dot-green" />
+                        </div>
+                        <span className="qd-cmd-title">zsh — quickdb install</span>
+                        <button className="qd-cmd-copy-btn" type="button" aria-label="Copy install command">
+                            {copied ? (
+                                <span className="qd-cmd-copied">Copied! ✓</span>
+                            ) : (
+                                <span className="qd-cmd-copy-text">
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    Copy
+                                </span>
+                            )}
+                        </button>
+                    </div>
+                    <div className="qd-cmd-body">
+                        <span className="qd-cmd-prompt">$</span>
+                        <code className="qd-cmd-text">
+                            <span className="qd-hl-cmd">code</span> --install-extension <span className="qd-hl-pkg">quickdb.quickdb</span>
+                        </code>
+                        <span className="qd-cmd-cursor" />
+                    </div>
+                </div>
+            </section>
+        </div>
+    );
+};
 
 export default QuickDBLanding;

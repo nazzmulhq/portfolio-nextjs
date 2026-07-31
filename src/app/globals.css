@@ -1761,62 +1761,543 @@ body {
 
 .qd-cta {
     position: relative;
-    padding: 16vh 1.5rem 14vh;
+    padding: 4.5rem 1.5rem 5rem;
     text-align: center;
-    background: linear-gradient(180deg, #08080b, #0d0d14);
+    background: radial-gradient(ellipse at 50% 90%, #111318 0%, #050608 65%, #000000 100%);
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
 }
+.qd-cta::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: 
+        linear-gradient(to right, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
+        linear-gradient(to bottom, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+    background-size: 40px 40px;
+    animation: qd-grid-move 22s linear infinite;
+    pointer-events: none;
+    z-index: 0;
+}
+@keyframes qd-grid-move {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+}
+
+/* ── Black and White Silver Eclipse Arc Corona ── */
+.qd-eclipse-container {
+    pointer-events: none;
+    z-index: 1;
+    width: 1024px;
+    height: 1024px;
+    position: absolute;
+    bottom: -138%;
+    left: 50%;
+    transform: translateX(-50%);
+}
+
+/* Pure White Silver Corona Light Flare behind Top Rim */
+.qd-eclipse-glow-flare {
+    position: absolute;
+    top: -55px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 780px;
+    height: 380px;
+    border-radius: 50%;
+    background: radial-gradient(ellipse at 50% 10%, #ffffff 0%, #e2e8f0 25%, #94a3b8 50%, rgba(255, 255, 255, 0.3) 70%, transparent 85%);
+    box-shadow: 
+        0 0 140px rgba(255, 255, 255, 0.95),
+        0 0 240px rgba(226, 232, 240, 0.7),
+        0 0 350px rgba(148, 163, 184, 0.4);
+    filter: blur(22px);
+    animation: qd-eclipse-corona-pulse 4.5s ease-in-out infinite alternate;
+}
+
+/* Pitch Black Eclipse Hemisphere Dome */
+.qd-eclipse-dark-dome {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle at 50% 0%, #0a0b0e 0%, #000000 65%);
+    border-top: 2px solid #ffffff;
+    box-shadow: 
+        0 -8px 30px rgba(255, 255, 255, 0.95),
+        0 -22px 75px rgba(226, 232, 240, 0.85),
+        0 -50px 140px rgba(148, 163, 184, 0.55),
+        0 -90px 220px rgba(100, 116, 139, 0.3);
+}
+
+@keyframes qd-eclipse-corona-pulse {
+    0% {
+        opacity: 0.82;
+        transform: translateX(-50%) scale(0.96);
+        filter: blur(20px);
+    }
+    50% {
+        opacity: 1;
+        transform: translateX(-50%) scale(1.05);
+        filter: blur(26px);
+    }
+    100% {
+        opacity: 0.88;
+        transform: translateX(-50%) scale(0.98);
+        filter: blur(22px);
+    }
+}
+
+@keyframes qd-conic-spin {
+    0% { transform: translate(-50%, -50%) rotate(0deg); }
+    100% { transform: translate(-50%, -50%) rotate(360deg); }
+}
+
+@keyframes qd-bg-color-move {
+    0% {
+        background-position: 0% 0%;
+        filter: hue-rotate(0deg);
+    }
+    33% {
+        background-position: 100% 50%;
+        filter: hue-rotate(45deg);
+    }
+    66% {
+        background-position: 50% 100%;
+        filter: hue-rotate(-35deg);
+    }
+    100% {
+        background-position: 0% 0%;
+        filter: hue-rotate(20deg);
+    }
+}
+@keyframes qd-grid-move {
+    0% { background-position: 0 0; }
+    100% { background-position: 40px 40px; }
+}
+
+.qd-cta-glow-beam {
+    position: absolute;
+    top: -35%;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 700px;
+    height: 450px;
+    background: radial-gradient(ellipse at center, rgba(0, 120, 212, 0.32) 0%, rgba(0, 120, 212, 0.08) 50%, rgba(3, 5, 8, 0) 80%);
+    pointer-events: none;
+    animation: qd-beam-pulse 5s ease-in-out infinite alternate;
+}
+@keyframes qd-beam-pulse {
+    0% { opacity: 0.6; transform: translateX(-50%) scale(0.92); }
+    100% { opacity: 1; transform: translateX(-50%) scale(1.15); }
+}
+
+/* Triple Floating Ambient Glow Orbs */
+.qd-cta-orb-1 {
+    position: absolute;
+    top: -20%;
+    left: 10%;
+    width: 550px;
+    height: 380px;
+    background: radial-gradient(circle, rgba(0, 120, 212, 0.3) 0%, rgba(0, 120, 212, 0.06) 55%, transparent 75%);
+    pointer-events: none;
+    animation: qd-orb-float-1 8s ease-in-out infinite alternate;
+    filter: blur(24px);
+}
+.qd-cta-orb-2 {
+    position: absolute;
+    bottom: -20%;
+    right: 10%;
+    width: 520px;
+    height: 350px;
+    background: radial-gradient(circle, rgba(59, 228, 158, 0.25) 0%, rgba(59, 228, 158, 0.05) 55%, transparent 75%);
+    pointer-events: none;
+    animation: qd-orb-float-2 9s ease-in-out infinite alternate;
+    filter: blur(28px);
+}
+.qd-cta-orb-3 {
+    position: absolute;
+    top: 30%;
+    right: 25%;
+    width: 420px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(120, 80, 255, 0.22) 0%, rgba(120, 80, 255, 0.04) 55%, transparent 75%);
+    pointer-events: none;
+    animation: qd-orb-float-3 11s ease-in-out infinite alternate;
+    filter: blur(30px);
+}
+
+@keyframes qd-orb-float-1 {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(50px, 35px) scale(1.18); }
+    100% { transform: translate(-35px, -25px) scale(0.88); }
+}
+
+@keyframes qd-orb-float-2 {
+    0% { transform: translate(0, 0) scale(0.92); }
+    50% { transform: translate(-50px, -40px) scale(1.22); }
+    100% { transform: translate(40px, 30px) scale(1); }
+}
+
+@keyframes qd-orb-float-3 {
+    0% { transform: translate(0, 0) scale(1); }
+    50% { transform: translate(-30px, 40px) scale(1.1); }
+    100% { transform: translate(45px, -30px) scale(0.95); }
+}
+
+.qd-top-border-beam {
+    position: absolute;
+    top: 0;
+    left: -50%;
+    width: 60%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ffffff, #94a3b8, transparent);
+    box-shadow: 0 0 15px #ffffff, 0 0 30px #cbd5e1;
+    animation: qd-border-beam 4s ease-in-out infinite;
+    z-index: 10;
+}
+@keyframes qd-border-beam {
+    0% { left: -60%; opacity: 0; }
+    30% { opacity: 1; }
+    70% { opacity: 1; }
+    100% { left: 120%; opacity: 0; }
+}
+
+/* Floating White Silver Particle Glow Nodes */
+.qd-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 2;
+}
+.qd-p1 {
+    top: 60%;
+    left: 12%;
+    width: 6px;
+    height: 6px;
+    background: #ffffff;
+    box-shadow: 0 0 12px #ffffff;
+    animation: qd-particle-rise 7s ease-in-out infinite alternate;
+}
+.qd-p2 {
+    top: 25%;
+    right: 18%;
+    width: 8px;
+    height: 8px;
+    background: #e2e8f0;
+    box-shadow: 0 0 14px #e2e8f0;
+    animation: qd-particle-rise 9s ease-in-out infinite alternate-reverse;
+}
+.qd-p3 {
+    bottom: 20%;
+    left: 45%;
+    width: 5px;
+    height: 5px;
+    background: #cbd5e1;
+    box-shadow: 0 0 10px #cbd5e1;
+    animation: qd-particle-rise 6s ease-in-out infinite alternate;
+}
+.qd-p4 {
+    top: 75%;
+    right: 30%;
+    width: 7px;
+    height: 7px;
+    background: #94a3b8;
+    box-shadow: 0 0 14px #94a3b8;
+    animation: qd-particle-rise 8s ease-in-out infinite alternate-reverse;
+}
+@keyframes qd-particle-rise {
+    0% { transform: translateY(0) scale(1); opacity: 0.4; }
+    50% { transform: translateY(-35px) scale(1.4); opacity: 0.9; }
+    100% { transform: translateY(-70px) scale(0.8); opacity: 0.2; }
+}
+
 .qd-cta-h {
+    position: relative;
+    z-index: 2;
     margin: 0;
-    font-size: clamp(1.6rem, 3.2vw, 2.75rem);
-    letter-spacing: -0.03em;
-    font-weight: 600;
+    font-size: clamp(2.6rem, 5.5vw, 4.2rem);
+    letter-spacing: -0.045em;
+    font-weight: 800;
+    line-height: 1.08;
+    background: linear-gradient(180deg, #ffffff 0%, #cbd5e1 55%, #94a3b8 100%);
+    background-size: 200% auto;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    text-shadow: 0 0 45px rgba(255, 255, 255, 0.45);
+    animation: qd-text-shimmer 6s ease-in-out infinite alternate;
+}
+@keyframes qd-text-shimmer {
+    0% { background-position: 0% 50%; }
+    100% { background-position: 100% 50%; }
 }
 .qd-cta-p {
-    margin: 0.9rem auto 0;
-    max-width: 30rem;
-    font-size: 0.95rem;
+    position: relative;
+    z-index: 2;
+    margin: 0.8rem auto 0;
+    max-width: 36rem;
+    font-size: 1.15rem;
     line-height: 1.6;
-    color: #9d9d9d;
+    color: rgba(226, 232, 240, 0.85);
     text-wrap: pretty;
 }
-.qd-cta-row {
+
+/* Image-Based Buttons Layout */
+.qd-img-btn-section {
+    position: relative;
+    z-index: 2;
     display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    margin-top: 1.8rem;
+}
+.qd-img-btn-row {
+    display: flex;
+    align-items: center;
     justify-content: center;
     flex-wrap: wrap;
-    gap: 0.75rem;
-    margin-top: 2.1rem;
+    gap: 10px;
 }
-.qd-btn {
-    padding: 0.8rem 1.5rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-    transition:
-        background 0.3s ease,
-        border-color 0.3s ease,
-        color 0.3s ease;
-}
-.qd-btn-primary {
-    background: #0078d4;
-    color: #fff;
-    font-weight: 600;
-}
-.qd-btn-primary:hover {
-    background: #1a8ae4;
-    color: #fff;
-}
-.qd-btn-ghost {
-    border: 1px solid #2a2a36;
-    color: #cccccc;
-}
-.qd-btn-ghost:hover {
-    border-color: #4a4a5a;
-    color: #fff;
-}
-.qd-cmd {
-    margin-top: 1.6rem;
+.qd-img-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 6px;
     font-family: var(--font-plex-mono), ui-monospace, monospace;
     font-size: 0.75rem;
-    color: #6f6f6f;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    text-decoration: none;
+    transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.qd-img-btn-mint {
+    background: #3be49e;
+    color: #030a06;
+    border: 1px solid #3be49e;
+    box-shadow: 0 0 20px rgba(59, 228, 158, 0.35);
+}
+.qd-img-btn-mint:hover {
+    background: #4ef0aa;
+    border-color: #4ef0aa;
+    color: #000000;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 26px rgba(59, 228, 158, 0.55);
+}
+.qd-img-btn-dark {
+    background: rgba(8, 12, 18, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #ffffff;
+    backdrop-filter: blur(12px);
+}
+.qd-img-btn-dark:hover {
+    background: rgba(16, 24, 36, 0.95);
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #ffffff;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(255, 255, 255, 0.12);
+}
+.qd-engine-tags {
+    position: relative;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 7px;
+    margin-top: 1.1rem;
+}
+.qd-engine-tag {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: #8fc9ff;
+    background: rgba(0, 120, 212, 0.12);
+    border: 1px solid rgba(0, 120, 212, 0.3);
+    padding: 3px 10px;
+    border-radius: 6px;
+    letter-spacing: 0.03em;
+    backdrop-filter: blur(8px);
+    transition: all 0.2s ease;
+}
+.qd-engine-tag:hover {
+    border-color: rgba(77, 170, 252, 0.6);
+    color: #ffffff;
+    background: rgba(0, 120, 212, 0.25);
+}
+.qd-hl-cmd {
+    color: #8fc9ff;
+    font-weight: 600;
+}
+.qd-hl-pkg {
+    color: #4daafc;
+    font-weight: 600;
+}
+.qd-btn {
+    position: relative;
+    overflow: hidden;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0.9rem 1.85rem;
+    border-radius: 10px;
+    font-size: 0.92rem;
+    font-weight: 600;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    text-decoration: none;
+}
+.qd-btn-primary {
+    background: linear-gradient(135deg, #0078d4, #005a9e);
+    color: #ffffff;
+    box-shadow: 0 4px 22px rgba(0, 120, 212, 0.5), 0 0 35px rgba(0, 120, 212, 0.25);
+    border: 1px solid rgba(77, 170, 252, 0.45);
+}
+.qd-btn-primary:hover {
+    background: linear-gradient(135deg, #0086ed, #0066b3);
+    color: #ffffff;
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 32px rgba(0, 120, 212, 0.65), 0 0 50px rgba(0, 120, 212, 0.4);
+}
+.qd-btn-shimmer {
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+    transform: skewX(-20deg);
+    animation: qd-shimmer-sweep 3.5s infinite;
+}
+@keyframes qd-shimmer-sweep {
+    0% { left: -100%; }
+    30%, 100% { left: 200%; }
+}
+
+.qd-btn-ghost {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    color: #e2f1ff;
+    backdrop-filter: blur(10px);
+}
+.qd-btn-ghost:hover {
+    background: rgba(255, 255, 255, 0.09);
+    border-color: rgba(0, 120, 212, 0.5);
+    color: #ffffff;
+    transform: translateY(-2px);
+}
+
+/* macOS Terminal Command Card */
+.qd-cmd-card {
+    position: relative;
+    z-index: 2;
+    margin-top: 2.5rem;
+    width: 100%;
+    max-width: 440px;
+    border-radius: 12px;
+    background: rgba(8, 12, 20, 0.92);
+    border: 1px solid rgba(0, 120, 212, 0.35);
+    box-shadow: 0 14px 40px rgba(0, 0, 0, 0.8), inset 0 1px 0 rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(16px);
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.qd-cmd-card:hover {
+    border-color: rgba(77, 170, 252, 0.65);
+    background: rgba(12, 18, 28, 0.96);
+    transform: translateY(-3px);
+    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.9), 0 0 25px rgba(0, 120, 212, 0.3);
+}
+.qd-cmd-card.is-copied {
+    border-color: rgba(74, 222, 128, 0.65);
+    box-shadow: 0 0 30px rgba(74, 222, 128, 0.35);
+}
+.qd-cmd-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 9px 14px;
+    background: rgba(4, 6, 10, 0.85);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+.qd-cmd-dots {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+.qd-cmd-dot {
+    width: 9px;
+    height: 9px;
+    border-radius: 50%;
+}
+.qd-cmd-dot-red { background: #ff5f56; }
+.qd-cmd-dot-yellow { background: #ffbd2e; }
+.qd-cmd-dot-green { background: #27c93f; }
+.qd-cmd-title {
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.72rem;
+    color: rgba(226, 241, 255, 0.5);
+    letter-spacing: 0.02em;
+}
+.qd-cmd-copy-btn {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.75rem;
+    color: #70c0ff;
+    transition: color 0.2s ease;
+}
+.qd-cmd-copy-text {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #70c0ff;
+}
+.qd-cmd-card:hover .qd-cmd-copy-text {
+    color: #ffffff;
+}
+.qd-cmd-copied {
+    color: #4ade80;
+    font-weight: 600;
+}
+.qd-cmd-body {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    font-family: var(--font-plex-mono), ui-monospace, monospace;
+    font-size: 0.82rem;
+}
+.qd-cmd-prompt {
+    color: #4daafc;
+    font-weight: 700;
+    user-select: none;
+}
+.qd-cmd-text {
+    color: #e2f1ff;
+    letter-spacing: 0.02em;
+    flex-grow: 1;
+    text-align: left;
+}
+.qd-cmd-cursor {
+    width: 7px;
+    height: 15px;
+    background: #4daafc;
+    display: inline-block;
+    animation: qd-blink 1s step-end infinite;
+}
+@keyframes qd-blink {
+    50% { opacity: 0; }
 }
 
 @media (prefers-reduced-motion: reduce) {

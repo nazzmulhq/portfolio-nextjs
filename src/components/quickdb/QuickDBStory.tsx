@@ -1976,7 +1976,7 @@ const QuickDBStory: FC = () => {
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12 }}>
                         <div style={{ fontSize: "clamp(13px,1.2vw,16px)", color: C.muted, maxWidth: 540, textWrap: "pretty" }}>
-                            Browse and query 30+ engines without leaving the window you already have open.
+                            Browse and query 80+ engines without leaving the window you already have open.
                         </div>
                         <div className="qd-bob" style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 7 }}>
                             <div style={{ font: `400 10.5px ${MONO}`, letterSpacing: ".14em", color: C.dark }}>SCROLL</div>
