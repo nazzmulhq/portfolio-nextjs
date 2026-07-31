@@ -2008,8 +2008,8 @@ const QuickDBStory: FC = () => {
                                 right: 20,
                                 top: "50%",
                                 transform: "translateY(-50%)",
-                                height: 760,
-                                width: 380,
+                                height: 580,
+                                width: 340,
                                 zIndex: 46,
                                 pointerEvents: "none",
                                 display: "flex",
@@ -2025,10 +2025,10 @@ const QuickDBStory: FC = () => {
                                 const isMajor = stepNum === 1 || stepNum % 3 === 1 || stepNum === 20;
 
                                 const norm = stepIdx / (STEPS.length - 1); // 0 to 1
-                                // True Geometric Circle Radius Equation (Radius R = 440px)
-                                const radius = 440;
-                                const maxDy = 370; // Half height span
-                                const dyPixel = (norm - 0.5) * 2 * maxDy; // -370 to +370
+                                // True Geometric Circle Radius Equation for 580px height
+                                const radius = 340;
+                                const maxDy = 270; // Half height span (540px total span)
+                                const dyPixel = (norm - 0.5) * 2 * maxDy; // -270 to +270
                                 const dxTop = radius - Math.sqrt(radius * radius - maxDy * maxDy);
                                 const dxCurrent = radius - Math.sqrt(Math.max(0, radius * radius - dyPixel * dyPixel));
                                 const arcX = -(dxTop - dxCurrent); // True circular arc offset
