@@ -1957,7 +1957,7 @@ const QuickDBStory: FC = () => {
                             }}
                         >
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.blue }} />
-                            QuickDB 1.2.6 — editor extension &amp; desktop app
+                            QuickDB 1.2.6 — Available for VS Code &amp; Cursor
                         </div>
                         <h1
                             style={{
@@ -2396,7 +2396,7 @@ const WelcomePane: FC = () => (
             <img
                 alt="QuickDB"
                 src="/images/quickdb-logo.png"
-                style={{ width: 120, height: 120, borderRadius: 22, objectFit: "cover" }}
+                style={{ width: 200, height: 200, borderRadius: 22, objectFit: "cover" }}
             />
         </div>
     </div>

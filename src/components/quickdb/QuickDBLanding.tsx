@@ -22,7 +22,7 @@ const CompactStory: FC = () => (
         <div className="qd-compact-hero">
             <span className="qd-pill">
                 <span className="qd-pill-dot" />
-                QuickDB 1.2.6 — editor extension &amp; desktop app
+                QuickDB 1.2.6 — Available for VS Code &amp; Cursor
             </span>
             <h1 className="qd-h1">
                 Your whole database,
@@ -76,7 +76,28 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                 <div className="qd-particle qd-p1" />
                 <div className="qd-particle qd-p2" />
                 <div className="qd-particle qd-p3" />
-                <div className="qd-particle qd-p4" />
+                {/* QuickDB Brand Logo */}
+                <div className="qd-logo-container">
+                    <img
+                        alt="QuickDB"
+                        src="/images/quickdb-logo.png"
+                        style={{
+                            width: "clamp(100px, 12vw, 140px)",
+                            height: "clamp(100px, 12vw, 140px)",
+                            objectFit: "cover",
+                            borderRadius: 16,
+                            padding: 16,
+                            background: "rgba(255, 255, 255, 0.04)",
+                            border: "1px solid rgba(255, 255, 255, 0.12)",
+                            backdropFilter: "blur(10px)",
+                            boxShadow: "0 4px 20px rgba(0, 0, 0, 0.6)",
+                            margin: "0 auto 1.2rem",
+                            position: "relative",
+                            zIndex: 2,
+                            display: "block",
+                        }}
+                    />
+                </div>
 
                 <h2 className="qd-cta-h">Install, connect, browse.</h2>
                 <p className="qd-cta-p">

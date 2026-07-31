@@ -1795,7 +1795,7 @@ body {
     width: 1024px;
     height: 1024px;
     position: absolute;
-    bottom: -138%;
+    bottom: -90%;
     left: 50%;
     transform: translateX(-50%);
 }
@@ -1803,18 +1803,17 @@ body {
 /* Pure White Silver Corona Light Flare behind Top Rim */
 .qd-eclipse-glow-flare {
     position: absolute;
-    top: -55px;
+    top: -20px;
     left: 50%;
     transform: translateX(-50%);
-    width: 780px;
-    height: 380px;
+    width: 680px;
+    height: 280px;
     border-radius: 50%;
-    background: radial-gradient(ellipse at 50% 10%, #ffffff 0%, #e2e8f0 25%, #94a3b8 50%, rgba(255, 255, 255, 0.3) 70%, transparent 85%);
+    background: radial-gradient(ellipse at 50% 10%, rgba(255, 255, 255, 0.45) 0%, rgba(226, 232, 240, 0.2) 30%, transparent 70%);
     box-shadow: 
-        0 0 140px rgba(255, 255, 255, 0.95),
-        0 0 240px rgba(226, 232, 240, 0.7),
-        0 0 350px rgba(148, 163, 184, 0.4);
-    filter: blur(22px);
+        0 0 25px rgba(255, 255, 255, 0.2),
+        0 0 50px rgba(226, 232, 240, 0.1);
+    filter: blur(8px);
     animation: qd-eclipse-corona-pulse 4.5s ease-in-out infinite alternate;
 }
 
@@ -1824,13 +1823,11 @@ body {
     width: 100%;
     height: 100%;
     border-radius: 50%;
-    background: radial-gradient(circle at 50% 0%, #0a0b0e 0%, #000000 65%);
-    border-top: 2px solid #ffffff;
+    background: radial-gradient(circle at 50% 0%, #08090c 0%, #000000 65%);
+    border-top: 1px solid rgba(255, 255, 255, 0.7);
     box-shadow: 
-        0 -8px 30px rgba(255, 255, 255, 0.95),
-        0 -22px 75px rgba(226, 232, 240, 0.85),
-        0 -50px 140px rgba(148, 163, 184, 0.55),
-        0 -90px 220px rgba(100, 116, 139, 0.3);
+        0 -2px 8px rgba(255, 255, 255, 0.25),
+        0 -6px 18px rgba(226, 232, 240, 0.1);
 }
 
 @keyframes qd-eclipse-corona-pulse {
