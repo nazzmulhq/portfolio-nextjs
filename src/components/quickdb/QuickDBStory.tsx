@@ -1633,7 +1633,7 @@ const QuickDBStory: FC = () => {
                                         <GridToolbar
                                             changes={changes}
                                             hasEditHistory={hasEditHistory}
-                                            pasteActive={s > 16 || (s === 16 && pastHover)}
+                                            pasteActive={pastePanel}
                                             pasteBtnRef={set("pasteBtn")}
                                             saveBtnRef={set("saveBtn")}
                                             undoBtnRef={set("undoBtn")}
