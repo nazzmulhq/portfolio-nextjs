@@ -10,6 +10,7 @@ import {
     P0,
     PAY_ROWS,
     PREVIEW_ROWS,
+    STEP_DETAILS,
     STEP_STARTS,
     STEPS,
     TABLES,
@@ -242,6 +243,55 @@ const QuickDBStory: FC = () => {
     editPhaseRef.current = editPhase;
     hasEditHistoryRef.current = hasEditHistory;
 
+    const jumpToStep = (stepNum: number) => {
+        const track = refs.current.track;
+        if (!track) return;
+        const vpH = typeof window !== "undefined" ? window.innerHeight : 800;
+        const r = track.getBoundingClientRect();
+        const span = Math.max(1, r.height - vpH);
+        const targetP = STEP_STARTS[Math.max(0, Math.min(STEP_STARTS.length - 1, stepNum - 1))];
+        const trackTop = window.scrollY + r.top;
+        const targetY = trackTop + targetP * span;
+        window.scrollTo({ top: targetY, behavior: "smooth" });
+    };
+
+    const triggerToast = (msg: string) => {
+        const t = refs.current.toast;
+        const txt = refs.current.toastText;
+        if (t && txt) {
+            txt.textContent = msg;
+            t.style.opacity = "1";
+            t.style.transform = "translateY(0)";
+            if (eng.current.toastTimer) clearTimeout(eng.current.toastTimer);
+            eng.current.toastTimer = setTimeout(() => {
+                const t2 = refs.current.toast;
+                if (t2) {
+                    t2.style.opacity = "0";
+                    t2.style.transform = "translateY(10px)";
+                }
+            }, 3200);
+        }
+    };
+
+    const NAV_ITEMS = [
+        { label: "Data View", icon: "▤", live: true },
+        { label: "Query Console", icon: "⌘", live: false },
+        { label: "Query Builder", icon: "⚙", live: false },
+        { label: "ERD Maker", icon: "◫", live: false },
+        { label: "AI & MCP", icon: "⚡", live: false },
+        { label: "Make Dashboard", icon: "▮▮", live: false },
+    ] as const;
+
+    const DATA_VIEW_SUBSTEPS = [
+        { label: "Install", step: 1 },
+        { label: "Connect", step: 7 },
+        { label: "Edit Grid", step: 10 },
+        { label: "Fill Down", step: 12 },
+        { label: "FK Rel", step: 13 },
+        { label: "Paste Import", step: 16 },
+        { label: "Save IDs", step: 19 },
+    ] as const;
+
     // Mutable engine scratch — deliberately outside React state so the scroll
     // loop can run at frame rate without re-rendering.
     const eng = useRef({
@@ -333,8 +383,8 @@ const QuickDBStory: FC = () => {
                     }
                 }
             }
-            // Step 14 hands off from the FK chip to the popover row midway.
-            if (s === 14) {
+            // Step 13 hands off from the FK chip to the popover row midway.
+            if (s === 13) {
                 const node = e.frac < 0.45 ? el("fkChip") : el("fkRow");
                 if (node) {
                     const a = toDesign(node);
@@ -342,6 +392,13 @@ const QuickDBStory: FC = () => {
                         e.aim = a;
                         return;
                     }
+                }
+            }
+            // Step 14 displays the filtered payments tab cleanly — hold pointer still (no hover over table).
+            if (s === 14) {
+                if (e.seen["fkRow"]) {
+                    e.aim = e.seen["fkRow"];
+                    return;
                 }
             }
             // Step 11 tracks the growing selection rather than a fixed node:
@@ -605,7 +662,7 @@ const QuickDBStory: FC = () => {
             const n =
                 s === 11
                     ? Math.min(5, 1 + Math.floor(clamp01((e.frac - 0.08) / 0.74) * 5))
-                    : s === 12 || s === 13
+                    : s >= 12 && s <= 20
                       ? 5
                       : 0;
             if (n) {
@@ -615,13 +672,13 @@ const QuickDBStory: FC = () => {
                 if (tip) tip.style.top = `${34 + n * 31 - 30}px`;
             }
 
-            // The payments tab stays open through the first part of step 16 so
+            // The payments tab stays open through the first part of step 15 so
             // the cursor has something to travel to and click — CLOSE_AT lines
             // up with the middle of the pulse window above, so the tab closes
-            // right as the click reads. Past that point TARGETS[16]'s ref is
+            // right as the click reads. Past that point TARGETS[15]'s ref is
             // gone; resolveAim falls back to the last cached position, so the
             // cursor holds still where it clicked rather than jumping.
-            const paymentsOpen = s === 15 || (s === 16 && e.frac < CLOSE_AT);
+            const paymentsOpen = s === 14 || (s === 15 && e.frac < CLOSE_AT);
 
             // Mirror of paymentsOpen: the customers tab stays CLOSED through
             // the first part of step 10, so the cursor visibly arrives at the
@@ -741,20 +798,16 @@ const QuickDBStory: FC = () => {
     const pay = paymentsOpen;
     // Step 20 is the save landing: same tail rows as step 19 (the pasted
     // records are still the last thing in the table), but now committed.
-    const tail = (s === 19 && pastClick) || s === 20;
-    const imported = s === 20 && pastClick;
+    const tail = (s === 18 && pastClick) || s === 19 || s === 20;
+    const imported = (s === 19 && pastClick) || s === 20;
     // Not just s >= 10: the tab stays closed into the first part of step 10
     // so the cursor visibly clicks the customers row first (see tick()).
     const grid = tableOpen;
     const filtering = s === 9 && findDone;
-    const dirty = s === 12 && !pastClick;
+    const dirty = s === 12;
     const filled = s >= 12 && !tail;
     const fillVal = CUST[0][4];
-    // editPhase 2 and 4 are this beat's two "pending change" states — dirty-
-    // Haque (just edited) and dirty-Murphy (just undone). 1 change either way,
-    // same as the fill-down demo shows a flat count rather than a per-cell
-    // diff.
-    const changes = (s === 12 && !pastClick) ? 4 : (s === 19 && pastClick) || (s === 20 && !pastClick) ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
+    const changes = (s === 18 && pastClick) || (s === 19 && !pastClick) ? 7 : editPhase === 2 || editPhase === 4 ? 1 : 0;
     const editFocused = editPhase === 1;
     const editShowingValue = editPhase === 2 || editPhase === 3;
     const editDirty = editPhase === 2 || editPhase === 4;
@@ -833,7 +886,7 @@ const QuickDBStory: FC = () => {
     // the pane briefly shows neither — an empty gap between logo and grid.
     const mainWelcome = s <= 3 || (s >= 7 && s <= 9) || (s === 10 && !grid);
     const mainExt = s >= 4 && s <= 6;
-    const pastePanel = (s === 17 && pastClick) || s === 18 || (s === 19 && !pastClick);
+    const pastePanel = (s === 16 && pastClick) || s === 17 || (s === 18 && !pastClick);
 
     const th: CSSProperties = {
         display: "flex",
@@ -1584,7 +1637,7 @@ const QuickDBStory: FC = () => {
                                         <GridToolbar
                                             changes={changes}
                                             hasEditHistory={hasEditHistory}
-                                            pasteActive={s > 17 || (s === 17 && pastHover)}
+                                            pasteActive={s > 16 || (s === 16 && pastHover)}
                                             pasteBtnRef={set("pasteBtn")}
                                             saveBtnRef={set("saveBtn")}
                                             undoBtnRef={set("undoBtn")}
@@ -1652,7 +1705,7 @@ const QuickDBStory: FC = () => {
                                                             <div style={{ display: "flex", alignItems: "center", justifyContent: "center", borderRight: `1px solid ${C.rowLine}`, color: C.faint, fontSize: 12 }}>
                                                                 {r.i}
                                                             </div>
-                                                            <div style={{ ...td, fontWeight: 600, color: C.textStrong }}>{r.num}</div>
+                                                            <div style={{ ...td, fontWeight: 600, color: r.isNewId ? "#7ee787" : C.textStrong }}>{r.num}</div>
                                                             <div style={td}>{r.name}</div>
                                                             <div
                                                                 ref={r.lastRef ? set(r.lastRef as RefKey) : undefined}
@@ -1742,8 +1795,8 @@ const QuickDBStory: FC = () => {
                                                 </div>
                                             )}
 
-                                            {s === 14 && <ForeignKeyPopover chipRef={set("fkChip")} rowRef={set("fkRow")} />}
-                                            {pastePanel && <PastePanel filled={s > 18 || (s === 18 && pastClick)} hoverImport={s === 19 && pastHover} pasteAreaRef={set("pasteArea")} importBtnRef={set("importBtn")} />}
+                                            {s === 13 && <ForeignKeyPopover chipRef={set("fkChip")} rowRef={set("fkRow")} open={pastClick} />}
+                                            {pastePanel && <PastePanel filled={s > 17 || (s === 17 && pastClick)} hoverImport={s === 18 && pastHover} pasteAreaRef={set("pasteArea")} importBtnRef={set("importBtn")} />}
                                         </div>
 
                                         <Pagination
@@ -1857,7 +1910,7 @@ const QuickDBStory: FC = () => {
                             <svg
                                 ref={set("curPointer")}
                                 height={26}
-                                style={{ display: "none", overflow: "visible", filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.4))" }}
+                                style={{ display: "none", overflow: "visible", transform: "translate(-8px, -2px)", filter: "drop-shadow(0 2px 5px rgba(0,0,0,0.4))" }}
                                 viewBox="0 0 24 28"
                                 width={22}
                             >
@@ -1934,6 +1987,271 @@ const QuickDBStory: FC = () => {
                             <div style={{ width: 1, height: 26, background: "linear-gradient(180deg,#6f6f6f,transparent)" }} />
                         </div>
                     </div>
+                </div>
+
+                {/* ── Right-side "How It Works" Info Card ── */}
+                {s >= 1 && (
+                    <div
+                        style={{
+                            position: "absolute",
+                            right: 28,
+                            top: 96,
+                            width: 330,
+                            borderRadius: 16,
+                            background: "rgba(13, 15, 23, 0.92)",
+                            border: "1px solid rgba(255, 255, 255, 0.15)",
+                            boxShadow: "0 24px 60px -10px rgba(0, 0, 0, 0.88), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
+                            backdropFilter: "blur(20px)",
+                            zIndex: 45,
+                            pointerEvents: "auto",
+                            overflow: "hidden",
+                            display: "flex",
+                            flexDirection: "column",
+                            transition: "all 0.25s cubic-bezier(0.16, 1, 0.3, 1)",
+                        }}
+                    >
+                        {/* Step progress bar header */}
+                        <div style={{ height: 3, background: "rgba(255, 255, 255, 0.08)", width: "100%", position: "relative" }}>
+                            <div
+                                style={{
+                                    height: "100%",
+                                    background: "linear-gradient(90deg, #0078d4, #8a5cf6)",
+                                    width: `${(s / 20) * 100}%`,
+                                    transition: "width 0.32s cubic-bezier(0.16, 1, 0.3, 1)",
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ padding: "16px 18px 14px", display: "flex", flexDirection: "column", gap: 11 }}>
+                            {/* Header Badges */}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                <span
+                                    style={{
+                                        fontSize: 10,
+                                        font: `600 10px ${MONO}`,
+                                        letterSpacing: ".08em",
+                                        color: "#8fc9ff",
+                                        background: "rgba(0, 120, 212, 0.22)",
+                                        border: "1px solid rgba(0, 120, 212, 0.45)",
+                                        padding: "2.5px 8.5px",
+                                        borderRadius: 99,
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                    }}
+                                >
+                                    <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#0078d4" }} />
+                                    STEP {s} / 20
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: 9.5,
+                                        font: `600 9.5px ${MONO}`,
+                                        letterSpacing: ".06em",
+                                        color: C.amberPale,
+                                        background: "rgba(255, 255, 255, 0.08)",
+                                        border: "1px solid rgba(255, 255, 255, 0.12)",
+                                        padding: "2.5px 8px",
+                                        borderRadius: 99,
+                                    }}
+                                >
+                                    {STEP_DETAILS[s]?.category ?? "DATA VIEW"}
+                                </span>
+                            </div>
+
+                            {/* Title */}
+                            <div style={{ fontSize: 15.5, fontWeight: 600, color: C.textStrong, lineHeight: 1.28, marginTop: 1 }}>
+                                {STEP_DETAILS[s]?.title ?? capStep[1]}
+                            </div>
+
+                            {/* Description */}
+                            <div style={{ fontSize: 12.5, color: C.muted, lineHeight: 1.5 }}>
+                                {STEP_DETAILS[s]?.description}
+                            </div>
+
+                            {/* Mechanism Detail Box */}
+                            <div
+                                style={{
+                                    padding: "9px 11px",
+                                    borderRadius: 8,
+                                    background: "rgba(255, 255, 255, 0.04)",
+                                    borderLeft: `3px solid ${C.blue}`,
+                                    fontSize: 11.5,
+                                    color: C.textDim,
+                                    lineHeight: 1.48,
+                                }}
+                            >
+                                <span style={{ fontWeight: 600, color: C.blueLight, marginRight: 5 }}>⚡ How it works:</span>
+                                {STEP_DETAILS[s]?.mechanism}
+                            </div>
+
+                            {/* Quick Milestone Sub-Step Badges */}
+                            <div style={{ display: "flex", flexWrap: "wrap", gap: 4, marginTop: 2 }}>
+                                {DATA_VIEW_SUBSTEPS.map((sub) => {
+                                    const isCurrent = s === sub.step;
+                                    return (
+                                        <button
+                                            key={sub.label}
+                                            onClick={() => jumpToStep(sub.step)}
+                                            style={{
+                                                padding: "2.5px 7px",
+                                                borderRadius: 99,
+                                                border: isCurrent ? "1px solid rgba(0, 120, 212, 0.6)" : "1px solid rgba(255, 255, 255, 0.08)",
+                                                background: isCurrent ? "rgba(0, 120, 212, 0.3)" : "rgba(255, 255, 255, 0.03)",
+                                                color: isCurrent ? "#ffffff" : C.textDim,
+                                                fontSize: 10,
+                                                fontWeight: isCurrent ? 600 : 400,
+                                                cursor: "pointer",
+                                                whiteSpace: "nowrap",
+                                                transition: "all 0.16s ease",
+                                            }}
+                                        >
+                                            {sub.label} #{sub.step}
+                                        </button>
+                                    );
+                                })}
+                            </div>
+
+                            {/* Prev / Next Step Controls */}
+                            <div
+                                style={{
+                                    display: "flex",
+                                    alignItems: "center",
+                                    justifyContent: "space-between",
+                                    marginTop: 4,
+                                    paddingTop: 10,
+                                    borderTop: `1px solid ${C.line}`,
+                                }}
+                            >
+                                <button
+                                    onClick={() => jumpToStep(Math.max(1, s - 1))}
+                                    disabled={s <= 1}
+                                    style={{
+                                        background: "rgba(255, 255, 255, 0.05)",
+                                        border: "1px solid rgba(255, 255, 255, 0.1)",
+                                        borderRadius: 6,
+                                        color: s > 1 ? C.text : C.faint,
+                                        fontSize: 11.5,
+                                        cursor: s > 1 ? "pointer" : "default",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        padding: "4px 10px",
+                                    }}
+                                >
+                                    ← Prev Step
+                                </button>
+                                <button
+                                    onClick={() => jumpToStep(Math.min(20, s + 1))}
+                                    disabled={s >= 20}
+                                    style={{
+                                        background: s < 20 ? "rgba(0, 120, 212, 0.25)" : "rgba(255, 255, 255, 0.05)",
+                                        border: s < 20 ? "1px solid rgba(0, 120, 212, 0.5)" : "1px solid rgba(255, 255, 255, 0.1)",
+                                        borderRadius: 6,
+                                        color: s < 20 ? "#8fc9ff" : C.faint,
+                                        fontSize: 11.5,
+                                        fontWeight: 600,
+                                        cursor: s < 20 ? "pointer" : "default",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        gap: 5,
+                                        padding: "4px 10px",
+                                    }}
+                                >
+                                    Next Step →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* quick feature navigator */}
+                <div
+                    style={{
+                        position: "absolute",
+                        left: "50%",
+                        bottom: 84,
+                        transform: "translateX(-50%)",
+                        display: "flex",
+                        alignItems: "center",
+                        gap: 6,
+                        padding: "6px 12px",
+                        borderRadius: 99,
+                        background: "rgba(14, 14, 20, 0.94)",
+                        border: "1px solid rgba(255, 255, 255, 0.14)",
+                        boxShadow: "0 16px 40px -10px rgba(0, 0, 0, 0.85)",
+                        zIndex: 40,
+                        pointerEvents: "auto",
+                        maxWidth: "94vw",
+                        overflowX: "auto",
+                        backdropFilter: "blur(14px)",
+                    }}
+                >
+                    {NAV_ITEMS.map((nav) => {
+                        if (nav.live) {
+                            return (
+                                <button
+                                    key={nav.label}
+                                    onClick={() => jumpToStep(10)}
+                                    style={{
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 6,
+                                        padding: "4.5px 12px",
+                                        borderRadius: 99,
+                                        border: "1px solid rgba(0, 120, 212, 0.6)",
+                                        background: "linear-gradient(135deg, #0078d4, #005a9e)",
+                                        color: "#ffffff",
+                                        fontSize: 11.5,
+                                        fontWeight: 600,
+                                        cursor: "pointer",
+                                        whiteSpace: "nowrap",
+                                        boxShadow: "0 2px 10px rgba(0, 120, 212, 0.45)",
+                                    }}
+                                >
+                                    <span style={{ fontSize: 11 }}>{nav.icon}</span>
+                                    {nav.label}
+                                </button>
+                            );
+                        }
+
+                        return (
+                            <button
+                                key={nav.label}
+                                onClick={() => triggerToast(`${nav.label} — Coming Soon! Data View (Steps 1–20) is active.`)}
+                                style={{
+                                    display: "inline-flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    padding: "4.5px 11px",
+                                    borderRadius: 99,
+                                    border: "1px solid rgba(255, 255, 255, 0.08)",
+                                    background: "rgba(255, 255, 255, 0.04)",
+                                    color: "#999999",
+                                    fontSize: 11.5,
+                                    cursor: "pointer",
+                                    whiteSpace: "nowrap",
+                                    transition: "all 0.18s ease",
+                                }}
+                            >
+                                <span style={{ fontSize: 11, opacity: 0.6 }}>{nav.icon}</span>
+                                {nav.label}
+                                <span
+                                    style={{
+                                        fontSize: 8.5,
+                                        font: `600 8.5px ${MONO}`,
+                                        background: "rgba(255, 255, 255, 0.12)",
+                                        color: C.amberPale,
+                                        padding: "1px 5px",
+                                        borderRadius: 3,
+                                        letterSpacing: ".04em",
+                                    }}
+                                >
+                                    SOON
+                                </span>
+                            </button>
+                        );
+                    })}
                 </div>
 
                 {/* caption pill */}
@@ -2063,7 +2381,7 @@ const Tab: FC<{ active: boolean; name: string; closeRef?: (el: HTMLElement | nul
     >
         <span style={{ color: C.muted, fontSize: 12 }}>▤</span>
         {name}
-        <span ref={closeRef} style={{ color: C.muted, fontSize: 13 }}>
+        <span ref={closeRef} style={{ color: C.muted, fontSize: 12, display: "inline-flex", alignItems: "center", justifyContent: "center", width: 16, height: 16, borderRadius: 3 }}>
             ✕
         </span>
     </div>
@@ -2340,10 +2658,14 @@ const GridToolbar: FC<{
             <span
                 ref={pasteBtnRef}
                 style={{
-                    padding: "3px 8px",
-                    borderRadius: 3,
-                    background: pasteActive ? "rgba(0,120,212,.28)" : "transparent",
-                    color: pasteActive ? "#8fc9ff" : C.textDim,
+                    padding: "3.5px 9px",
+                    borderRadius: 4,
+                    background: pasteActive ? "rgba(0, 120, 212, 0.38)" : "transparent",
+                    color: pasteActive ? "#ffffff" : C.textDim,
+                    border: pasteActive ? "1px solid rgba(0, 120, 212, 0.6)" : "1px solid transparent",
+                    boxShadow: pasteActive ? "0 0 12px rgba(0, 120, 212, 0.45)" : "none",
+                    fontWeight: pasteActive ? 600 : 400,
+                    transition: "all 0.18s ease",
                 }}
             >
                 ⧉ Paste
@@ -2677,7 +2999,8 @@ const PaymentsGrid: FC = () => {
 const ForeignKeyPopover: FC<{
     chipRef: (el: HTMLElement | null) => void;
     rowRef: (el: HTMLElement | null) => void;
-}> = ({ chipRef, rowRef }) => (
+    open?: boolean;
+}> = ({ chipRef, rowRef, open = true }) => (
     <>
         <div style={{ position: "absolute", left: 56, top: 158, width: 200, height: 31, border: `2px solid ${C.blue}`, background: "rgba(0,120,212,.12)", pointerEvents: "none" }} />
         <div
@@ -2700,15 +3023,17 @@ const ForeignKeyPopover: FC<{
             <span>⑃ 2</span>
             <span style={{ color: C.muted }}>⧉</span>
         </div>
-        <div style={{ position: "absolute", left: 218, top: 196, width: 216, padding: "12px 0", background: "#252526", border: "1px solid #454545", boxShadow: "0 10px 28px rgba(0,0,0,.6)" }}>
-            <div style={{ padding: "0 14px 10px", fontSize: 12.5, color: C.textDim }}>Show rows referencing this</div>
-            <div ref={rowRef} style={{ margin: "0 8px", padding: "6px 8px", background: "#04395e", font: `400 12.5px ${MONO}`, color: C.textStrong }}>
-                payments.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
+        {open && (
+            <div style={{ position: "absolute", left: 218, top: 196, width: 216, padding: "12px 0", background: "#252526", border: "1px solid #454545", boxShadow: "0 10px 28px rgba(0,0,0,.6)" }}>
+                <div style={{ padding: "0 14px 10px", fontSize: 12.5, color: C.textDim }}>Show rows referencing this</div>
+                <div ref={rowRef} style={{ margin: "0 8px", padding: "6px 8px", background: "#04395e", font: `400 12.5px ${MONO}`, color: C.textStrong }}>
+                    payments.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
+                </div>
+                <div style={{ margin: "4px 8px 0", padding: "6px 8px", font: `400 12.5px ${MONO}`, color: C.textDim }}>
+                    orders.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
+                </div>
             </div>
-            <div style={{ margin: "4px 8px 0", padding: "6px 8px", font: `400 12.5px ${MONO}`, color: C.textDim }}>
-                orders.<span style={{ color: "#9cdcfe" }}>customerNumber</span>
-            </div>
-        </div>
+        )}
     </>
 );
 
@@ -2724,31 +3049,32 @@ const PastePanel: FC<{
             right: 24,
             bottom: 16,
             width: 566,
-            background: C.panel,
-            border: `1px solid ${C.line3}`,
+            background: "#1e1e1e",
+            border: "1px solid #333333",
             borderRadius: 6,
-            boxShadow: "0 20px 50px rgba(0,0,0,.6)",
+            boxShadow: "0 20px 50px rgba(0,0,0,.75)",
             display: "flex",
             flexDirection: "column",
         }}
     >
-        <div style={{ height: 38, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", borderBottom: `1px solid ${C.line2}`, fontSize: 13, color: C.text }}>
-            <span style={{ color: C.blueLight }}>⧉</span>Paste Playground
-            <span style={{ marginLeft: "auto", display: "flex", gap: 14, color: C.muted }}>▤ ✕</span>
+        <div style={{ height: 38, display: "flex", alignItems: "center", gap: 10, padding: "0 14px", borderBottom: "1px solid #2a2a2a", fontSize: 13, color: C.text, fontWeight: 600 }}>
+            <span style={{ color: "#8fc9ff", fontSize: 14 }}>⧉</span>Paste Playground
+            <span style={{ marginLeft: "auto", display: "flex", gap: 14, color: C.muted, fontSize: 13 }}>▤ ✕</span>
         </div>
         <div
             ref={pasteAreaRef}
             style={{
                 margin: "12px 14px",
                 height: 104,
-                border: `1px solid ${C.line3}`,
-                background: C.raised,
-                borderRadius: 3,
+                border: filled ? "1px solid rgba(0, 120, 212, 0.6)" : "1px solid #333333",
+                background: filled ? "rgba(0, 120, 212, 0.04)" : "#181818",
+                borderRadius: 4,
                 padding: "9px 11px",
                 position: "relative",
                 font: `400 12px/1.5 ${MONO}`,
                 color: C.cell,
                 overflow: "hidden",
+                transition: "all 0.2s ease",
             }}
         >
             {filled ? (
@@ -2759,33 +3085,36 @@ const PastePanel: FC<{
                     <span style={{ display: "inline-block", width: 1.5, height: 12, background: C.blueLight, verticalAlign: -2 }} />
                 </div>
             ) : (
-                <div style={{ fontFamily: UI, fontSize: 12.5, color: C.faint }}>Paste CSV, TSV, or JSON array of objects here…</div>
+                <div style={{ fontFamily: UI, fontSize: 12.5, color: "#666666" }}>
+                    Paste CSV, TSV, or JSON array of objects here...
+                </div>
             )}
             <div
                 style={{
                     position: "absolute",
                     right: 8,
                     top: 8,
-                    font: `600 9.5px ${UI}`,
+                    font: `600 9px ${UI}`,
                     letterSpacing: ".08em",
-                    color: C.faint,
-                    border: `1px solid ${C.line3}`,
+                    color: filled ? C.blueLight : "#888888",
+                    border: filled ? "1px solid rgba(0,120,212,0.4)" : "1px solid #3a3a3a",
+                    background: filled ? "rgba(0,120,212,0.15)" : "#2a2a2a",
                     padding: "2px 5px",
-                    borderRadius: 2,
+                    borderRadius: 3,
                 }}
             >
                 INPUT
             </div>
         </div>
-        <div style={{ margin: "0 14px", border: `1px solid ${C.line2}`, borderRadius: 3, overflow: "hidden" }}>
-            <div style={{ height: 30, display: "flex", alignItems: "center", gap: 10, padding: "0 10px", background: "#232323", fontSize: 11, letterSpacing: ".06em", color: C.textDim, fontWeight: 600 }}>
+        <div style={{ margin: "0 14px", border: "1px solid #2a2a2a", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ height: 30, display: "flex", alignItems: "center", gap: 10, padding: "0 10px", background: "#232323", fontSize: 11, letterSpacing: ".06em", color: "#aaaaaa", fontWeight: 600 }}>
                 PREVIEW
-                <span style={{ display: "flex", alignItems: "center", gap: 6, letterSpacing: 0, fontWeight: 400, fontSize: 11.5, color: C.textDim }}>
+                <span style={{ display: "flex", alignItems: "center", gap: 6, letterSpacing: 0, fontWeight: 400, fontSize: 11.5, color: "#cccccc" }}>
                     <span style={{ width: 13, height: 13, borderRadius: 2, background: C.blue, color: "#fff", display: "grid", placeItems: "center", fontSize: 9 }}>✓</span>
                     Auto-generate IDs (Clear PKs)
                 </span>
-                <span style={{ marginLeft: "auto", letterSpacing: 0, fontWeight: 400, fontSize: 11.5, color: C.muted }}>
-                    {filled ? 7 : 0} records detected
+                <span style={{ marginLeft: "auto", letterSpacing: 0, fontWeight: 600, fontSize: 11.5, color: filled ? C.bluePale : "#888888" }}>
+                    {filled ? "7 records detected" : "0 records detected"}
                 </span>
             </div>
             {filled ? (
@@ -2817,19 +3146,22 @@ const PastePanel: FC<{
                     ))}
                 </div>
             ) : (
-                <div style={{ height: 246, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 12, color: C.dark }}>
-                    <div style={{ width: 26, height: 22, border: "1.4px solid #5a5a5a", borderRadius: 3 }} />
-                    <div style={{ fontSize: 12.5 }}>Pasted data will appear here</div>
+                <div style={{ height: 246, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 10, color: "#555555" }}>
+                    <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#444444" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 20h9" />
+                        <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+                    </svg>
+                    <div style={{ fontSize: 12.5, color: "#666666", fontStyle: "italic" }}>Pasted data will appear here</div>
                 </div>
             )}
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px" }}>
-            <div style={{ fontSize: 12.5, color: C.textDim, lineHeight: 1.45 }}>
+            <div style={{ fontSize: 12.5, color: "#cccccc", lineHeight: 1.45, fontWeight: 600 }}>
                 Target Table
                 <br />
-                <span style={{ color: C.muted }}>13 columns available</span>
+                <span style={{ color: "#777777", fontWeight: 400, fontSize: 11.5 }}>13 columns available</span>
             </div>
-            <div style={{ marginLeft: "auto", fontSize: 12.5, color: C.text, padding: "5px 12px", border: `1px solid ${C.line3}`, borderRadius: 3 }}>Cancel</div>
+            <div style={{ marginLeft: "auto", fontSize: 12.5, color: "#cccccc", padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 4, background: "#222226" }}>Cancel</div>
             <div
                 ref={importBtnRef}
                 style={{
@@ -2838,10 +3170,14 @@ const PastePanel: FC<{
                     gap: 7,
                     fontSize: 12.5,
                     fontWeight: 600,
-                    padding: "5px 12px",
-                    borderRadius: 3,
-                    background: !filled ? "#2a2a2a" : hoverImport ? "#0078d4" : "#e9e9e9",
-                    color: !filled ? C.dark : hoverImport ? "#fff" : "#1b1b1b",
+                    padding: "5.5px 14px",
+                    borderRadius: 4,
+                    background: !filled ? "#222226" : hoverImport ? "linear-gradient(135deg, #0078d4, #005a9e)" : "#0078d4",
+                    color: !filled ? "#4e4e52" : "#ffffff",
+                    border: !filled ? "1px solid #2e2e32" : "1px solid rgba(0,120,212,0.6)",
+                    boxShadow: filled ? "0 2px 10px rgba(0, 120, 212, 0.45)" : "none",
+                    cursor: filled ? "pointer" : "default",
+                    transition: "all 0.18s ease",
                 }}
             >
                 ⇱ Import Data

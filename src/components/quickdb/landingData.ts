@@ -20,16 +20,146 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["09", "Schema loaded — 8 tables"],
     ["10", "customers · 122 rows"],
     ["11", "Drag-select the phone cells"],
-    ["12", "Fill down — first value into the range"],
-    ["13", "Save the 4 edits"],
-    ["14", "Follow a foreign key"],
-    ["15", "payments where customerNumber = 121"],
-    ["16", "Close the tab, back to customers"],
-    ["17", "Paste playground"],
-    ["18", "7 records detected"],
-    ["19", "7 rows staged — ⌘S to save"],
-    ["20", "Saved — 129 customers in the table"],
+    ["12", "Fill down — first value into range"],
+    ["13", "Follow a foreign key"],
+    ["14", "payments where customerNumber = 121"],
+    ["15", "Close the tab, back to customers"],
+    ["16", "Paste playground"],
+    ["17", "7 records detected"],
+    ["18", "7 rows staged — ⌘S to save"],
+    ["19", "Saved — 129 customers in table"],
+    ["20", "Database synced & ready"],
 ] as const;
+
+export interface StepDetail {
+    title: string;
+    category: string;
+    description: string;
+    mechanism: string;
+}
+
+export const STEP_DETAILS: Record<number, StepDetail> = {
+    1: {
+        title: "Your Editor Before QuickDB",
+        category: "EXTENSIONS",
+        description: "Clean VS Code layout before launching database management features.",
+        mechanism: "Pointer navigates to the activity bar extensions icon.",
+    },
+    2: {
+        title: "Marketplace Search",
+        category: "EXTENSIONS",
+        description: "Opening marketplace search pane to locate QuickDB extension.",
+        mechanism: "Types 'quickdb' into the extension marketplace search input.",
+    },
+    3: {
+        title: "Extension Found",
+        category: "EXTENSIONS",
+        description: "QuickDB extension by Nazmul Haque highlighted in search results.",
+        mechanism: "Cursor hovers over extension card to inspect details and install button.",
+    },
+    4: {
+        title: "Installing Extension",
+        category: "EXTENSIONS",
+        description: "Triggering installation of QuickDB into the editor workspace.",
+        mechanism: "Cursor clicks 'Install', initiating background loading state.",
+    },
+    5: {
+        title: "Package Unpacking",
+        category: "EXTENSIONS",
+        description: "Downloading and unpacking Webview UI and engine binary handlers.",
+        mechanism: "Button updates to 'Installing' progress indicator.",
+    },
+    6: {
+        title: "Installation Complete",
+        category: "EXTENSIONS",
+        description: "QuickDB 1.2.6 extension successfully registered in VS Code.",
+        mechanism: "Lightning bolt icon ⚡ renders in the activity bar sidebar.",
+    },
+    7: {
+        title: "Open QuickDB Sidebar",
+        category: "CONNECTIONS",
+        description: "Opening QuickDB database connection manager panel.",
+        mechanism: "Activity sidebar switches view to QuickDB panel.",
+    },
+    8: {
+        title: "Add Connection 'Demo'",
+        category: "CONNECTIONS",
+        description: "Creating SQLite/PostgreSQL connection 'Demo' in connection manager.",
+        mechanism: "Toast notification confirms connection 'Demo' initialized.",
+    },
+    9: {
+        title: "Schema Explorer & Filter",
+        category: "SCHEMA",
+        description: "Schema explorer loads 8 database tables. Filtering for 'cust' tables.",
+        mechanism: "Types 'cust' in search box to filter tree down to 'customers' table.",
+    },
+    10: {
+        title: "Interactive Data Grid",
+        category: "DATA VIEW",
+        description: "Opening 'customers' table grid displaying 122 records.",
+        mechanism: "Single click cell to edit inline, tracking dirty state and undo buffer.",
+    },
+    11: {
+        title: "Drag-Select Cells",
+        category: "BULK EDIT",
+        description: "Selecting a vertical range across 4 phone number cells.",
+        mechanism: "Bounding box highlights selection range with '40.32.2555 → 4 cells' tooltip.",
+    },
+    12: {
+        title: "Fill Down Values",
+        category: "BULK EDIT",
+        description: "Applying initial cell value across all 4 selected phone number cells.",
+        mechanism: "Range values update instantly across all selected cells.",
+    },
+    13: {
+        title: "Foreign Key Navigation",
+        category: "RELATIONS",
+        description: "Clicking FK chip on customerNumber = 121 in rows grid.",
+        mechanism: "QuickDB inspects FK constraints and prepares related payments query.",
+    },
+    14: {
+        title: "Filtered Payments View",
+        category: "RELATIONS",
+        description: "Opens new 'payments' tab filtered by customerNumber = 121.",
+        mechanism: "Displays 4 matching payment records with active amber filter pill.",
+    },
+    15: {
+        title: "Tab Management",
+        category: "NAVIGATION",
+        description: "Closing 'payments' tab and returning to primary 'customers' table.",
+        mechanism: "Tab closes and view restores main customers grid state.",
+    },
+    16: {
+        title: "Paste Playground Modal",
+        category: "IMPORT & AI",
+        description: "Clicking 'Paste' opens CSV / TSV / JSON import modal.",
+        mechanism: "Opens Paste Playground overlay with target column mapping.",
+    },
+    17: {
+        title: "Auto Data Detection",
+        category: "IMPORT & AI",
+        description: "Pasting 7 raw customer records into import playground input.",
+        mechanism: "Parser detects 7 records with NULL primary keys for auto-generation.",
+    },
+    18: {
+        title: "Stage 7 Rows Without IDs",
+        category: "IMPORT & AI",
+        description: "Clicking 'Import Data' appends 7 rows into table without IDs.",
+        mechanism: "Rows 123–129 appear at bottom of table. Toolbar displays 'Save 7'.",
+    },
+    19: {
+        title: "Commit & Auto-Generate IDs",
+        category: "SAVE & PERSIST",
+        description: "Clicking 'Save' commits changes and auto-assigns primary key IDs.",
+        mechanism: "'Save 7' clears to 'Save'. Sequential IDs (497–503) light up in emerald (#7ee787)!",
+    },
+    20: {
+        title: "Database Synced & Live",
+        category: "COMPLETE",
+        description: "All 129 customer records fully synchronized and persistent.",
+        mechanism: "QuickDB live engine keeps local cache in sync with upstream DB.",
+    },
+};
 
 /**
  * Where the cursor points on each step: either a ref name resolved live from
@@ -48,13 +178,13 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     10: "custRow",
     11: [1496, 393],
     12: "saveBtn",
-    13: [912, 134],
-    14: "fkRow",
-    15: "filterVal",
-    16: "closeTab",
-    17: "pasteBtn",
-    18: "pasteArea",
-    19: "importBtn",
+    13: "fkRow",
+    14: "filterVal",
+    15: "closeTab",
+    16: "pasteBtn",
+    17: "pasteArea",
+    18: "importBtn",
+    19: "saveBtn",
     20: "saveBtn",
 };
 
