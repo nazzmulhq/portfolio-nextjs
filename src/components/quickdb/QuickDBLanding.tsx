@@ -1,7 +1,7 @@
 "use client";
 
-import { FC, useState } from "react";
 import dynamic from "next/dynamic";
+import { FC, useState } from "react";
 import { STEPS } from "./landingData";
 
 const QuickDBStory = dynamic(() => import("./QuickDBStory"), {
@@ -30,7 +30,7 @@ const CompactStory: FC = () => (
         <div className="qd-compact-hero">
             <span className="qd-pill">
                 <span className="qd-pill-dot" />
-                QuickDB 1.2.6 — Available for VS Code &amp; Cursor
+                QuickDB — Available for VS Code &amp; Cursor
             </span>
             <h1 className="qd-h1">
                 Your whole database,

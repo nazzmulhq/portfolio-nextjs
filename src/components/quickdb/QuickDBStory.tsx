@@ -1,8 +1,8 @@
 "use client";
 
 import { CSSProperties, FC, ReactNode, useEffect, useRef, useState } from "react";
-import QuickDBClockDial from "./QuickDBClockDial";
 import QuickDBBottomNav from "./QuickDBBottomNav";
+import QuickDBClockDial from "./QuickDBClockDial";
 import {
     CATEGORIES,
     CUST,
@@ -12,7 +12,6 @@ import {
     P0,
     PAY_ROWS,
     PREVIEW_ROWS,
-    STEP_DETAILS,
     STEP_STARTS,
     STEPS,
     TABLES,
@@ -20,7 +19,7 @@ import {
     TARGETS,
     TOASTS,
     TOOLS,
-    TRACK_VH,
+    TRACK_VH
 } from "./landingData";
 
 /* ────────────────────────────────────────────────────────────────
@@ -1959,7 +1958,7 @@ const QuickDBStory: FC = () => {
                             }}
                         >
                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: C.blue }} />
-                            QuickDB 1.2.6 — Available for VS Code &amp; Cursor
+                            QuickDB — Available for VS Code &amp; Cursor
                         </div>
                         <h1
                             style={{

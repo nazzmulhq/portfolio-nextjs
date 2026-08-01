@@ -72,7 +72,7 @@ export const STEP_DETAILS: Record<number, StepDetail> = {
     6: {
         title: "Installation Complete",
         category: "EXTENSIONS",
-        description: "QuickDB 1.2.6 extension successfully registered in VS Code.",
+        description: "QuickDB extension successfully registered in VS Code.",
         mechanism: "Lightning bolt icon ⚡ renders in the activity bar sidebar.",
     },
     7: {
