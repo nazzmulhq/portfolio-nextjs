@@ -3,6 +3,7 @@
 import { CSSProperties, FC, ReactNode, useEffect, useRef, useState } from "react";
 import QuickDBBottomNav from "./QuickDBBottomNav";
 import QuickDBClockDial from "./QuickDBClockDial";
+import QuickDBTopMenuBar from "./QuickDBTopMenuBar";
 import {
     CATEGORIES,
     CUST,
@@ -1012,52 +1013,8 @@ const QuickDBStory: FC = () => {
                         }}
                     >
                         {/* macOS menu bar */}
-                        <div
-                            style={{
-                                height: 28,
-                                flex: "none",
-                                display: "flex",
-                                alignItems: "center",
-                                gap: 18,
-                                padding: "0 14px",
-                                background: "#0b0b0f",
-                                fontSize: 13,
-                                color: "rgba(255,255,255,.92)",
-                            }}
-                        >
-                            <div style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,.9)" }} />
-                            <span style={{ fontWeight: 600 }}>Editor</span>
-                            {["File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Window", "Help"].map((m) => (
-                                <span key={m}>{m}</span>
-                            ))}
-                            <div
-                                style={{
-                                    marginLeft: "auto",
-                                    display: "flex",
-                                    alignItems: "center",
-                                    gap: 15,
-                                    color: "rgba(255,255,255,.85)",
-                                    fontSize: 12.5,
-                                }}
-                            >
-                                <span>28°C</span>
-                                <span>100%</span>
-                                <div
-                                    style={{
-                                        width: 24,
-                                        height: 12,
-                                        borderRadius: 3,
-                                        border: "1px solid rgba(255,255,255,.5)",
-                                        padding: 1.5,
-                                        boxSizing: "border-box",
-                                    }}
-                                >
-                                    <div style={{ width: "100%", height: "100%", borderRadius: 1, background: "rgba(255,255,255,.9)" }} />
-                                </div>
-                                <div style={{ width: 13, height: 13, borderRadius: "50%", border: "1.5px solid rgba(255,255,255,.7)" }} />
-                                <span>Tue 28 Jul 8:51 PM</span>
-                            </div>
-                        </div>
+                        {/* macOS-style top status bar with realtime time, date, battery, & weather */}
+                        <QuickDBTopMenuBar />
 
                         {/* window bar */}
                         <div
