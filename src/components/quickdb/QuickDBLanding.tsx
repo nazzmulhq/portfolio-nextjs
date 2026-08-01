@@ -3,11 +3,32 @@
 import dynamic from "next/dynamic";
 import { FC, useState } from "react";
 import { STEPS } from "./landingData";
+import {
+    formatInstallCount,
+    useQuickDBMarketplace,
+} from "./useQuickDBMarketplace";
 
 const QuickDBStory = dynamic(() => import("./QuickDBStory"), {
     loading: () => (
-        <div style={{ height: "100vh", width: "100%", background: "#0d0d11", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <div style={{ color: "#777788", fontSize: "14px", fontFamily: "sans-serif" }}>Loading interactive story...</div>
+        <div
+            style={{
+                height: "100vh",
+                width: "100%",
+                background: "#0d0d11",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+            }}
+        >
+            <div
+                style={{
+                    color: "#777788",
+                    fontSize: "14px",
+                    fontFamily: "sans-serif",
+                }}
+            >
+                Loading interactive story...
+            </div>
         </div>
     ),
 });
@@ -25,12 +46,17 @@ const INSTALL_CMD = "code --install-extension quickdb.quickdb";
  * Both are rendered and swapped with CSS rather than a media-query hook, so the
  * markup is identical on the server and after hydration.
  */
-const CompactStory: FC = () => (
+const CompactStory: FC<{
+    version: string;
+    installs: number;
+    downloads: number;
+}> = ({ version, installs, downloads }) => (
     <div className="md:hidden">
         <div className="qd-compact-hero">
             <span className="qd-pill">
                 <span className="qd-pill-dot" />
-                QuickDB — Available for VS Code &amp; Cursor
+                QuickDB v{version} · {formatInstallCount(installs)} Installs ·{" "}
+                {formatInstallCount(downloads)} Downloads
             </span>
             <h1 className="qd-h1">
                 Your whole database,
@@ -38,7 +64,8 @@ const CompactStory: FC = () => (
                 inside your editor.
             </h1>
             <p className="qd-lede">
-                Browse and query 80+ engines without leaving the window you already have open.
+                Browse and query 80+ engines without leaving the window you
+                already have open.
             </p>
         </div>
 
@@ -55,6 +82,7 @@ const CompactStory: FC = () => (
 
 const QuickDBLanding: FC<IQuickDBLanding> = () => {
     const [copied, setCopied] = useState(false);
+    const stats = useQuickDBMarketplace();
 
     const handleCopy = () => {
         navigator.clipboard.writeText(INSTALL_CMD);
@@ -68,15 +96,18 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                 <QuickDBStory />
             </div>
 
-            <CompactStory />
+            <CompactStory
+                version={stats.version}
+                installs={stats.installs}
+                downloads={stats.downloads}
+            />
 
             <section className="qd-cta" id="install">
-
                 {/* Ultra-Premium Minimalist Background */}
                 <div className="qd-premium-bg" aria-hidden="true">
                     {/* Dark, subtle animated radial gradient base */}
                     <div className="qd-premium-glow" />
-                    
+
                     {/* Noise texture for matte cinematic finish */}
                     <div className="qd-premium-noise" />
                 </div>
@@ -106,9 +137,46 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
 
                 <h2 className="qd-cta-h">Install, connect, browse.</h2>
                 <p className="qd-cta-p">
-                    Schema, rows and query history live next to the code that depends on them.
+                    Schema, rows and query history live next to the code that
+                    depends on them.
                 </p>
-                
+
+                {/* Live VS Code Marketplace Badges */}
+                <div
+                    style={{
+                        display: "flex",
+                        justifyContent: "center",
+                        gap: 10,
+                        marginBottom: "1.5rem",
+                        flexWrap: "wrap",
+                    }}
+                >
+                    <span
+                        style={{
+                            font: "600 12px ui-monospace, monospace",
+                            background: "rgba(0, 120, 212, 0.15)",
+                            border: "1px solid rgba(0, 120, 212, 0.4)",
+                            color: "#70baff",
+                            padding: "4px 12px",
+                            borderRadius: 20,
+                        }}
+                    >
+                        v{stats.version}
+                    </span>
+                    <span
+                        style={{
+                            font: "600 12px ui-monospace, monospace",
+                            background: "rgba(16, 185, 129, 0.15)",
+                            border: "1px solid rgba(16, 185, 129, 0.4)",
+                            color: "#34d399",
+                            padding: "4px 12px",
+                            borderRadius: 20,
+                        }}
+                    >
+                        {formatInstallCount(stats.installs)} Installs on VS Code
+                    </span>
+                </div>
+
                 {/* Image-Based Action Buttons Grid */}
                 <div className="qd-img-btn-section">
                     <div className="qd-img-btn-row">
@@ -118,7 +186,20 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                            <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
                             <span>INSTALL IN VS CODE</span>
                         </a>
                         <a
@@ -127,7 +208,19 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1"/><path d="M18 8l4 4-4 4"/></svg>
+                            <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v1" />
+                                <path d="M18 8l4 4-4 4" />
+                            </svg>
                             <span>MARKETPLACE</span>
                         </a>
                         <a
@@ -136,13 +229,36 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                             target="_blank"
                             rel="noopener noreferrer"
                         >
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+                            <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2" />
+                            </svg>
                             <span>OPEN VSX</span>
                         </a>
                     </div>
                     <div className="qd-img-btn-row">
                         <a className="qd-img-btn qd-img-btn-dark" href="/">
-                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+                            <svg
+                                width="15"
+                                height="15"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="2.5"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <line x1="19" y1="12" x2="5" y2="12" />
+                                <polyline points="12 19 5 12 12 5" />
+                            </svg>
                             <span>PORTFOLIO</span>
                         </a>
                     </div>
@@ -150,7 +266,14 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
 
                 {/* Engine Support Tags Row */}
                 <div className="qd-engine-tags">
-                    {["SQLite", "PostgreSQL", "MySQL", "Redis", "MongoDB", "80+ Engines"].map((engine) => (
+                    {[
+                        "SQLite",
+                        "PostgreSQL",
+                        "MySQL",
+                        "Redis",
+                        "MongoDB",
+                        "80+ Engines",
+                    ].map(engine => (
                         <span key={engine} className="qd-engine-tag">
                             {engine}
                         </span>
@@ -158,20 +281,49 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                 </div>
 
                 {/* macOS Terminal Command Card */}
-                <div className={`qd-cmd-card ${copied ? "is-copied" : ""}`} onClick={handleCopy} title="Click to copy command">
+                <div
+                    className={`qd-cmd-card ${copied ? "is-copied" : ""}`}
+                    onClick={handleCopy}
+                    title="Click to copy command"
+                >
                     <div className="qd-cmd-header">
                         <div className="qd-cmd-dots">
                             <span className="qd-cmd-dot qd-cmd-dot-red" />
                             <span className="qd-cmd-dot qd-cmd-dot-yellow" />
                             <span className="qd-cmd-dot qd-cmd-dot-green" />
                         </div>
-                        <span className="qd-cmd-title">zsh — quickdb install</span>
-                        <button className="qd-cmd-copy-btn" type="button" aria-label="Copy install command">
+                        <span className="qd-cmd-title">
+                            zsh — quickdb install
+                        </span>
+                        <button
+                            className="qd-cmd-copy-btn"
+                            type="button"
+                            aria-label="Copy install command"
+                        >
                             {copied ? (
                                 <span className="qd-cmd-copied">Copied! ✓</span>
                             ) : (
                                 <span className="qd-cmd-copy-text">
-                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                                    <svg
+                                        width="13"
+                                        height="13"
+                                        viewBox="0 0 24 24"
+                                        fill="none"
+                                        stroke="currentColor"
+                                        strokeWidth="2"
+                                        strokeLinecap="round"
+                                        strokeLinejoin="round"
+                                    >
+                                        <rect
+                                            x="9"
+                                            y="9"
+                                            width="13"
+                                            height="13"
+                                            rx="2"
+                                            ry="2"
+                                        />
+                                        <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1" />
+                                    </svg>
                                     Copy
                                 </span>
                             )}
@@ -180,7 +332,9 @@ const QuickDBLanding: FC<IQuickDBLanding> = () => {
                     <div className="qd-cmd-body">
                         <span className="qd-cmd-prompt">$</span>
                         <code className="qd-cmd-text">
-                            <span className="qd-hl-cmd">code</span> --install-extension <span className="qd-hl-pkg">quickdb.quickdb</span>
+                            <span className="qd-hl-cmd">code</span>{" "}
+                            --install-extension{" "}
+                            <span className="qd-hl-pkg">quickdb.quickdb</span>
                         </code>
                         <span className="qd-cmd-cursor" />
                     </div>
