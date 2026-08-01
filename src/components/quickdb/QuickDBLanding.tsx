@@ -1,8 +1,16 @@
 "use client";
 
 import { FC, useState } from "react";
+import dynamic from "next/dynamic";
 import { STEPS } from "./landingData";
-import QuickDBStory from "./QuickDBStory";
+
+const QuickDBStory = dynamic(() => import("./QuickDBStory"), {
+    loading: () => (
+        <div style={{ height: "100vh", width: "100%", background: "#0d0d11", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <div style={{ color: "#777788", fontSize: "14px", fontFamily: "sans-serif" }}>Loading interactive story...</div>
+        </div>
+    ),
+});
 
 export interface IQuickDBLanding {}
 

@@ -94,19 +94,19 @@ export const STEP_DETAILS: Record<number, StepDetail> = {
         mechanism: "Types 'cust' in search box to filter tree down to 'customers' table.",
     },
     10: {
-        title: "Interactive Data Grid",
+        title: "Undo/Redo Support ",
         category: "DATA VIEW",
         description: "Opening 'customers' table grid displaying 122 records.",
         mechanism: "Single click cell to edit inline, tracking dirty state and undo buffer.",
     },
     11: {
-        title: "Drag-Select Cells",
+        title: "Multi-Cell Editing (Drag-Select)",
         category: "BULK EDIT",
         description: "Selecting a vertical range across 4 phone number cells.",
         mechanism: "Bounding box highlights selection range with '40.32.2555 → 4 cells' tooltip.",
     },
     12: {
-        title: "Fill Down Values",
+        title: "Save to DB (Multi-Cell)",
         category: "BULK EDIT",
         description: "Applying initial cell value across all 4 selected phone number cells.",
         mechanism: "Range values update instantly across all selected cells.",
