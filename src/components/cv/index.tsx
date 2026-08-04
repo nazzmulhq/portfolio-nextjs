@@ -337,10 +337,6 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                         </div>
                                         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                                             <span style={{ fontSize: "10px", color: "#cbd5e1", fontWeight: 500 }}>English</span>
-                                            <span style={{ fontSize: "9px", color: "#64748b" }}>Professional</span>
-                                        </div>
-                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                            <span style={{ fontSize: "10px", color: "#cbd5e1", fontWeight: 500 }}>Hindi</span>
                                             <span style={{ fontSize: "9px", color: "#64748b" }}>Conversational</span>
                                         </div>
                                     </div>
@@ -530,24 +526,28 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                                         </span>
                                                     ))}
                                                 </div>
-                                                <a
-                                                    href={work.link}
-                                                    target="_blank"
-                                                    rel="noopener noreferrer"
-                                                    style={{
-                                                        fontSize: "8.5px",
-                                                        color: "#7dd3fc",
-                                                        textDecoration: "none",
-                                                        display: "flex",
-                                                        alignItems: "center",
-                                                        gap: "2px",
-                                                    }}
-                                                >
-                                                    View Project
-                                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: "7px", height: "7px" }}>
-                                                        <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                                                    </svg>
-                                                </a>
+                                                {work.link ? (
+                                                    <a
+                                                        href={work.link}
+                                                        target="_blank"
+                                                        rel="noopener noreferrer"
+                                                        style={{
+                                                            fontSize: "8.5px",
+                                                            color: "#7dd3fc",
+                                                            textDecoration: "none",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: "2px",
+                                                        }}
+                                                    >
+                                                        View Project
+                                                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{ width: "7px", height: "7px" }}>
+                                                            <path d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                                                        </svg>
+                                                    </a>
+                                                ) : (
+                                                    <span style={{ fontSize: "8.5px", color: "#64748b" }}>Internal &amp; confidential</span>
+                                                )}
                                             </div>
                                         ))}
                                     </div>
@@ -563,7 +563,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                             Industry Domains
                                         </p>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
-                                            {["ERP Systems", "E-Learning", "E-Commerce", "Website Builder", "Governance", "Healthcare", "SaaS", "CRM", "Real Estate"].map((domain, i) => (
+                                            {["ERP Systems", "E-Learning", "E-Commerce", "Website Builder", "Governance", "Healthcare", "SaaS"].map((domain, i) => (
                                                 <span
                                                     key={i}
                                                     style={{

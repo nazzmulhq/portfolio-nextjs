@@ -15,6 +15,7 @@ const info = {
         "JavaScript",
         "TypeScript",
         "Python",
+        "Go (beginner)",
         "React.js",
         "Next.js",
         "Nest.js",
@@ -29,7 +30,7 @@ const info = {
     // Grouped view for the home page — the category is information, where a
     // flat list of pills is just decoration.
     skillGroups: [
-        { label: "Languages", items: ["TypeScript", "JavaScript", "Python"] },
+        { label: "Languages", items: ["TypeScript", "JavaScript", "Python", "Go (beginner)"] },
         { label: "Frontend", items: ["React.js", "Next.js", "Redux Toolkit", "TailwindCSS", "Ant Design"] },
         { label: "Backend", items: ["Nest.js", "FastAPI", "Django", "REST APIs", "Microservices"] },
         { label: "Data", items: ["PostgreSQL", "MySQL", "MongoDB", "Redis"] },
@@ -203,37 +204,31 @@ const info = {
             link: "/quickdb",
         },
         {
-            imageOrVideo: "/images/quick-cicd.png",
-            title: "Quick Dockerize Tool",
-            technologies: ["JavaScript", "Node.js", "Shell Script"],
+            // Internal enterprise system — no public URL or screenshot to link/show.
+            title: "Enterprise ERPs (Textile)",
+            technologies: ["React.js", "Redux", "TailwindCSS", "Ant Design", "REST APIs"],
             description: [
-                "Developed CLI tool for rapid containerization of Node.js and PHP projects.",
-                "Automatically generates production-ready Dockerfile and docker-compose.yml.",
-                "Provides interactive selection of runtime (Node.js/PHP) and version management.",
+                "Currently spearheading full-stack ERP development for textile industry operations, including Production Planning, Manufacturing, and Inventory modules.",
+                "Building scalable frontends with React.js, Redux, TailwindCSS, and Ant Design.",
+                "Designing and implementing robust RESTful APIs.",
             ],
-            link: "/quick-cicd",
         },
         {
-            imageOrVideo: "/images/eslint-prettier-nextjs.jpg",
-            title: "ESLint & Prettier Setup for Next.js",
-            technologies: ["JavaScript", "Node.js", "Shell Script"],
+            imageOrVideo: "/images/zcommerz.jpg",
+            title: "Built Zcommerz (E-commerce SaaS)",
+            technologies: ["Next.js", "Nest.js"],
             description: [
-                "Published npm package for automated ESLint and Prettier configuration in Next.js.",
-                "Handles dependency installation and config generation with zero manual setup.",
-                "Supports both TypeScript and JavaScript project configurations.",
+                "Engineered a comprehensive e-commerce builder platform (zcommerz.com).",
+                "Architected an optimized onboarding flow that empowers merchants to launch fully functional online shops in just 5 minutes.",
             ],
-            link: "https://www.npmjs.com/package/nextjs-eslint-prettier-setup",
+            link: "https://zcommerz.com",
         },
         {
-            imageOrVideo: "/images/quick-design-system.jpg",
-            title: "Quick UI Design",
-            technologies: ["Next.js", "Ant Design", "TypeScript"],
-            description: [
-                "Scaffolding tool for rapid web application UI development with Ant Design and Next.js.",
-                "Delivers reusable component libraries and responsive layout templates.",
-                "Supports TypeScript and JavaScript with configurable project structure.",
-            ],
-            link: "https://www.npmjs.com/package/quick-ui-design",
+            imageOrVideo: "/images/ssl-lms.png",
+            title: "SSL Wireless LMS (E-Learning SaaS)",
+            technologies: ["Next.js", "Nest.js"],
+            description: ["Built a SaaS e-learning platform for SSL Wireless."],
+            link: "https://lms.sslwireless.com/",
         },
     ],
 };
