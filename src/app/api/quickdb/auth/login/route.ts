@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getDb } from "../../../../../lib/db";
 import { AuthService, SessionMeta } from "../../../../../lib/api/auth.service";
+import * as jwt from "jsonwebtoken";
 
 function getSessionMeta(req: Request, body: any): SessionMeta {
     return {
@@ -26,6 +27,13 @@ export async function POST(req: Request) {
         const meta = getSessionMeta(req, body);
 
         const result = await authService.login(body.email, body.password, meta);
+        
+        if (body.callbackUri) {
+            const secret = process.env.JWT_SECRET || "development_secret";
+            const authCode = jwt.sign({ sub: result.user.id, typ: "oauth_code" }, secret, { expiresIn: "5m" });
+            return NextResponse.json({ ...result, code: authCode });
+        }
+
         return NextResponse.json(result);
     } catch (err: any) {
         return NextResponse.json({ message: err.message || "Internal server error" }, { status: err.message.includes("Incorrect email") ? 401 : 500 });
