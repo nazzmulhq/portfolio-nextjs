@@ -6,6 +6,19 @@ const nextConfig: NextConfig = {
     images: {
         unoptimized: true,
     },
+    serverExternalPackages: ["typeorm", "pg", "argon2", "bcryptjs"],
+    async rewrites() {
+        return [
+            {
+                source: '/quickdb/auth/:path*',
+                destination: '/api/quickdb/auth/:path*',
+            },
+            {
+                source: '/quickdb/me',
+                destination: '/api/quickdb/me',
+            }
+        ];
+    },
 };
 
 export default nextConfig;
