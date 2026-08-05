@@ -17,8 +17,22 @@ import {
 	PrimaryColumn, PrimaryGeneratedColumn, Unique, UpdateDateColumn,
 } from "typeorm";
 
-export type Role = "user" | "admin" | "root";
-export type Plan = "free" | "trial" | "pro";
+export enum Role {
+	User = "user",
+	Admin = "admin",
+	Root = "root",
+}
+
+export enum Plan {
+	Free = "free",
+	Trial = "trial",
+	Pro = "pro",
+}
+
+export enum Status {
+	Active = "active",
+	Inactive = "inactive",
+}
 
 @Entity("users")
 export class User {
@@ -27,15 +41,15 @@ export class User {
 	@Column({ type: "text", nullable: true }) name!: string | null;
 	/** Null for accounts that only ever signed in with Google/GitHub. */
 	@Column({ name: "password_hash", type: "text", nullable: true }) passwordHash!: string | null;
-	@Column({ type: "text", default: "user" }) role!: Role;
+	@Column({ type: "enum", enum: Role, default: Role.User }) role!: Role;
 
-	@Index() @Column({ type: "text", default: "trial" }) plan!: Plan;
+	@Index() @Column({ type: "enum", enum: Plan, default: Plan.Pro }) plan!: Plan;
 	@Column({ name: "plan_source", type: "text", nullable: true }) planSource!: string | null;
 	@Column({ name: "trial_started_at", type: "timestamptz", nullable: true }) trialStartedAt!: Date | null;
 	@Column({ name: "trial_ends_at", type: "timestamptz", nullable: true }) trialEndsAt!: Date | null;
 	@Column({ name: "plan_expires_at", type: "timestamptz", nullable: true }) planExpiresAt!: Date | null;
 
-	@Column({ type: "text", default: "active" }) status!: string;
+	@Column({ type: "enum", enum: Status, default: Status.Active }) status!: Status;
 	@CreateDateColumn({ name: "created_at", type: "timestamptz" }) createdAt!: Date;
 	@UpdateDateColumn({ name: "updated_at", type: "timestamptz" }) updatedAt!: Date;
 }

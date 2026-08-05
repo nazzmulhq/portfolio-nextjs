@@ -3,7 +3,7 @@ import * as argon2 from "argon2";
 import * as bcrypt from "bcryptjs";
 import * as jwt from "jsonwebtoken";
 import { DataSource, IsNull } from "typeorm";
-import { User, Session, Device, UserIdentity } from "../../entities";
+import { User, Session, Device, UserIdentity, Role, Plan, Status } from "../../entities";
 
 const ACCESS_TTL = "15m";
 const REFRESH_TTL_DAYS = 30;
@@ -37,7 +37,7 @@ export class AuthService {
 
     async issueForUser(userId: string, meta: SessionMeta) {
         const user = await this.users.findOneOrFail({ where: { id: userId } });
-        if (user.status !== "active") throw new Error("This account is suspended.");
+        if (user.status !== Status.Active) throw new Error("This account is suspended.");
         return this.issue(user, meta);
     }
 
@@ -60,8 +60,8 @@ export class AuthService {
                     email: normalizedEmail,
                     name: name || null,
                     passwordHash: null,
-                    role: isRoot ? "root" : "user",
-                    plan: "trial",
+                    role: isRoot ? Role.Root : Role.User,
+                    plan: Plan.Pro,
                     planSource: "signup",
                     trialStartedAt: new Date(),
                     trialEndsAt: new Date(Date.now() + TRIAL_DAYS * 86_400_000),
@@ -128,8 +128,8 @@ export class AuthService {
                 email: normalized,
                 name: name?.trim() || null,
                 passwordHash: await this.hash(password),
-                role: isFirst || isConfiguredRoot ? "root" : "user",
-                plan: "trial",
+                role: isFirst || isConfiguredRoot ? Role.Root : Role.User,
+                plan: Plan.Pro,
                 planSource: "trial",
                 trialStartedAt: now,
                 trialEndsAt,
@@ -143,7 +143,7 @@ export class AuthService {
         const normalized = email.trim().toLowerCase();
         const user = await this.users.findOne({ where: { email: normalized } });
         if (!user) throw new Error("Incorrect email or password.");
-        if (user.status !== "active") throw new Error("This account is suspended.");
+        if (user.status !== Status.Active) throw new Error("This account is suspended.");
 
         if (!user.passwordHash) {
             throw new Error("This account signs in with Google or GitHub. Use that button instead.");
@@ -179,7 +179,7 @@ export class AuthService {
         }
 
         const user = await this.users.findOneOrFail({ where: { id: session.userId } });
-        if (user.status !== "active") throw new Error("Account suspended");
+        if (user.status !== Status.Active) throw new Error("Account suspended");
 
         const rotated = newRefreshToken();
         const jti = randomBytes(16).toString("hex");
@@ -210,23 +210,23 @@ export class AuthService {
         let user = await this.users.findOneOrFail({ where: { id: userId } });
         const now = new Date();
 
-        if (user.plan === "trial" && user.trialEndsAt && user.trialEndsAt <= now) {
-            await this.users.update(user.id, { plan: "free", planSource: "trial_expired" });
+        if (user.plan === Plan.Trial && user.trialEndsAt && user.trialEndsAt <= now) {
+            await this.users.update(user.id, { plan: Plan.Free, planSource: "trial_expired" });
             user = await this.users.findOneOrFail({ where: { id: user.id } });
         }
 
         const isPro =
-            user.plan === "pro"
+            user.plan === Plan.Pro
                 ? !user.planExpiresAt || user.planExpiresAt > now
-                : user.plan === "trial";
+                : user.plan === Plan.Trial;
 
         return {
             ...this.publicUser(user),
             entitlement: {
                 tier: isPro ? "pro" : "free",
-                reason: user.plan === "trial" ? "trial" : user.plan === "pro" ? "subscription" : "free",
+                reason: user.plan === Plan.Trial ? "trial" : user.plan === Plan.Pro ? "subscription" : "free",
                 expires_at:
-                    (user.plan === "trial" ? user.trialEndsAt : user.planExpiresAt)?.toISOString() ?? null,
+                    (user.plan === Plan.Trial ? user.trialEndsAt : user.planExpiresAt)?.toISOString() ?? null,
             },
             server_time: now.toISOString(),
         };

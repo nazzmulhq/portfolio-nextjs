@@ -12,27 +12,31 @@ function LoginForm() {
     const githubUrl = `/api/quickdb/auth/oauth/github/start${callbackUri ? `?callback_uri=${encodeURIComponent(callbackUri)}` : ''}`;
     const googleUrl = `/api/quickdb/auth/oauth/google/start${callbackUri ? `?callback_uri=${encodeURIComponent(callbackUri)}` : ''}`;
 
+    const [isLogin, setIsLogin] = useState(searchParams.get("signup") !== "1");
+    const [name, setName] = useState("");
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState(false);
 
-    const handleEmailLogin = async (e: React.FormEvent) => {
+    const handleEmailSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
         setLoading(true);
 
         try {
-            const res = await fetch("/api/quickdb/auth/login", {
+            const endpoint = isLogin ? "/api/quickdb/auth/login" : "/api/quickdb/auth/register";
+            const payload = isLogin ? { email, password, callbackUri } : { name, email, password, callbackUri };
+            const res = await fetch(endpoint, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ email, password, callbackUri }),
+                body: JSON.stringify(payload),
             });
 
             if (!res.ok) {
                 const data = await res.json().catch(() => ({}));
-                throw new Error(data.message || "Invalid credentials");
+                throw new Error(data.message || (isLogin ? "Invalid credentials" : "Registration failed"));
             }
 
             const data = await res.json();
@@ -74,7 +78,7 @@ function LoginForm() {
                         Welcome Back
                     </h1>
                     <p className="mt-2 text-sm text-muted">
-                        Sign in to your QuickDB account to continue.
+                        {isLogin ? "Sign in to your QuickDB account to continue." : "Create a QuickDB account to get started."}
                     </p>
                 </div>
 
@@ -133,10 +137,27 @@ function LoginForm() {
                                 <div className="flex-1 border-t border-line"></div>
                             </div>
 
-                            <form onSubmit={handleEmailLogin} className="space-y-4">
+                            <form onSubmit={handleEmailSubmit} className="space-y-4">
                                 {error && (
                                     <div className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">
                                         {error}
+                                    </div>
+                                )}
+                                
+                                {!isLogin && (
+                                    <div>
+                                        <label className="mb-1.5 block text-xs font-medium text-muted" htmlFor="name">
+                                            Full Name
+                                        </label>
+                                        <input
+                                            id="name"
+                                            type="text"
+                                            required
+                                            value={name}
+                                            onChange={(e) => setName(e.target.value)}
+                                            className="w-full rounded-xl border border-line bg-black/20 px-4 py-2.5 text-sm text-white placeholder-faint outline-none transition-all focus:border-accent focus:bg-black/40 focus:ring-1 focus:ring-accent/50"
+                                            placeholder="John Doe"
+                                        />
                                     </div>
                                 )}
                                 
@@ -178,13 +199,31 @@ function LoginForm() {
                                     {loading ? (
                                         <div className="h-5 w-5 animate-spin rounded-full border-2 border-white border-t-transparent" />
                                     ) : (
-                                        "Sign In"
+                                        isLogin ? "Sign In" : "Create Account"
                                     )}
                                 </button>
                             </form>
 
+                            <div className="mt-6 text-center text-sm text-muted">
+                                {isLogin ? (
+                                    <>
+                                        Don't have an account?{" "}
+                                        <button type="button" onClick={() => { setIsLogin(false); setError(""); }} className="font-medium text-white hover:text-accent transition-colors">
+                                            Sign up
+                                        </button>
+                                    </>
+                                ) : (
+                                    <>
+                                        Already have an account?{" "}
+                                        <button type="button" onClick={() => { setIsLogin(true); setError(""); }} className="font-medium text-white hover:text-accent transition-colors">
+                                            Log in
+                                        </button>
+                                    </>
+                                )}
+                            </div>
+
                             <div className="mt-6 text-center text-xs text-faint">
-                                By signing in, you agree to our <a href="#" className="text-muted hover:text-white">Terms of Service</a> and <a href="#" className="text-muted hover:text-white">Privacy Policy</a>.
+                                By continuing, you agree to our <a href="#" className="text-muted hover:text-white">Terms of Service</a> and <a href="#" className="text-muted hover:text-white">Privacy Policy</a>.
                             </div>
                         </>
                     )}
