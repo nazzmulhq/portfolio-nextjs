@@ -27,7 +27,7 @@ import {
     TRACK_VH,
 } from "./landingData";
 import QuickDBBottomNav from "./QuickDBBottomNav";
-import QuickDBRightNav from "./QuickDBRightNav";
+
 import QuickDBTopMenuBar from "./QuickDBTopMenuBar";
 import {
     formatInstallCount,
@@ -2832,8 +2832,7 @@ const QuickDBStory: FC = () => {
                     </div>
                 </div>
 
-                {/* ── Right-side Nav Timeline Client Component ── */}
-                <QuickDBRightNav s={s} jumpToStep={jumpToStep} />
+
 
                 {/* ── Quick Feature Navigator Bottom Bar Client Component ── */}
                 <QuickDBBottomNav

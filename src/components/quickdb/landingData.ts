@@ -287,16 +287,15 @@ export interface ToolGroup {
 export const TOOLS: readonly ToolGroup[] = [
     {
         name: "Query",
-        count: "7",
+        count: "6",
         icon: "⌘",
         tint: "#7cc4f5",
         items: [
-            "New Query (SQL Console)",
+            "SQL Console",
             "Query Builder",
             "ERD Diagram",
             "Aggregation Builder",
             "Pivot Table",
-            "Query History Dashboard",
             "SQL Snippets",
         ],
     },
