@@ -42,8 +42,8 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                     right: 0,
                     top: 0,
                     bottom: 0,
-                    width: 340,
-                    background: "linear-gradient(270deg, rgba(8, 10, 15, 0.82) 0%, rgba(8, 10, 15, 0.4) 60%, rgba(8, 10, 15, 0) 100%)",
+                    width: 380,
+                    background: "linear-gradient(270deg, rgba(8, 10, 15, 0.95) 0%, rgba(8, 10, 15, 0.6) 50%, rgba(8, 10, 15, 0) 100%)",
                     pointerEvents: "none",
                     zIndex: 44,
                 }}
@@ -59,7 +59,7 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                     pointerEvents: "none",
                     display: "flex",
                     flexDirection: "column",
-                    gap: 16,
+                    gap: 12,
                     alignItems: "flex-end",
                     userSelect: "none",
                 }}
@@ -71,13 +71,15 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                     return (
                         <div 
                             key={stepNum} 
+                            className="group"
                             style={{ 
                                 display: "flex", 
                                 alignItems: "center", 
-                                gap: 16, 
+                                gap: 14, 
                                 pointerEvents: "auto", 
                                 cursor: "pointer",
-                                minHeight: isActive ? 60 : 20,
+                                minHeight: isActive ? 68 : 28,
+                                transition: "min-height 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
                             }} 
                             onClick={() => jumpToStep(stepNum)}
                         >
@@ -87,37 +89,38 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                                     // Active state: Show the full card
                                     <div
                                         style={{
-                                            background: "rgba(8, 12, 20, 0.94)",
-                                            border: "1px solid rgba(0, 120, 212, 0.5)",
-                                            padding: "8px 13px",
-                                            borderRadius: 8,
-                                            boxShadow: "0 8px 24px rgba(0, 0, 0, 0.92), inset 0 1px 0 rgba(255, 255, 255, 0.12)",
-                                            backdropFilter: "blur(16px)",
+                                            background: "rgba(10, 15, 24, 0.85)",
+                                            border: "1px solid rgba(77, 170, 252, 0.3)",
+                                            padding: "10px 14px",
+                                            borderRadius: 10,
+                                            boxShadow: "0 10px 30px rgba(0, 0, 0, 0.95), inset 0 1px 0 rgba(255, 255, 255, 0.1)",
+                                            backdropFilter: "blur(20px)",
                                             display: "flex",
                                             flexDirection: "column",
                                             alignItems: "flex-end",
-                                            gap: 5,
-                                            maxWidth: 275,
+                                            gap: 6,
+                                            maxWidth: 290,
+                                            animation: "qd-slide-in 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
                                         }}
                                     >
                                         <div
                                             style={{
                                                 display: "flex",
                                                 alignItems: "center",
-                                                gap: 7,
-                                                fontSize: 12.5,
+                                                gap: 8,
+                                                fontSize: 13,
                                                 fontWeight: 600,
                                                 textAlign: "right",
                                             }}
                                         >
-                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 8px #4daafc", flexShrink: 0 }} />
+                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 10px #4daafc", flexShrink: 0 }} />
                                             <span
                                                 style={{
-                                                    font: `600 10.5px ${MONO}`,
-                                                    background: "rgba(0, 120, 212, 0.3)",
-                                                    border: "1px solid rgba(77, 170, 252, 0.4)",
+                                                    font: `600 11px ${MONO}`,
+                                                    background: "rgba(0, 120, 212, 0.2)",
+                                                    border: "1px solid rgba(77, 170, 252, 0.3)",
                                                     color: "#8fc9ff",
-                                                    padding: "1px 5px",
+                                                    padding: "2px 6px",
                                                     borderRadius: 4,
                                                     lineHeight: 1.2,
                                                     flexShrink: 0,
@@ -125,7 +128,7 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                                             >
                                                 {String(stepNum).padStart(2, "0")}
                                             </span>
-                                            <span style={{ color: "#ffffff", letterSpacing: ".02em", textShadow: "0 0 10px rgba(0, 120, 212, 0.6)" }}>
+                                            <span style={{ color: "#ffffff", letterSpacing: ".02em", textShadow: "0 0 12px rgba(0, 120, 212, 0.5)" }}>
                                                 {STEP_DETAILS[stepNum]?.title ?? ""}
                                             </span>
                                         </div>
@@ -133,41 +136,57 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                                             <div
                                                 style={{
                                                     fontSize: 11.5,
-                                                    color: "rgba(226, 241, 255, 0.85)",
-                                                    lineHeight: 1.45,
+                                                    color: "rgba(230, 245, 255, 0.75)",
+                                                    lineHeight: 1.5,
                                                     textAlign: "right",
                                                 }}
                                             >
                                                 {STEP_DETAILS[stepNum].description}
                                             </div>
                                         )}
+                                        <style>{`
+                                            @keyframes qd-slide-in {
+                                                0% { opacity: 0; transform: translateX(10px) scale(0.96); }
+                                                100% { opacity: 1; transform: translateX(0) scale(1); }
+                                            }
+                                        `}</style>
                                     </div>
                                 ) : (
                                     // Inactive state: Initial show title
                                     <div
                                         style={{
-                                            fontSize: 12,
-                                            color: "rgba(255, 255, 255, 0.5)",
-                                            fontWeight: 500,
-                                            letterSpacing: ".02em",
-                                            transition: "color 0.2s ease",
+                                            font: `500 11px ${MONO}`,
+                                            color: "rgba(255, 255, 255, 0.35)",
+                                            textTransform: "uppercase",
+                                            letterSpacing: ".08em",
+                                            transition: "all 0.2s ease",
                                         }}
+                                        className="group-hover:text-white group-hover:-translate-x-1"
                                     >
                                         {substep.label}
                                     </div>
                                 )}
                             </div>
 
-                            {/* The Line */}
-                            <div
-                                style={{
-                                    width: isActive ? 40 : 20,
-                                    height: 2,
-                                    background: isActive ? "linear-gradient(90deg, #0078d4, #4daafc)" : "rgba(255, 255, 255, 0.4)",
-                                    boxShadow: isActive ? "0 0 16px #0078d4, 0 0 6px #4daafc" : "none",
-                                    transition: "all 0.3s cubic-bezier(0.16, 1, 0.3, 1)",
-                                }}
-                            />
+                            {/* The Line - Only for inactive steps */}
+                            {!isActive && (
+                                <>
+                                    <div className="qd-nav-line" />
+                                    <style>{`
+                                        .qd-nav-line {
+                                            height: 1.5px;
+                                            background: rgba(255, 255, 255, 0.3);
+                                            border-radius: 1px;
+                                            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+                                            width: 16px;
+                                        }
+                                        .group:hover .qd-nav-line {
+                                            background: rgba(255, 255, 255, 0.8);
+                                            width: 32px;
+                                        }
+                                    `}</style>
+                                </>
+                            )}
                         </div>
                     );
                 })}
