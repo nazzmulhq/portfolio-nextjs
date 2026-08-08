@@ -27,7 +27,7 @@ import {
     TRACK_VH,
 } from "./landingData";
 import QuickDBBottomNav from "./QuickDBBottomNav";
-import QuickDBClockDial from "./QuickDBClockDial";
+import QuickDBRightNav from "./QuickDBRightNav";
 import QuickDBTopMenuBar from "./QuickDBTopMenuBar";
 import {
     formatInstallCount,
@@ -2832,8 +2832,8 @@ const QuickDBStory: FC = () => {
                     </div>
                 </div>
 
-                {/* ── Right-side Curved Clock Scale Timeline Client Component ── */}
-                <QuickDBClockDial s={s} jumpToStep={jumpToStep} />
+                {/* ── Right-side Nav Timeline Client Component ── */}
+                <QuickDBRightNav s={s} jumpToStep={jumpToStep} />
 
                 {/* ── Quick Feature Navigator Bottom Bar Client Component ── */}
                 <QuickDBBottomNav
