@@ -150,7 +150,7 @@ export async function GET(request: NextRequest) {
         { label: me.email, href: `mailto:${me.email}` },
         { label: `Phone: ${me.phone}`, href: `tel:${me.phone}` },
         { label: `WhatsApp: ${me.whatsapp}`, href: `https://wa.me/${me.whatsapp}` },
-        { label: me.mysite.replace("https://", ""), href: me.mysite },
+        { label: me.mysite.replace(/^https?:\/\//, "").replace(/\/$/, ""), href: me.mysite },
         { label: "linkedin.com/in/nazzmulhq", href: me.linkedin },
         { label: "github.com/nazzmulhq", href: me.github },
         { label: "Dhaka, Bangladesh", href: "" },

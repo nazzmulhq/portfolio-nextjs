@@ -7,7 +7,7 @@ const info = {
         whatsapp: "+8801917003822",
         experience: "4+ years",
         image: "/images/person.png",
-        mysite: "https://nazmulhaque.netlify.app/",
+        mysite: "https://nazzmulhaque.vercel.app",
         linkedin: "https://www.linkedin.com/in/nazzmulhq/",
         github: "https://www.github.com/nazzmulhq",
         resume: "/doc/Nazmul_Haque_CV.pdf",

@@ -150,7 +150,7 @@ export default function QuickDBPage() {
                 {/* Intro media */}
                 <div className="container relative z-20 mx-auto -mt-8 mb-4 px-6 sm:-mt-16">
                     <ZoomOnScroll
-                        src="https://nazmulhaque.netlify.app/gifs/quickdb/mcp-server-intro.gif"
+                        src="https://nazzmulhaque.vercel.app/gifs/quickdb/mcp-server-intro.gif"
                         alt="MCP Server Intro"
                     />
                 </div>

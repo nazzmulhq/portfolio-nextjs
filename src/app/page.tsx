@@ -25,8 +25,8 @@ export default function Page() {
         "@context": "https://schema.org",
         "@type": "Person",
         "name": "Nazmul Haque",
-        "url": "https://nazmulhaque.netlify.app",
-        "image": "https://nazmulhaque.netlify.app/images/person.png",
+        "url": "https://nazzmulhaque.vercel.app",
+        "image": "https://nazzmulhaque.vercel.app/images/person.png",
         "sameAs": [
             "https://www.github.com/nazzmulhq",
             "https://www.linkedin.com/in/nazzmulhq/"

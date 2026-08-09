@@ -23,7 +23,7 @@ const GA_ID = process.env.NODE_ENV === "production" ? "G-X18XQGB0NX" : null;
 const themeInit = `(function(){try{var t=localStorage.getItem('theme');if(t==='light'||t==='dark'){document.documentElement.setAttribute('data-theme',t);}}catch(e){}document.documentElement.classList.add('js-reveal');})();`;
 
 export const metadata: Metadata = {
-    metadataBase: new URL("https://nazmulhaque.netlify.app"),
+    metadataBase: new URL("https://nazzmulhaque.vercel.app"),
     applicationName: "Nazmul Haque Portfolio",
     generator: "Next.js",
     referrer: "origin-when-cross-origin",
@@ -50,7 +50,7 @@ export const metadata: Metadata = {
         "Software Architect",
         "Enterprise ERP"
     ],
-    authors: [{ name: "Nazmul Haque", url: "https://nazmulhaque.netlify.app" }],
+    authors: [{ name: "Nazmul Haque", url: "https://nazzmulhaque.vercel.app" }],
     creator: "Nazmul Haque",
     alternates: {
         canonical: "/",

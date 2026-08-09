@@ -44,7 +44,7 @@ const Page: FC<IPage> = () => {
             "name": "Nazmul Haque",
             "jobTitle": "Senior Software Specialist",
             "description": "Professional CV of Nazmul Haque, Senior Software Specialist. Review and download a PDF/print version of my software engineering experience and skills.",
-            "image": "https://nazmulhaque.netlify.app/images/person.png",
+            "image": "https://nazzmulhaque.vercel.app/images/person.png",
             "worksFor": {
                 "@type": "Organization",
                 "name": "SSL Wireless Ltd."
