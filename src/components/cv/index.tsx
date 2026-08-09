@@ -38,30 +38,30 @@ const themeConfig = {
     },
     light: {
         bg: "#ffffff",
-        sidebarBg: "#f8fafc",
-        sidebarBorder: "#e2e8f0",
+        sidebarBg: "#f0f4f8",
+        sidebarBorder: "#cbd5e1",
         textColorPrimary: "#0f172a",
-        textColorSecondary: "#475569",
+        textColorSecondary: "#1e293b",
         textColorAccent: "#1e40af",
         badgeBg: "#dbeafe",
-        badgeText: "#1e40af",
-        tagBg: "#f1f5f9",
-        tagText: "#334155",
-        cardBg: "#ffffff",
-        cardBorder: "#e2e8f0",
-        imageBorder: "#cbd5e1",
-        imageBg: "#f1f5f9",
+        badgeText: "#1d4ed8",
+        tagBg: "#e2e8f0",
+        tagText: "#0f172a",
+        cardBg: "#f8fafc",
+        cardBorder: "#cbd5e1",
+        imageBorder: "#94a3b8",
+        imageBg: "#e2e8f0",
         iconColor: "#0f172a",
-        iconBg: "#e2e8f0",
-        techTagBg: "#f1f5f9",
-        techTagText: "#0369a1",
-        linkColor: "#0369a1",
+        iconBg: "#cbd5e1",
+        techTagBg: "#dbeafe",
+        techTagText: "#1e40af",
+        linkColor: "#1d4ed8",
         strongColor: "#0f172a",
-        sectionBorder: "#bfdbfe",
-        sectionIcon: "#2563eb",
-        contactIcon: "#64748b",
-        dateColor: "#64748b",
-        internalText: "#64748b",
+        sectionBorder: "#93c5fd",
+        sectionIcon: "#1d4ed8",
+        contactIcon: "#334155",
+        dateColor: "#334155",
+        internalText: "#334155",
     }
 };
 
@@ -157,6 +157,29 @@ const CVBtn: FC<ICV> = ({ children }) => {
         return `${years}+ years`;
     }
 
+    const [isGenerating, setIsGenerating] = useState(false);
+
+    const handleDownloadPDF = async () => {
+        setIsGenerating(true);
+        try {
+            const response = await fetch(`/api/cv/generate-pdf?theme=${theme}`);
+            if (!response.ok) throw new Error("Failed to generate PDF");
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Nazmul_Haque_CV_${theme}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch {
+            reactToPrintFn();
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
     return (
         <div className="flex flex-col items-center gap-4 w-full">
             <div className="flex items-center justify-between w-72 bg-[color-mix(in_srgb,var(--surface)_60%,transparent)] p-1.5 rounded-xl border border-line shadow-sm">
@@ -186,15 +209,15 @@ const CVBtn: FC<ICV> = ({ children }) => {
             </div>
             
             <button
-                className="group relative w-72 flex justify-center items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-400 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] border border-emerald-400/50 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 select-none"
-                disabled={isPrint}
-                onClick={() => reactToPrintFn()}
+                className="group relative w-72 flex justify-center items-center gap-3 px-8 py-3.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-400 text-white font-bold rounded-xl shadow-[0_0_20px_rgba(16,185,129,0.3)] hover:shadow-[0_0_40px_rgba(16,185,129,0.6)] border border-emerald-400/50 overflow-hidden transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:translate-y-0 select-none cursor-pointer"
+                disabled={isGenerating || isPrint}
+                onClick={handleDownloadPDF}
             >
                 <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1500ms] ease-in-out bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none z-0"></div>
                 <span className="relative z-10 tracking-wider">
-                    {isPrint ? "Preparing..." : children}
+                    {isGenerating ? "Generating PDF..." : isPrint ? "Preparing..." : children || "Generate PDF"}
                 </span>
-                {!isPrint && (
+                {!isGenerating && !isPrint && (
                     <svg className="w-5 h-5 relative z-10 transition-transform duration-300 group-hover:translate-y-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                     </svg>
@@ -332,7 +355,14 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                         <ContactRow
                                             colors={colors}
                                             icon="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z"
-                                            text={me.phone}
+                                            text={`Phone: ${me.phone}`}
+                                            href={`tel:${me.phone}`}
+                                        />
+                                        <ContactRow
+                                            colors={colors}
+                                            icon="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"
+                                            text={`WhatsApp: ${me.whatsapp}`}
+                                            href={`https://wa.me/${me.whatsapp}`}
                                         />
                                         <ContactRow
                                             colors={colors}
