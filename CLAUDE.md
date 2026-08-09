@@ -17,7 +17,7 @@ There is no test suite. `npm install` requires `legacy-peer-deps=true` (set in `
 
 Single-developer portfolio site. Next.js 16 (App Router) + React 19 + Tailwind CSS v4, statically exported.
 
-- **`output: "export"` in [next.config.ts](next.config.ts)** — the whole site builds to static HTML in `./out` and is deployed to Netlify (`https://nazmulhaque.netlify.app`). Consequences: no server runtime at deploy time, no SSR/ISR, no API routes, no `next/image` optimization server. Every page must be statically renderable; pages set `export const dynamic = "force-static"`. `basePath` is read from `NEXT_PUBLIC_BASE_PATH` env at build time.
+- **`output: "export"` in [next.config.ts](next.config.ts)** — the whole site builds to static HTML in `./out` and is deployed to Vercel (`https://nazzmulhaque.vercel.app`). Consequences: no server runtime at deploy time, no SSR/ISR, no API routes, no `next/image` optimization server. Every page must be statically renderable; pages set `export const dynamic = "force-static"`. `basePath` is read from `NEXT_PUBLIC_BASE_PATH` env at build time.
 - **`src/proxy.ts`** is a no-op middleware-style file (not active Next.js middleware) kept for reference; static export does not run middleware.
 
 ### Routing & pages

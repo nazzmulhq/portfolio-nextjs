@@ -328,7 +328,7 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                     gsap.set(expCards, { autoAlpha: 1, clipPath: "inset(0% 0% 100% 0%)" });
                     gsap.set(expCards[0], { clipPath: "inset(0% 0% 0% 0%)" });
 
-                    const span = () => (expCards.length - 1) * window.innerHeight * 0.9;
+                    const span = () => `+=${(expCards.length - 1) * window.innerHeight * 0.9}`;
 
                     const deck = gsap.timeline({
                         defaults: { ease: "none" },
