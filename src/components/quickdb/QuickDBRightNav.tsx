@@ -15,6 +15,18 @@ export const DATA_VIEW_SUBSTEPS = [
     { label: "Save IDs", step: 19 },
 ] as const;
 
+export const QUERY_CONSOLE_SUBSTEPS = [
+    { label: "Open Console", step: 21 },
+    { label: "New Query", step: 23 },
+    { label: "Select DB", step: 30 },
+    { label: "Write SQL", step: 31 },
+    { label: "Run Query", step: 40 },
+    { label: "Query History", step: 44 },
+    { label: "Saved Query", step: 48 },
+    { label: "SQL Snippets", step: 54 },
+    { label: "Visualize", step: 60 },
+] as const;
+
 export interface QuickDBRightNavProps {
     s: number;
     jumpToStep: (stepNum: number) => void;
@@ -23,10 +35,12 @@ export interface QuickDBRightNavProps {
 export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep }) => {
     if (s < 1) return null;
 
+    const substeps = s >= 21 ? QUERY_CONSOLE_SUBSTEPS : DATA_VIEW_SUBSTEPS;
+
     // Determine the active substep index based on the current step 's'
     let activeIndex = 0;
-    for (let i = 0; i < DATA_VIEW_SUBSTEPS.length; i++) {
-        if (s >= DATA_VIEW_SUBSTEPS[i].step) {
+    for (let i = 0; i < substeps.length; i++) {
+        if (s >= substeps[i].step) {
             activeIndex = i;
         } else {
             break;
@@ -64,7 +78,7 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                     userSelect: "none",
                 }}
             >
-                {DATA_VIEW_SUBSTEPS.map((substep, index) => {
+                {substeps.map((substep, index) => {
                     const stepNum = substep.step;
                     const isActive = index === activeIndex;
 
@@ -124,7 +138,7 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                         gap: 8,
                         zIndex: 10,
                     }}
-                    onClick={() => jumpToStep(DATA_VIEW_SUBSTEPS[activeIndex].step)}
+                    onClick={() => jumpToStep(substeps[activeIndex].step)}
                 >
                     <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4daafc", boxShadow: "0 0 10px #4daafc", flexShrink: 0 }} />
                     <span
@@ -139,10 +153,10 @@ export const QuickDBRightNav: React.FC<QuickDBRightNavProps> = ({ s, jumpToStep 
                             flexShrink: 0,
                         }}
                     >
-                        {String(DATA_VIEW_SUBSTEPS[activeIndex].step).padStart(2, "0")}
+                        {String(substeps[activeIndex].step).padStart(2, "0")}
                     </span>
                     <span style={{ color: "#ffffff", fontSize: 13, fontWeight: 600, letterSpacing: ".02em", textShadow: "0 0 12px rgba(0, 120, 212, 0.5)", whiteSpace: "nowrap" }}>
-                        {STEP_DETAILS[DATA_VIEW_SUBSTEPS[activeIndex].step]?.title ?? ""}
+                        {STEP_DETAILS[substeps[activeIndex].step]?.title ?? ""}
                     </span>
                 </div>
 

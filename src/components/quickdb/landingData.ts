@@ -29,6 +29,47 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["18", "7 rows staged — ⌘S to save"],
     ["19", "Saved — 129 customers in table"],
     ["20", "Database synced & ready"],
+    ["21", "Hover the SQL Console tool"],
+    ["22", "SQL Console opens"],
+    ["23", "New Query"],
+    ["24", "Query Console: Demo › classicmodels"],
+    ["25", "Select a connection"],
+    ["26", "Connection options"],
+    ["27", "Demo · mysql selected"],
+    ["28", "Select a database"],
+    ["29", "Database options"],
+    ["30", "classicmodels selected"],
+    ["31", "Write SQL statements…"],
+    ["32", "Typing SELECT"],
+    ["33", "SELECT — autocomplete"],
+    ["34", "SELECT *"],
+    ["35", "FROM — autocomplete"],
+    ["36", "FROM customers"],
+    ["37", "LEFT JOIN — autocomplete"],
+    ["38", "…LEFT JOIN payments"],
+    ["39", "Hover Run"],
+    ["40", "297 rows returned"],
+    ["41", "Schema Explorer"],
+    ["42", "customers · 122 rows"],
+    ["43", "Query History"],
+    ["44", "Local history log"],
+    ["45", "Saved Queries"],
+    ["46", "Save as new"],
+    ["47", "Update saved query"],
+    ["48", "Typing the query title"],
+    ["49", "Hover Update"],
+    ["50", "Query saved"],
+    ["51", "SQL Snippets"],
+    ["52", "Top 10 newest rows"],
+    ["53", "Search snippets"],
+    ["54", "orderDetails snippet"],
+    ["55", "Snippet inserted"],
+    ["56", "Retarget to orderNumber"],
+    ["57", "Hover Run again"],
+    ["58", "10 rows returned"],
+    ["59", "Close snippets"],
+    ["60", "Hover Visualize"],
+    ["61", "Chart rendered"],
 ] as const;
 
 export interface StepDetail {
@@ -159,6 +200,60 @@ export const STEP_DETAILS: Record<number, StepDetail> = {
         description: "All 129 customer records fully synchronized and persistent.",
         mechanism: "QuickDB live engine keeps local cache in sync with upstream DB.",
     },
+    21: {
+        title: "Open SQL Console",
+        category: "QUERY CONSOLE",
+        description: "Hovering the SQL Console tool in the sidebar's Query group.",
+        mechanism: "Pointer travels to the Query › SQL Console item in the TOOLS tree.",
+    },
+    23: {
+        title: "Start a New Query",
+        category: "QUERY CONSOLE",
+        description: "SQL Console tab opens with a New Query card and no saved queries yet.",
+        mechanism: "Clicking New Query opens a blank SQL console.",
+    },
+    30: {
+        title: "Pick Connection & Database",
+        category: "QUERY CONSOLE",
+        description: "Connection set to Demo · mysql, database set to classicmodels.",
+        mechanism: "Selectors resolve the schema before the editor becomes writable.",
+    },
+    31: {
+        title: "Write the Query",
+        category: "SQL EDITOR",
+        description: "IntelliSense-driven SQL editor with keyword, table, and FK-aware autocomplete.",
+        mechanism: "Typing triggers context-aware suggestions at each token boundary.",
+    },
+    40: {
+        title: "Run & Inspect Results",
+        category: "SQL EDITOR",
+        description: "Query executes and returns 297 rows across 17 columns.",
+        mechanism: "Run compiles and executes the statement against the live connection.",
+    },
+    44: {
+        title: "Query History",
+        category: "QUERY CONSOLE",
+        description: "Local history logs every SELECT/UPDATE/INSERT with timing and status.",
+        mechanism: "Opens via the clock icon or Ctrl/Cmd+Alt+E.",
+    },
+    48: {
+        title: "Rename & Update",
+        category: "SAVED QUERIES",
+        description: "Editing the saved query's title before committing the update.",
+        mechanism: "Backspaces the auto-generated title, types a human-readable one.",
+    },
+    54: {
+        title: "Insert a Snippet",
+        category: "SQL SNIPPETS",
+        description: "Reusable query templates, searchable and inserted at the cursor.",
+        mechanism: "Filtering by “orderDetails” narrows the snippet list to one match.",
+    },
+    60: {
+        title: "Visualize the Result Set",
+        category: "VISUALIZATION",
+        description: "Chart builder maps result columns to X/Y axes for a live preview.",
+        mechanism: "Opens QuickDB Visualization in a new tab, pre-wired to the last result set.",
+    },
 };
 
 /**
@@ -186,6 +281,47 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     18: "importBtn",
     19: "saveBtn",
     20: "saveBtn",
+    21: "sidebarSqlConsole",
+    22: "sidebarSqlConsole",
+    23: "newQueryBtnCard",
+    24: "newQueryBtnCard",
+    25: "topConnSelectBtn",
+    26: "topConnSelectBtn",
+    27: "connOptionDemoItem",
+    28: "topDbSelectBtn",
+    29: "topDbSelectBtn",
+    30: "dbOptionClassicItem",
+    31: "monacoSqlEditor",
+    32: "monacoSqlEditor",
+    33: "monacoSqlEditor",
+    34: "monacoSqlEditor",
+    35: "monacoSqlEditor",
+    36: "monacoSqlEditor",
+    37: "monacoSqlEditor",
+    38: "monacoSqlEditor",
+    39: "topRunQueryBtn",
+    40: "topRunQueryBtn",
+    41: "schemaExpRightIcon",
+    42: "schemaExpRightIcon",
+    43: "queryHistoryRightIcon",
+    44: "queryHistoryRightIcon",
+    45: "savedQueriesRightIcon",
+    46: "saveQueryAsBtn",
+    47: "queryTitleModalInput",
+    48: "queryTitleModalInput",
+    49: "updateQueryModalBtn",
+    50: "updateQueryModalBtn",
+    51: "sqlSnippetsRightIcon",
+    52: "sqlSnippetsRightIcon",
+    53: "snippetSearchInput",
+    54: "snippetCardItem",
+    55: "snippetCardItem",
+    56: "monacoSqlEditor",
+    57: "topRunQueryBtn",
+    58: "topRunQueryBtn",
+    59: "closeSnippetRightBtn",
+    60: "visualizeBarBtn",
+    61: "visualizeBarBtn",
 };
 
 export interface TypedField {
@@ -407,53 +543,73 @@ export const TOASTS: Record<number, string> = {
 };
 
 /** Total steps in the story — STEPS.length would work too, but the scroll-
- *  span math below (P0 + STEP_COUNT * PSTEP) reads clearer spelled out. */
-export const STEP_COUNT = 20;
+ *  span math below (P0 + STEP_COUNT * PSTEP) reads clearer spelled out.
+ *  Grew from 20 to 61 when the Query Console beat (steps 21-61) was added
+ *  on top of the original Data View story (steps 1-20). */
+export const STEP_COUNT = 61;
 
 /**
- * Step 10 carries far more than the other 19: the tab-open beat, then a
- * four-part edit/save/undo/save-again sequence whose first part alone runs
- * a ~2.5s focus/delete/type animation (after the cursor finishes gliding in
- * from the sidebar tree — close to a second by itself). It needs real extra
- * *scroll track*, not just a bigger percentage of the 19 other steps' track.
+ * Most steps are the same width, but a handful run a real character-by-
+ * character type/delete animation in place (see runEditTypeAnim-style
+ * helpers in QuickDBStory.tsx) rather than just flipping content on arrival
+ * — those need real extra *scroll track*, not just a bigger percentage of
+ * everyone else's track:
  *
- * The first version of this tried giving step 10 a bigger share of the
- * original fixed-height (1400vh) track — dividing the SAME total space
- * differently rather than adding to it. That doesn't work: with a fixed
- * total, growing step 10's share necessarily *shrinks* PSTEP (the width of
- * one "normal" step) for every other step too, and even at the extreme of
- * giving step 10 the whole track, its slice tops out at a fraction of the
- * page that's still short of the pixels the animation needs at a normal
- * scroll speed — the total page height was simply never big enough to
- * hold both. So the track height itself now scales with step 10's weight
- * (see TRACK_VH below): the other 19 steps keep the *exact* pixel width
- * they had before (UNIT_VH each, unchanged, already tuned and verified),
- * and step 10's extra weight adds new track length on top rather than
- * carving it out of theirs.
+ *   10  the customers-grid cell edit: focus → delete "Murphy" → type
+ *       "Haque" (~2.2s)
+ *   47  the saved-query title: delete the auto-generated SQL preview →
+ *       type "How many total customers have made a payment?"
+ *   56  the second query edit: delete "my_table" → type "orderdetails",
+ *       delete "created_at" → autocomplete-select "orderNumber"
+ *
+ * A first version of this tried giving a wide step a bigger share of a
+ * fixed-height track — dividing the SAME total space differently rather
+ * than adding to it. That doesn't work: with a fixed total, growing one
+ * step's share necessarily *shrinks* PSTEP (the width of one "normal"
+ * step) for every other step too, and even at the extreme of giving one
+ * step the whole track, its slice tops out short of the pixels a real
+ * animation needs at a normal scroll speed. So the track height instead
+ * scales with the sum of every step's weight (see TRACK_VH below): every
+ * weight-1 step keeps the *exact* pixel width it had before (UNIT_VH,
+ * already tuned and verified), and each wide step's extra weight adds new
+ * track length on top rather than carving it out of everyone else's.
  */
-export const STEP10_WEIGHT = 8;
+export const STEP_WEIGHTS: Record<number, number> = {
+    10: 8,
+    47: 3,
+    56: 3,
+};
 
 /** The original fixed track height, and how many equal-width steps it was
- *  divided into before step 10 needed to be wider than the rest. 
+ *  divided into before any step needed to be wider than the rest. Kept as
+ *  literals decoupled from the live STEP_COUNT above — extending the story
+ *  with more (weight-1) steps shouldn't retroactively shrink the width of
+ *  ones already tuned.
  *  Increased from 1400 to 3500 to require more physical scrolling, slowing down the pace. */
 const ORIGINAL_TRACK_VH = 3500;
-/** One "normal" step's share of that track, in vh — fixed regardless of
- *  STEP10_WEIGHT, since this is the pixel width every non-10 step keeps. */
-const UNIT_VH = ORIGINAL_TRACK_VH / STEP_COUNT;
+const ORIGINAL_STEP_COUNT = 20;
+/** One "normal" (weight-1) step's share of that track, in vh — fixed
+ *  regardless of STEP_WEIGHTS, since this is the pixel width every
+ *  unweighted step keeps. */
+const UNIT_VH = ORIGINAL_TRACK_VH / ORIGINAL_STEP_COUNT;
 /** Absolute vh consumed by the intro zoom-in before step 1's content
  *  starts (P0's original meaning, fixed rather than stretched — that
- *  animation is unrelated to step 10 and already tuned on its own). */
+ *  animation is unrelated to step weighting and already tuned on its own). */
 const P0_VH = 0.11 * ORIGINAL_TRACK_VH;
 
-const TOTAL_UNITS = STEP_COUNT - 1 + STEP10_WEIGHT;
-/** New total track height: the intro, plus 19 normal-width steps, plus
- *  step 10 at STEP10_WEIGHT times normal width. Exported so the track
+const TOTAL_UNITS = (() => {
+    let sum = 0;
+    for (let n = 1; n <= STEP_COUNT; n++) sum += STEP_WEIGHTS[n] ?? 1;
+    return sum;
+})();
+/** New total track height: the intro, plus every step at its own weight
+ *  (1 for most, wider for the animated ones above). Exported so the track
  *  element's own CSS height can be driven by this instead of a literal. */
 export const TRACK_VH = P0_VH + UNIT_VH * TOTAL_UNITS;
 
 /** P0 and PSTEP re-expressed as fractions of the new, taller TRACK_VH —
  *  same quantities as before in vh terms, just a smaller share of a
- *  bigger whole, which is what keeps every non-10 step's actual pixel
+ *  bigger whole, which is what keeps every unweighted step's actual pixel
  *  width unchanged. */
 export const P0 = P0_VH / TRACK_VH;
 export const PSTEP = UNIT_VH / TRACK_VH;
@@ -462,13 +618,13 @@ export const PSTEP = UNIT_VH / TRACK_VH;
  * Scroll fraction at which each step begins — STEP_STARTS[n - 1] is step
  * n's start, STEP_STARTS[STEP_COUNT] is 1.0 (the end of the last step).
  * Precomputed once here rather than re-derived from a flat step index on
- * every scroll tick, since step 10's extra width means "step n's start" is
- * no longer just P0 + (n - 1) * PSTEP for n > 10.
+ * every scroll tick, since the weighted steps mean "step n's start" is no
+ * longer just P0 + (n - 1) * PSTEP.
  */
 export const STEP_STARTS: readonly number[] = (() => {
     const starts = [P0];
     for (let n = 1; n <= STEP_COUNT; n++) {
-        starts.push(starts[n - 1] + PSTEP * (n === 10 ? STEP10_WEIGHT : 1));
+        starts.push(starts[n - 1] + PSTEP * (STEP_WEIGHTS[n] ?? 1));
     }
     return starts;
 })();

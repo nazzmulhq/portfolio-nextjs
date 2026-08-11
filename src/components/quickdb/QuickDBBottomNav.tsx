@@ -8,6 +8,7 @@ export interface NavItem {
     label: string;
     icon: string;
     live: boolean;
+    step?: number;
 }
 
 export interface QuickDBBottomNavProps {
@@ -48,7 +49,7 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
                     return (
                         <button
                             key={nav.label}
-                            onClick={() => jumpToStep(1)}
+                            onClick={() => jumpToStep(nav.step ?? 1)}
                             style={{
                                 display: "inline-flex",
                                 alignItems: "center",

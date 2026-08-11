@@ -106,11 +106,52 @@ type RefKey =
     | "undoBtn"
     | "curArrow"
     | "curPointer"
-    | "pasteArea";
+    | "pasteArea"
+    | "sidebarSqlConsole"
+    | "newQueryBtnCard"
+    | "topConnSelectBtn"
+    | "connOptionDemoItem"
+    | "topDbSelectBtn"
+    | "dbOptionClassicItem"
+    | "monacoSqlEditor"
+    | "topRunQueryBtn"
+    | "schemaExpRightIcon"
+    | "queryHistoryRightIcon"
+    | "savedQueriesRightIcon"
+    | "saveQueryAsBtn"
+    | "queryTitleModalInput"
+    | "updateQueryModalBtn"
+    | "sqlSnippetsRightIcon"
+    | "snippetSearchInput"
+    | "snippetCardItem"
+    | "closeSnippetRightBtn"
+    | "visualizeBarBtn";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
     t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+/**
+ * Scroll-driven "focus → backspace old → pause → type new" text reveal,
+ * shared by every character-by-character beat in this story (step 10's
+ * cell edit, the saved-query title rename, the second query's table/column
+ * swap). `f` is local progress in [0, 1] through whatever window the
+ * caller has mapped to this beat — driven by scroll fraction rather than
+ * wall-clock time, so it can never desync from how fast the user is
+ * actually scrolling: 20% dwell (cursor visibly arrives before anything
+ * changes), 30% backspacing `before` away, 10% pause on empty, 40% typing
+ * `after` in.
+ */
+const scrollTypeReveal = (before: string, after: string, f: number): string => {
+    if (f < 0.2) return before;
+    if (f < 0.5) {
+        const p = (f - 0.2) / 0.3;
+        return before.slice(0, Math.max(0, Math.round((1 - p) * before.length)));
+    }
+    if (f < 0.6) return "";
+    const p = (f - 0.6) / 0.4;
+    return after.slice(0, Math.min(after.length, Math.round(p * after.length)));
+};
 
 const CELL_COLS = "56px 200px 230px 190px 190px 190px 240px 210px 150px";
 const PAY_COLS = "56px 420px 320px 390px 260px";
@@ -151,6 +192,19 @@ const CLOSE_AT = 0.5;
 const OPEN_AT = 0.12;
 
 /**
+ * Fraction into step 21 ("Query Console") at which the old Data View grid
+ * (customers table + its Refresh/Add/Paste/Clone toolbar) actually closes
+ * and the Query Console webview takes over the editor pane. Same problem as
+ * OPEN_AT/CLOSE_AT again: step 20 ends on the Save button, and the cursor
+ * needs to visibly glide from there over to "SQL Console" in the sidebar
+ * (sidebarSqlConsole) before the body flips — not the instant scroll crosses
+ * into step 21. None of the reference screenshots ever show the Data View
+ * grid once the Query Console is open, so past this threshold it stays
+ * closed for the rest of the story, unlike tableOpen's other toggles.
+ */
+const QC_OPEN_AT = 0.45;
+
+/**
  * Row index (into CUST) that step 10's edit/save/undo/save-again beat runs
  * against — CUST[8] is customerNumber 129, "Mini Wheels Co.", contactLastName
  * "Murphy". Picked because it sits inside the first page of an unfiltered
@@ -159,6 +213,32 @@ const OPEN_AT = 0.12;
  */
 const EDIT_ROW = 8;
 const EDIT_VALUE = "Haque";
+
+/**
+ * Step 47's saved-query rename: the modal opens with the auto-generated SQL
+ * preview as its title (truncated in the reference screenshots, but the
+ * animation runs against the real full string since the truncation is a
+ * CSS overflow effect, not a shorter underlying value) and backspaces it
+ * away in favor of a human-readable question — same scrollTypeReveal shape
+ * as step 10's cell edit, mapped to step 47's own frac window.
+ */
+const QUERY_TITLE_BEFORE =
+    "SELECT * FROM customers LEFT JOIN payments ON payments.customerNumber = customers.customerNumber;";
+const QUERY_TITLE_AFTER = "How many total customers have made a payment?";
+
+/**
+ * Step 56's second query edit: the "Top 10 newest rows" snippet landed with
+ * placeholder table/column names (my_table, created_at) that don't exist in
+ * this schema — retargeted to the real orderdetails table and its
+ * orderNumber column. Two sequential scrollTypeReveal beats sharing one
+ * step's frac window (table name over the first half, order column over
+ * the second) rather than two separate steps, since both edits happen to
+ * the same already-open editor without the cursor leaving it.
+ */
+const SECOND_EDIT_TABLE_BEFORE = "my_table";
+const SECOND_EDIT_TABLE_AFTER = "orderdetails";
+const SECOND_EDIT_ORDERCOL_BEFORE = "created_at";
+const SECOND_EDIT_ORDERCOL_AFTER = "orderNumber";
 
 /**
  * The tab-open beat (OPEN_AT) claims step 10's first 46.2vh; everything
@@ -242,6 +322,15 @@ const QuickDBStory: FC = () => {
     // looking at the text alone.
     const [editCellText, setEditCellText] = useState("");
     const [editAnimStarted, setEditAnimStartedState] = useState(false);
+    // Live text for the two Query Console character-reveal beats (steps 47
+    // and 56). Defaulted to the *finished* strings rather than "" — unlike
+    // editCellText, these fields only ever render while their own step is
+    // active, so there's no "not started yet" ambiguity to preserve, and
+    // defaulting to the final text means an interrupted render never shows
+    // a half-built string.
+    const [queryTitleText, setQueryTitleText] = useState(QUERY_TITLE_AFTER);
+    const [secondEditTable, setSecondEditTable] = useState(SECOND_EDIT_TABLE_AFTER);
+    const [secondEditOrderCol, setSecondEditOrderCol] = useState(SECOND_EDIT_ORDERCOL_AFTER);
 
     const jumpToStep = (stepNum: number) => {
         const track = refs.current.track;
@@ -277,8 +366,8 @@ const QuickDBStory: FC = () => {
     };
 
     const NAV_ITEMS = [
-        { label: "Data View", icon: "▤", live: true },
-        { label: "Query Console", icon: "⌘", live: false },
+        { label: "Data View", icon: "▤", live: true, step: 1 },
+        { label: "Query Console", icon: "⌘", live: true, step: 21 },
         { label: "Query Builder", icon: "⚙", live: false },
         { label: "ERD Maker", icon: "◫", live: false },
         { label: "AI & MCP", icon: "⚡", live: false },
@@ -320,6 +409,9 @@ const QuickDBStory: FC = () => {
         hasEditHistory: false,
         editCellText: "",
         editAnimStarted: false,
+        queryTitleText: QUERY_TITLE_AFTER,
+        secondEditTable: SECOND_EDIT_TABLE_AFTER,
+        secondEditOrderCol: SECOND_EDIT_ORDERCOL_AFTER,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -701,8 +793,15 @@ const QuickDBStory: FC = () => {
             // the first part of step 10, so the cursor visibly arrives at the
             // customers row in the sidebar tree and "clicks" it before the
             // tab appears, instead of the tab being open before the cursor
-            // even sets off toward the row.
-            const tableOpen = s > 10 || (s === 10 && e.frac >= OPEN_AT);
+            // even sets off toward the row. And, same idea a third time at
+            // the other end: the grid stays OPEN through the first part of
+            // step 21 (see QC_OPEN_AT) rather than closing the instant step
+            // 20 ends, then stays closed for good once the Query Console
+            // webview takes over — the two panes never share the stage.
+            const tableOpen =
+                (s === 10 && e.frac >= OPEN_AT) ||
+                (s > 10 && s < 21) ||
+                (s === 21 && e.frac < QC_OPEN_AT);
 
             // Edit → save → undo → save-again, in step 10's tail. See
             // editPhaseFor's comment for what each phase shows and where the
@@ -756,6 +855,56 @@ const QuickDBStory: FC = () => {
                     setEditAnimStartedState(false);
                     setEditCellText("");
                 }
+            }
+
+            // Step 47: the saved-query title rename. A single
+            // scrollTypeReveal across the whole step, same shape as step
+            // 10's — resets to the pre-edit SQL preview the instant the
+            // step is entered from either direction so scrolling back into
+            // 47 later replays it rather than resuming a stale snapshot.
+            if (s === 47) {
+                const text = scrollTypeReveal(QUERY_TITLE_BEFORE, QUERY_TITLE_AFTER, e.frac);
+                if (text !== e.queryTitleText) {
+                    e.queryTitleText = text;
+                    setQueryTitleText(text);
+                }
+            } else if (e.queryTitleText !== QUERY_TITLE_AFTER) {
+                e.queryTitleText = QUERY_TITLE_AFTER;
+                setQueryTitleText(QUERY_TITLE_AFTER);
+            }
+
+            // Step 56: the second query's table name, then its ORDER BY
+            // column — two scrollTypeReveal beats back to back, the table
+            // over the first half of the step's frac window and the column
+            // over the second, so the retarget reads as one edit following
+            // another rather than both fields changing at once.
+            if (s === 56) {
+                const table = scrollTypeReveal(
+                    SECOND_EDIT_TABLE_BEFORE,
+                    SECOND_EDIT_TABLE_AFTER,
+                    clamp01(e.frac / 0.5),
+                );
+                const orderCol = scrollTypeReveal(
+                    SECOND_EDIT_ORDERCOL_BEFORE,
+                    SECOND_EDIT_ORDERCOL_AFTER,
+                    clamp01((e.frac - 0.5) / 0.5),
+                );
+                if (table !== e.secondEditTable) {
+                    e.secondEditTable = table;
+                    setSecondEditTable(table);
+                }
+                if (orderCol !== e.secondEditOrderCol) {
+                    e.secondEditOrderCol = orderCol;
+                    setSecondEditOrderCol(orderCol);
+                }
+            } else if (
+                e.secondEditTable !== SECOND_EDIT_TABLE_AFTER ||
+                e.secondEditOrderCol !== SECOND_EDIT_ORDERCOL_AFTER
+            ) {
+                e.secondEditTable = SECOND_EDIT_TABLE_AFTER;
+                e.secondEditOrderCol = SECOND_EDIT_ORDERCOL_AFTER;
+                setSecondEditTable(SECOND_EDIT_TABLE_AFTER);
+                setSecondEditOrderCol(SECOND_EDIT_ORDERCOL_AFTER);
             }
 
             if (
@@ -1929,6 +2078,7 @@ const QuickDBStory: FC = () => {
                                                         </div>
                                                     </div>
                                                 )}
+
                                             </div>
 
                                             {/* tools */}
@@ -2033,6 +2183,11 @@ const QuickDBStory: FC = () => {
                                                             {g.items.map(it => (
                                                                 <div
                                                                     key={it}
+                                                                    ref={
+                                                                        it === "SQL Console"
+                                                                            ? set("sidebarSqlConsole")
+                                                                            : undefined
+                                                                    }
                                                                     style={{
                                                                         height: 24,
                                                                         display:
@@ -2042,7 +2197,18 @@ const QuickDBStory: FC = () => {
                                                                         gap: 8,
                                                                         padding:
                                                                             "0 12px 0 40px",
-                                                                        color: C.textDim,
+                                                                        background:
+                                                                            it === "SQL Console" && s >= 21
+                                                                                ? C.raised
+                                                                                : "transparent",
+                                                                        color:
+                                                                            it === "SQL Console" && s >= 21
+                                                                                ? C.text
+                                                                                : C.textDim,
+                                                                        fontWeight:
+                                                                            it === "SQL Console" && s >= 21
+                                                                                ? 600
+                                                                                : 400,
                                                                     }}
                                                                 >
                                                                     <span
@@ -2172,6 +2338,687 @@ const QuickDBStory: FC = () => {
                                         step={s}
                                         installBtnRef={set("installBtn")}
                                     />
+                                )}
+
+                                {/* The Query Console webview only takes over the editor pane
+                                    once the old Data View grid has actually closed (see
+                                    QC_OPEN_AT) — gated on !grid, not a flat s>=21, so the two
+                                    panes never show at the same time and the swap lands right
+                                    as the cursor arrives at "SQL Console" in the sidebar. */}
+                                {!grid && s >= 21 && (
+                                    <div
+                                        style={{
+                                            flex: 1,
+                                            display: "flex",
+                                            flexDirection: "column",
+                                            minHeight: 0,
+                                            background: "#1e1e1e",
+                                            color: "#cccccc",
+                                            fontFamily: "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace",
+                                            position: "relative",
+                                            overflow: "hidden",
+                                        }}
+                                    >
+                                        {/* Top Editor Tab Bar */}
+                                        <div
+                                            style={{
+                                                height: 36,
+                                                flex: "none",
+                                                display: "flex",
+                                                alignItems: "stretch",
+                                                background: C.chrome,
+                                                borderBottom: `1px solid ${C.line}`,
+                                                fontSize: 12,
+                                            }}
+                                        >
+                                            {s === 21 && (
+                                                <div style={{ padding: "0 14px", display: "flex", alignItems: "center", color: C.muted }}>
+                                                    VS Code
+                                                </div>
+                                            )}
+                                            {s >= 22 && s <= 23 && (
+                                                <div
+                                                    style={{
+                                                        padding: "0 14px",
+                                                        background: "#1e1e1e",
+                                                        borderTop: "2px solid #0078d4",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        color: "#fff",
+                                                        fontSize: 12,
+                                                    }}
+                                                >
+                                                    <span>📄</span> SQL Console <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                </div>
+                                            )}
+                                            {s >= 24 && s <= 59 && (
+                                                <div
+                                                    style={{
+                                                        padding: "0 14px",
+                                                        background: "#1e1e1e",
+                                                        borderTop: "2px solid #0078d4",
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 8,
+                                                        color: "#fff",
+                                                        fontSize: 12,
+                                                    }}
+                                                >
+                                                    <span>📄</span> Query Console: Demo &gt; classicmodels <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                </div>
+                                            )}
+                                            {s >= 60 && (
+                                                <>
+                                                    <div
+                                                        style={{
+                                                            padding: "0 14px",
+                                                            background: "#181818",
+                                                            borderRight: "1px solid #2d2d2d",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            color: "#888",
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        <span>📄</span> Query Console: Demo &gt; classicmodels
+                                                    </div>
+                                                    <div
+                                                        style={{
+                                                            padding: "0 14px",
+                                                            background: "#1e1e1e",
+                                                            borderTop: "2px solid #0078d4",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            color: "#fff",
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        <span>📊</span> QuickDB Visualization <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                    </div>
+                                                </>
+                                            )}
+
+                                            <div
+                                                style={{
+                                                    marginLeft: "auto",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 14,
+                                                    padding: "0 14px",
+                                                    color: C.muted,
+                                                    fontSize: 13,
+                                                }}
+                                            >
+                                                <span style={{ color: C.amber }}>✳</span>
+                                                <span>◫</span>
+                                                <span>···</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Webview Area */}
+                                        <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
+                                            
+                                            {/* Step 21: VS Code Watermark Page */}
+                                            {s === 21 && (
+                                                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", background: "#181818" }}>
+                                                    <svg width="120" height="120" viewBox="0 0 24 24" fill="rgba(255,255,255,0.06)">
+                                                        <path d="M23.5 12l-5.5 5.5-12-12L1.5 8 0 9.5 6 12 0 14.5 1.5 16l4.5 2.5 12-12 5.5 5.5z"/>
+                                                    </svg>
+                                                    <div style={{ marginTop: 24, display: "flex", flexDirection: "column", gap: 8, fontSize: 12, color: "#666" }}>
+                                                        <div>Open Chat <span style={{ background: "#252526", padding: "2px 6px", borderRadius: 3, marginLeft: 8 }}>^ ⌘ I</span></div>
+                                                        <div>Show All Commands <span style={{ background: "#252526", padding: "2px 6px", borderRadius: 3, marginLeft: 8 }}>⇧ ⌘ P</span></div>
+                                                        <div>Open Recent <span style={{ background: "#252526", padding: "2px 6px", borderRadius: 3, marginLeft: 8 }}>^ R</span></div>
+                                                        <div>Open File or Folder <span style={{ background: "#252526", padding: "2px 6px", borderRadius: 3, marginLeft: 8 }}>⌘ O</span></div>
+                                                        <div>New Untitled Text File <span style={{ background: "#252526", padding: "2px 6px", borderRadius: 3, marginLeft: 8 }}>⌘ N</span></div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 22-23: SQL Console Start Card */}
+                                            {(s === 22 || s === 23) && (
+                                                <div style={{ flex: 1, padding: 40, background: "#181818", display: "flex", flexDirection: "column", gap: 24 }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                                        <span style={{ fontSize: 28 }}>🚀</span>
+                                                        <div>
+                                                            <h2 style={{ fontSize: 18, fontWeight: 700, color: "#fff", margin: 0 }}>SQL Console</h2>
+                                                            <p style={{ fontSize: 12, color: "#888", margin: "4px 0 0" }}>Open a saved query or start a new one</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div
+                                                        ref={set("newQueryBtnCard")}
+                                                        style={{
+                                                            border: s === 23 ? "1.5px solid #0078d4" : "1px dashed rgba(255,255,255,0.15)",
+                                                            borderRadius: 8,
+                                                            padding: "16px 20px",
+                                                            background: s === 23 ? "rgba(0,120,212,0.1)" : "#222222",
+                                                            cursor: "pointer",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 16,
+                                                            transition: "all 0.2s ease",
+                                                            maxWidth: 580,
+                                                        }}
+                                                    >
+                                                        <div style={{ width: 36, height: 36, borderRadius: 6, background: "rgba(0,120,212,0.2)", color: "#70baff", display: "grid", placeItems: "center", fontSize: 20 }}>+</div>
+                                                        <div>
+                                                            <div style={{ fontSize: 14, fontWeight: 600, color: "#fff" }}>New Query</div>
+                                                            <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>Open a blank SQL console — pick the connection inside it</div>
+                                                        </div>
+                                                        <span style={{ marginLeft: "auto", color: "#666" }}>›</span>
+                                                    </div>
+
+                                                    <div style={{ marginTop: 20, textAlign: "center", color: "#555", fontSize: 12 }}>
+                                                        📦<br />No saved queries yet — save one from the console and it'll show up here.
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 24+: Active Query Console Webview Studio */}
+                                            {s >= 24 && s <= 59 && (
+                                                <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "#181818" }}>
+                                                    
+                                                    {/* Webview Studio Header Toolbar */}
+                                                    <div style={{ height: 38, background: "#1f1f1f", borderBottom: "1px solid #2d2d2d", display: "flex", alignItems: "center", padding: "0 10px", gap: 10, fontSize: 11.5 }}>
+                                                        
+                                                        {/* Sub-tab Query 1 */}
+                                                        <div style={{ padding: "3px 8px", background: "#2a2a2a", borderRadius: 4, color: "#fff", display: "flex", alignItems: "center", gap: 6 }}>
+                                                            <span>📄</span> Query 1 <span style={{ opacity: 0.5 }}>+</span>
+                                                        </div>
+
+                                                        <div style={{ width: 1, height: 16, background: "#333" }} />
+
+                                                        {/* Action Buttons Left */}
+                                                        <button
+                                                            ref={set("topRunQueryBtn")}
+                                                            style={{
+                                                                padding: "3px 10px",
+                                                                borderRadius: 4,
+                                                                background: s === 39 || s === 40 || s === 57 || s === 58 ? "#0078d4" : "#2a2a2a",
+                                                                border: s === 39 || s === 40 || s === 57 || s === 58 ? "1px solid #4daafc" : "1px solid #3c3c3c",
+                                                                color: "#fff",
+                                                                fontWeight: 600,
+                                                                fontSize: 11,
+                                                                cursor: "pointer",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 4,
+                                                            }}
+                                                        >
+                                                            <span>▷</span> Run
+                                                        </button>
+                                                        <span style={{ color: "#777", fontSize: 13, cursor: "pointer" }}>⛶</span>
+                                                        <span style={{ color: "#777", fontSize: 13, cursor: "pointer" }}>🔗</span>
+                                                        <span style={{ color: "#777", fontSize: 13, cursor: "pointer" }}>📊</span>
+                                                        <span style={{ color: "#777", fontSize: 11, cursor: "pointer", background: "#282828", padding: "2px 6px", borderRadius: 3 }}>🤖 AI</span>
+
+                                                        {/* Dropdowns Right */}
+                                                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
+                                                            
+                                                            {/* Connection Selector */}
+                                                            <div
+                                                                ref={set("topConnSelectBtn")}
+                                                                style={{
+                                                                    padding: "3px 10px",
+                                                                    background: s >= 25 && s <= 26 ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                    border: s >= 25 && s <= 26 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                    borderRadius: 4,
+                                                                    color: s >= 27 ? "#fff" : "#aaa",
+                                                                    fontSize: 11,
+                                                                    cursor: "pointer",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 6,
+                                                                }}
+                                                            >
+                                                                <span>{s >= 27 ? "Demo · mysql" : "Select connection"}</span>
+                                                                <span style={{ opacity: 0.6 }}>▾</span>
+                                                            </div>
+
+                                                            {/* Database Selector */}
+                                                            <div
+                                                                ref={set("topDbSelectBtn")}
+                                                                style={{
+                                                                    padding: "3px 10px",
+                                                                    background: s >= 28 && s <= 29 ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                    border: s >= 28 && s <= 29 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                    borderRadius: 4,
+                                                                    color: s >= 30 ? "#fff" : "#aaa",
+                                                                    fontSize: 11,
+                                                                    cursor: "pointer",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 6,
+                                                                }}
+                                                            >
+                                                                <span>{s >= 30 ? "classicmodels" : "Select database"}</span>
+                                                                <span style={{ opacity: 0.6 }}>▾</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Connection Options Popup (Step 26) */}
+                                                    {s === 26 && (
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: 42,
+                                                                right: 120,
+                                                                width: 160,
+                                                                background: "#252526",
+                                                                border: "1px solid #0078d4",
+                                                                borderRadius: 4,
+                                                                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                                                                zIndex: 50,
+                                                                padding: 4,
+                                                            }}
+                                                        >
+                                                            <div
+                                                                ref={set("connOptionDemoItem")}
+                                                                style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                                                            >
+                                                                Demo · mysql
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Database Options Popup (Step 29) */}
+                                                    {s === 29 && (
+                                                        <div
+                                                            style={{
+                                                                position: "absolute",
+                                                                top: 42,
+                                                                right: 14,
+                                                                width: 150,
+                                                                background: "#252526",
+                                                                border: "1px solid #0078d4",
+                                                                borderRadius: 4,
+                                                                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                                                                zIndex: 50,
+                                                                padding: 4,
+                                                            }}
+                                                        >
+                                                            <div
+                                                                ref={set("dbOptionClassicItem")}
+                                                                style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                                                            >
+                                                                classicmodels
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage Body */}
+                                                    <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
+                                                        
+                                                        {/* Empty Connection Prompt (Step 24–29) */}
+                                                        {s >= 24 && s <= 29 ? (
+                                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#777", gap: 12 }}>
+                                                                <span style={{ fontSize: 32 }}>🔌</span>
+                                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#ccc" }}>Select a connection</div>
+                                                                <div style={{ fontSize: 12, maxWidth: 380, textAlign: "center", color: "#777" }}>
+                                                                    Choose a connection from the selector in the top-right. The SQL editor opens once a connection and database are set.
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            /* Active Editor & Results (Step 30+) */
+                                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                                                                
+                                                                {/* Monaco SQL Editor */}
+                                                                <div
+                                                                    ref={set("monacoSqlEditor")}
+                                                                    style={{
+                                                                        height: s >= 40 ? 170 : 360,
+                                                                        background: "#1e1e1e",
+                                                                        padding: "12px 16px",
+                                                                        fontFamily: "ui-monospace, monospace",
+                                                                        fontSize: 13,
+                                                                        position: "relative",
+                                                                        borderBottom: "1px solid #2d2d2d",
+                                                                        transition: "height 0.3s ease",
+                                                                    }}
+                                                                >
+                                                                    <div style={{ color: "#888", fontSize: 10, position: "absolute", top: 6, right: 12 }}>
+                                                                        {s >= 52 ? "1 line · 55 chars" : "1 line · 97 chars"}
+                                                                    </div>
+                                                                    <div style={{ display: "flex", gap: 16 }}>
+                                                                        <div style={{ color: "#555", width: 14 }}>1</div>
+                                                                        <div style={{ color: "#d4d4d4", flex: 1, whiteSpace: "pre-wrap" }}>
+                                                                            {s === 31 && (
+                                                                                <span style={{ color: "#6a6a6a", fontStyle: "italic" }}>Write SQL statements...</span>
+                                                                            )}
+                                                                            {s === 32 && <span>s</span>}
+                                                                            {s === 33 && <KW>SELECT</KW>}
+                                                                            {s === 34 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> *
+                                                                                </span>
+                                                                            )}
+                                                                            {s === 35 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW>
+                                                                                </span>
+                                                                            )}
+                                                                            {s === 36 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers
+                                                                                </span>
+                                                                            )}
+                                                                            {s === 37 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW>
+                                                                                </span>
+                                                                            )}
+                                                                            {s >= 38 && s < 52 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW> payments <KW>ON</KW> payments.customerNumber = customers.customerNumber;
+                                                                                </span>
+                                                                            )}
+                                                                            {s >= 52 && s <= 55 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> my_table
+                                                                                </span>
+                                                                            )}
+                                                                            {s >= 56 && (
+                                                                                <span>
+                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> {s === 56 ? secondEditTable : SECOND_EDIT_TABLE_AFTER} <KW>ORDER BY</KW> {s === 56 ? secondEditOrderCol : SECOND_EDIT_ORDERCOL_AFTER} <KW>DESC LIMIT</KW> 10;
+                                                                                </span>
+                                                                            )}
+                                                                            <span style={{ borderLeft: "2px solid #0078d4", marginLeft: 2 }} />
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* IntelliSense Autocomplete Popup — two-pane, matching the
+                                                                        reference screenshots: a suggestion list on the left,
+                                                                        a detail card for the highlighted entry on the right. */}
+                                                                    {s === 32 && (
+                                                                        <AutocompletePopup
+                                                                            items={[
+                                                                                { label: "SELECT", hint: "Keyword", active: true },
+                                                                                { label: "SELECT * snippet", hint: "" },
+                                                                                { label: "SELECT COUNT snippet", hint: "" },
+                                                                            ]}
+                                                                            detailTitle="SELECT"
+                                                                            detailBody="Choose the columns/expressions to return."
+                                                                        />
+                                                                    )}
+                                                                    {s === 33 && (
+                                                                        <AutocompletePopup
+                                                                            items={[
+                                                                                { label: "*", active: true },
+                                                                                { label: "DISTINCT" },
+                                                                                { label: "ALL" },
+                                                                                { label: "CASE" },
+                                                                                { label: "FROM" },
+                                                                                { label: "COUNT", hint: "aggregate" },
+                                                                                { label: "SUM", hint: "aggregate" },
+                                                                            ]}
+                                                                        />
+                                                                    )}
+                                                                    {s === 34 && (
+                                                                        <AutocompletePopup
+                                                                            items={[{ label: "FROM", hint: "Keyword", active: true }]}
+                                                                            detailTitle="FROM"
+                                                                            detailBody="The table(s) the rows come from."
+                                                                        />
+                                                                    )}
+                                                                    {s === 35 && (
+                                                                        <AutocompletePopup
+                                                                            items={[
+                                                                                { label: "customers", hint: "table", active: true },
+                                                                                { label: "employees", hint: "table" },
+                                                                                { label: "offices", hint: "table" },
+                                                                                { label: "orderdetails", hint: "table" },
+                                                                                { label: "orders", hint: "table" },
+                                                                                { label: "payments", hint: "table" },
+                                                                                { label: "productlines", hint: "table" },
+                                                                            ]}
+                                                                            detailTitle="customers"
+                                                                            detailBody="table"
+                                                                        />
+                                                                    )}
+                                                                    {s === 36 && (
+                                                                        <AutocompletePopup
+                                                                            items={[
+                                                                                { label: "WHERE" },
+                                                                                { label: "JOIN" },
+                                                                                { label: "LEFT JOIN", active: true },
+                                                                                { label: "INNER JOIN" },
+                                                                                { label: "RIGHT JOIN" },
+                                                                                { label: "GROUP BY" },
+                                                                                { label: "ORDER BY" },
+                                                                            ]}
+                                                                            detailTitle="LEFT JOIN"
+                                                                            detailBody="Keep all left rows; NULLs where the right side has no match."
+                                                                        />
+                                                                    )}
+                                                                    {s === 37 && (
+                                                                        <AutocompletePopup
+                                                                            items={[
+                                                                                { label: "employees", hint: "FK" },
+                                                                                { label: "payments", hint: "FK", active: true },
+                                                                                { label: "orders", hint: "FK" },
+                                                                                { label: "employees", hint: "table" },
+                                                                                { label: "offices", hint: "table" },
+                                                                            ]}
+                                                                            detailTitle="payments (FK)"
+                                                                            detailBody="payments.customerNumber → customers.customerNumber"
+                                                                        />
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Results Grid Stage (Step 40+) */}
+                                                                {s >= 40 && (
+                                                                    <div style={{ flex: 1, display: "flex", flexDirection: "column", background: "#181818", minHeight: 0 }}>
+                                                                        <div style={{ height: 30, background: "#222", borderBottom: "1px solid #2d2d2d", display: "flex", alignItems: "center", padding: "0 12px", gap: 12, fontSize: 11 }}>
+                                                                            <span style={{ background: "#059669", color: "#fff", padding: "1px 6px", borderRadius: 3, fontWeight: 600 }}>OK</span>
+                                                                            <span style={{ color: "#aaa" }}>{s >= 58 ? "10 rows • 5ms" : "297 rows 17 cols • 9ms"}</span>
+                                                                            <div
+                                                                                ref={set("visualizeBarBtn")}
+                                                                                style={{
+                                                                                    marginLeft: "auto",
+                                                                                    display: "flex",
+                                                                                    alignItems: "center",
+                                                                                    gap: 4,
+                                                                                    background: s >= 60 ? "#0078d4" : "#2c2c2c",
+                                                                                    color: "#fff",
+                                                                                    padding: "2px 8px",
+                                                                                    borderRadius: 4,
+                                                                                    cursor: "pointer",
+                                                                                    fontSize: 11,
+                                                                                }}
+                                                                            >
+                                                                                <span>📊</span> Visualize
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div style={{ flex: 1, overflow: "auto" }}>
+                                                                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, textAlign: "left" }}>
+                                                                                <thead>
+                                                                                    <tr style={{ background: "#252526", borderBottom: "1px solid #333", color: "#888" }}>
+                                                                                        <th style={{ padding: "6px 10px", width: 30 }}>#</th>
+                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "orderNumber" : "customerNumber"}</th>
+                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "productCode" : "customerName"}</th>
+                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "quantityOrdered" : "contactLastName"}</th>
+                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "priceEach" : "contactFirstName"}</th>
+                                                                                    </tr>
+                                                                                </thead>
+                                                                                <tbody>
+                                                                                    {[
+                                                                                        [1, s >= 58 ? "10425" : "103", s >= 58 ? "S10_1678" : "Atelier graphique", s >= 58 ? "33" : "Schmitt", s >= 58 ? "$95.70" : "Carine"],
+                                                                                        [2, s >= 58 ? "10424" : "103", s >= 58 ? "S12_1099" : "Atelier graphique", s >= 58 ? "50" : "Schmitt", s >= 58 ? "$100.00" : "Carine"],
+                                                                                        [3, s >= 58 ? "10423" : "103", s >= 58 ? "S18_2238" : "Atelier graphique", s >= 58 ? "28" : "Schmitt", s >= 58 ? "$68.44" : "Carine"],
+                                                                                        [4, s >= 58 ? "10422" : "112", s >= 58 ? "S24_3856" : "Signal Gift Stores", s >= 58 ? "41" : "King", s >= 58 ? "$120.50" : "Jean"],
+                                                                                    ].map(([r, c1, c2, c3, c4]) => (
+                                                                                        <tr key={r} style={{ borderBottom: "1px solid #222" }}>
+                                                                                            <td style={{ padding: "6px 10px", color: "#666" }}>{r}</td>
+                                                                                            <td style={{ padding: "6px 10px", color: "#70baff" }}>{c1}</td>
+                                                                                            <td style={{ padding: "6px 10px", color: "#ddd" }}>{c2}</td>
+                                                                                            <td style={{ padding: "6px 10px", color: "#aaa" }}>{c3}</td>
+                                                                                            <td style={{ padding: "6px 10px", color: "#34d399" }}>{c4}</td>
+                                                                                        </tr>
+                                                                                    ))}
+                                                                                </tbody>
+                                                                            </table>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {/* Webview Far Right Vertical Icon Bar */}
+                                                        <div style={{ width: 36, background: "#1c1c1c", borderLeft: "1px solid #2d2d2d", display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", gap: 12 }}>
+                                                            <div ref={set("schemaExpRightIcon")} title="Schema Explorer" style={{ color: s === 41 || s === 42 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>🗂</div>
+                                                            <div ref={set("queryHistoryRightIcon")} title="Query History" style={{ color: s === 43 || s === 44 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>📜</div>
+                                                            <div ref={set("savedQueriesRightIcon")} title="Saved Queries" style={{ color: s >= 45 && s <= 50 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>⭐</div>
+                                                            <div ref={set("sqlSnippetsRightIcon")} title="SQL Snippets" style={{ color: s >= 51 && s <= 59 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>⚡</div>
+                                                        </div>
+
+                                                        {/* Schema Explorer Drawer (Step 41–42) */}
+                                                        {(s === 41 || s === 42) && (
+                                                            <div style={{ width: 220, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 8, fontSize: 11.5 }}>
+                                                                <div style={{ fontWeight: 700, color: "#fff" }}>🗂 Schema Explorer</div>
+                                                                <div style={{ color: "#70baff" }}>▼ classicmodels (8)</div>
+                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>▼ customers (122)</div>
+                                                                <div style={{ paddingLeft: 20, color: "#888", fontSize: 11 }}>🔑 customerNumber INT</div>
+                                                                <div style={{ paddingLeft: 20, color: "#888", fontSize: 11 }}>customerName VARCHAR</div>
+                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>► orders (326)</div>
+                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>► payments (273)</div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Local History Side Panel (Step 43–44) */}
+                                                        {(s === 43 || s === 44) && (
+                                                            <div style={{ width: 280, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
+                                                                    <span>Local History</span>
+                                                                    <span style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                </div>
+                                                                <div style={{ padding: 8, background: "#1a1a1a", border: "1px solid #333", borderRadius: 4 }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", color: "#70baff", fontSize: 10 }}>
+                                                                        <span>SELECT ✓</span> <span>10/08/2026</span>
+                                                                    </div>
+                                                                    <div style={{ color: "#fff", marginTop: 4, fontSize: 11 }}>SELECT * FROM customers LEFT JOIN payments...</div>
+                                                                    <div style={{ color: "#666", marginTop: 4, fontSize: 10 }}>297 rows • 8ms</div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Saved Queries Side Panel & Modal (Step 45–50) */}
+                                                        {s >= 45 && s <= 50 && (
+                                                            <>
+                                                                <div style={{ width: 260, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
+                                                                        <span>Saved Queries</span>
+                                                                        <span ref={set("saveQueryAsBtn")} style={{ color: "#70baff", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                    </div>
+                                                                    {s === 50 && (
+                                                                        <div style={{ padding: 8, background: "rgba(0,120,212,0.15)", border: "1px solid #0078d4", borderRadius: 4, color: "#fff", fontSize: 11 }}>
+                                                                            ⭐ How many total customers have made a payment?
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+
+                                                                {s >= 46 && (
+                                                                <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60 }}>
+                                                                    <div style={{ width: 440, background: "#252526", border: "1px solid #0078d4", borderRadius: 8, padding: 18 }}>
+                                                                        <h4 style={{ margin: "0 0 12px", color: "#fff", fontSize: 13 }}>Update saved query</h4>
+                                                                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                                                            <input
+                                                                                ref={set("queryTitleModalInput")}
+                                                                                readOnly
+                                                                                value={s === 46 ? QUERY_TITLE_BEFORE : s === 47 ? queryTitleText : QUERY_TITLE_AFTER}
+                                                                                style={{ width: "100%", padding: "6px 10px", background: "#1e1e1e", border: "1px solid #0078d4", borderRadius: 4, color: "#fff", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis" }}
+                                                                            />
+                                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+                                                                                <button style={{ padding: "4px 12px", background: "#333", border: "none", borderRadius: 4, color: "#ccc", fontSize: 11 }}>Cancel</button>
+                                                                                <button ref={set("updateQueryModalBtn")} style={{ padding: "4px 14px", background: s >= 49 ? "#0078d4" : "#2a2a2a", border: s >= 49 ? "1px solid #4daafc" : "1px solid #3c3c3c", borderRadius: 4, color: "#fff", fontWeight: 600, fontSize: 11 }}>Update</button>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                                )}
+                                                            </>
+                                                        )}
+
+                                                        {/* SQL Snippets Side Panel (Step 51–59) */}
+                                                        {s >= 51 && s <= 59 && (
+                                                            <div style={{ width: 300, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
+                                                                    <span>SQL Snippets</span>
+                                                                    <span ref={set("closeSnippetRightBtn")} style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                </div>
+                                                                <input
+                                                                    ref={set("snippetSearchInput")}
+                                                                    readOnly
+                                                                    value={s >= 53 ? "orderDetails" : ""}
+                                                                    placeholder="Filter snippets..."
+                                                                    style={{ width: "100%", padding: "5px 8px", background: "#1c1c1c", border: "1px solid #3c3c3c", borderRadius: 4, color: "#fff", fontSize: 11 }}
+                                                                />
+                                                                <div
+                                                                    ref={set("snippetCardItem")}
+                                                                    style={{ padding: 10, background: s >= 54 ? "rgba(0,120,212,0.2)" : "#1c1c1c", border: "1px solid #0078d4", borderRadius: 4, cursor: "pointer" }}
+                                                                >
+                                                                    <div style={{ color: "#fff", fontWeight: 600, fontSize: 11 }}>Top 10 newest rows</div>
+                                                                    <div style={{ color: "#70baff", fontSize: 10, marginTop: 4 }}>SELECT * FROM my_table ORDER BY created_at DESC LIMIT 10;</div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 60-61: QuickDB Visualization Full View (Image 41) */}
+                                            {s >= 60 && (
+                                                <div style={{ flex: 1, display: "flex", minHeight: 0, background: "#141418" }}>
+                                                    
+                                                    {/* Left Controls Panel */}
+                                                    <div style={{ width: 280, background: "#1c1c22", borderRight: "1px solid #2d2d35", padding: 16, display: "flex", flexDirection: "column", gap: 16, fontSize: 11.5 }}>
+                                                        <div>
+                                                            <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>CHART TYPE</div>
+                                                            <div style={{ padding: "6px 10px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#fff", marginTop: 6 }}>
+                                                                XY CHART Line
+                                                            </div>
+                                                        </div>
+                                                        <div>
+                                                            <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>AXES & GROUPING</div>
+                                                            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 8 }}>
+                                                                <div style={{ padding: "6px 10px", background: "#252530", borderRadius: 4, color: "#70baff" }}>
+                                                                    X: productCode <span style={{ color: "#34d399", float: "right" }}>STR</span>
+                                                                </div>
+                                                                <div style={{ padding: "6px 10px", background: "#252530", borderRadius: 4, color: "#70baff" }}>
+                                                                    Y: orderLineNumber <span style={{ color: "#f59e0b", float: "right" }}>NUM</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right Preview Canvas SVG */}
+                                                    <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16, background: "#0e0e12" }}>
+                                                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>SELECT * FROM orderdetails ORDER BY orderNumber DESC LIMIT 1</div>
+                                                        <div style={{ flex: 1, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 20, position: "relative" }}>
+                                                            <svg width="100%" height="100%" viewBox="0 0 700 240" preserveAspectRatio="none">
+                                                                <line x1="0" y1="40" x2="700" y2="40" stroke="rgba(255,255,255,0.05)" />
+                                                                <line x1="0" y1="90" x2="700" y2="90" stroke="rgba(255,255,255,0.05)" />
+                                                                <line x1="0" y1="140" x2="700" y2="140" stroke="rgba(255,255,255,0.05)" />
+                                                                <polyline
+                                                                    fill="none"
+                                                                    stroke="#0078d4"
+                                                                    strokeWidth="2.5"
+                                                                    points="0,180 70,140 140,40 210,120 280,70 350,190 420,30 490,90 560,60 630,90 700,120"
+                                                                />
+                                                                {[[0,180],[70,140],[140,40],[210,120],[280,70],[350,190],[420,30],[490,90],[560,60],[630,90],[700,120]].map(([x,y],i) => (
+                                                                    <circle key={i} cx={x} cy={y} r="4" fill="#0078d4" stroke="#fff" strokeWidth="1.5" />
+                                                                ))}
+                                                            </svg>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
                                 )}
 
                                 {grid && (
@@ -2889,6 +3736,72 @@ const DbGlyph: FC<{ size?: number; stroke?: string; full?: boolean }> = ({
         <path d="M5 6v12c0 1.4 3.13 2.6 7 2.6s7-1.2 7-2.6V6" />
         {full && <path d="M5 12c0 1.4 3.13 2.6 7 2.6s7-1.2 7-2.6" />}
     </svg>
+);
+
+/** SQL keyword highlight, used throughout the Query Console's editor snapshots. */
+const KW: FC<{ children: ReactNode }> = ({ children }) => (
+    <span style={{ color: "#569cd6", fontWeight: 600 }}>{children}</span>
+);
+
+/**
+ * The two-pane IntelliSense popup used across the query-typing sequence
+ * (steps 32-37): a suggestion list on the left, and — when the active item
+ * has one — a detail card on the right, matching the real SQL Console's
+ * autocomplete chrome in the reference screenshots.
+ */
+const AutocompletePopup: FC<{
+    items: readonly { label: string; hint?: string; active?: boolean }[];
+    detailTitle?: string;
+    detailBody?: string;
+}> = ({ items, detailTitle, detailBody }) => (
+    <div style={{ position: "absolute", top: 34, left: 120, display: "flex", zIndex: 40 }}>
+        <div
+            style={{
+                width: 220,
+                maxHeight: 150,
+                overflow: "hidden",
+                background: "#252526",
+                border: "1px solid #0078d4",
+                borderRadius: 4,
+                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                padding: 4,
+                fontSize: 12,
+            }}
+        >
+            {items.map((it, i) => (
+                <div
+                    key={i}
+                    style={{
+                        padding: "4px 8px",
+                        background: it.active ? "#04395e" : "transparent",
+                        color: it.active ? "#fff" : "#aaa",
+                        borderRadius: 3,
+                        display: "flex",
+                        gap: 6,
+                    }}
+                >
+                    <span>{it.label}</span>
+                    {it.hint && <span style={{ color: it.active ? "#9cc7ea" : "#777" }}>{it.hint}</span>}
+                </div>
+            ))}
+        </div>
+        {detailTitle && (
+            <div
+                style={{
+                    width: 260,
+                    background: "#252526",
+                    border: "1px solid #0078d4",
+                    borderLeft: "none",
+                    borderRadius: "0 4px 4px 0",
+                    padding: "8px 10px",
+                    fontSize: 12,
+                }}
+            >
+                <div style={{ color: "#fff", fontWeight: 700 }}>{detailTitle}</div>
+                <div style={{ color: "#aaa", marginTop: 4, lineHeight: 1.4 }}>{detailBody}</div>
+            </div>
+        )}
+    </div>
 );
 
 const Caret: FC = () => (
