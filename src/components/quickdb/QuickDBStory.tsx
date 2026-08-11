@@ -122,7 +122,6 @@ type RefKey =
     | "queryTitleModalInput"
     | "updateQueryModalBtn"
     | "sqlSnippetsRightIcon"
-    | "snippetSearchInput"
     | "snippetCardItem"
     | "closeSnippetRightBtn"
     | "visualizeBarBtn";
@@ -307,6 +306,10 @@ const QuickDBStory: FC = () => {
     const [findDone, setFindDone] = useState(false);
     const [paymentsOpen, setPaymentsOpen] = useState(false);
     const [tableOpen, setTableOpen] = useState(false);
+    const [saveModalOpen, setSaveModalOpen] = useState(false);
+    const [connSelected, setConnSelected] = useState(false);
+    const [dbSelected, setDbSelected] = useState(false);
+    const [savedPanelOpen, setSavedPanelOpen] = useState(false);
     const [pastHover, setPastHover] = useState(false);
     const [pastClick, setPastClick] = useState(false);
     const [editPhase, setEditPhase] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
@@ -403,6 +406,10 @@ const QuickDBStory: FC = () => {
         selN: 0,
         paymentsOpen: false,
         tableOpen: false,
+        saveModalOpen: false,
+        connSelected: false,
+        dbSelected: false,
+        savedPanelOpen: false,
         pastHover: false,
         pastClick: false,
         editPhase: 0 as 0 | 1 | 2 | 3 | 4 | 5,
@@ -789,6 +796,48 @@ const QuickDBStory: FC = () => {
             // cursor holds still where it clicked rather than jumping.
             const paymentsOpen = s === 14 || (s === 15 && e.frac < CLOSE_AT);
 
+            // The "Update saved query" modal only opens once the cursor has
+            // actually arrived at the save icon and the click-pulse reads —
+            // same idea as paymentsOpen/tableOpen, just for step 46. 0.5 sits
+            // in the middle of the default (non-step-10) click-pulse window
+            // (frac 0.4–0.65, see glide's isClickWindow), so the modal lands
+            // right as the click registers instead of the instant step 46
+            // begins, before the cursor has even set off toward the icon.
+            //
+            // It also has to actually CLOSE again — TARGETS[49-50] point the
+            // cursor at the modal's own "Update" button, and clicking that is
+            // exactly what reveals the saved-query card sitting in the panel
+            // behind it (step 50's "show save query" beat). A modal that
+            // never closes keeps that card permanently hidden. Mirrors the
+            // open condition: closes at step 49's own click-pulse midpoint.
+            const saveModalOpen =
+                (s === 46 && e.frac >= 0.5) ||
+                (s > 46 && s < 49) ||
+                (s === 49 && e.frac < 0.5);
+
+            // Same problem, twice more: the connection/database dropdown
+            // popups were unmounting the instant their step ended (s===26,
+            // s===29), while TARGETS still pointed the cursor at an option
+            // *inside* them for the whole next step (27, 30) — the option
+            // vanished before the cursor got anywhere near it, and the
+            // "Demo · mysql" / "classicmodels" label just appeared on its
+            // own with no visible click. Selection now lands mid-click
+            // instead, and the popup (further down) stays mounted until then.
+            const connSelected = s > 27 || (s === 27 && e.frac >= 0.5);
+            const dbSelected = s > 30 || (s === 30 && e.frac >= 0.5);
+
+            // The right-side vertical icon bar (Schema Explorer / Query
+            // History / Saved Queries / SQL Snippets) has the same "opens
+            // before the click" problem. Three of the four get two steps at
+            // the same target (hover, then click) — TARGETS[41,42] etc. —
+            // so by the second step the cursor already had a full step to
+            // arrive; those just need to stop opening on the FIRST (hover)
+            // step and wait for the second. Saved Queries is the odd one
+            // out with only a single step (45) at its target, so it needs
+            // real frac-gating like saveModalOpen/connSelected above,
+            // rather than just picking the later of two steps.
+            const savedPanelOpen = s > 45 || (s === 45 && e.frac >= 0.5);
+
             // Mirror of paymentsOpen: the customers tab stays CLOSED through
             // the first part of step 10, so the cursor visibly arrives at the
             // customers row in the sidebar tree and "clicks" it before the
@@ -912,6 +961,10 @@ const QuickDBStory: FC = () => {
                 n !== e.selN ||
                 paymentsOpen !== e.paymentsOpen ||
                 tableOpen !== e.tableOpen ||
+                saveModalOpen !== e.saveModalOpen ||
+                connSelected !== e.connSelected ||
+                dbSelected !== e.dbSelected ||
+                savedPanelOpen !== e.savedPanelOpen ||
                 isPastHover !== e.pastHover ||
                 isPastClick !== e.pastClick ||
                 editPhase !== e.editPhase ||
@@ -920,6 +973,10 @@ const QuickDBStory: FC = () => {
                 const changedStep = s !== e.step;
                 const changedSelN = n !== e.selN;
                 const changedTableOpen = tableOpen !== e.tableOpen;
+                const changedSaveModalOpen = saveModalOpen !== e.saveModalOpen;
+                const changedConnSelected = connSelected !== e.connSelected;
+                const changedDbSelected = dbSelected !== e.dbSelected;
+                const changedSavedPanelOpen = savedPanelOpen !== e.savedPanelOpen;
                 const changedPaymentsOpen = paymentsOpen !== e.paymentsOpen;
                 const changedPastHover = isPastHover !== e.pastHover;
                 const changedPastClick = isPastClick !== e.pastClick;
@@ -931,6 +988,10 @@ const QuickDBStory: FC = () => {
                 e.selN = n;
                 e.paymentsOpen = paymentsOpen;
                 e.tableOpen = tableOpen;
+                e.saveModalOpen = saveModalOpen;
+                e.connSelected = connSelected;
+                e.dbSelected = dbSelected;
+                e.savedPanelOpen = savedPanelOpen;
                 e.pastHover = isPastHover;
                 e.pastClick = isPastClick;
                 e.editPhase = editPhase;
@@ -939,6 +1000,10 @@ const QuickDBStory: FC = () => {
                 if (changedStep) setStep(s);
                 if (changedSelN) setSelN(n);
                 if (changedTableOpen) setTableOpen(tableOpen);
+                if (changedSaveModalOpen) setSaveModalOpen(saveModalOpen);
+                if (changedConnSelected) setConnSelected(connSelected);
+                if (changedDbSelected) setDbSelected(dbSelected);
+                if (changedSavedPanelOpen) setSavedPanelOpen(savedPanelOpen);
                 if (changedPaymentsOpen) setPaymentsOpen(paymentsOpen);
                 if (changedPastHover) setPastHover(isPastHover);
                 if (changedPastClick) setPastClick(isPastClick);
@@ -2408,8 +2473,8 @@ const QuickDBStory: FC = () => {
                                                     {/* Builds up as the connection, then the database,
                                                         actually get picked — not the full "Demo >
                                                         classicmodels" from the moment the console opens. */}
-                                                    <span>📄</span> Query Console{s >= 27 && ": Demo"}
-                                                    {s >= 30 && " > classicmodels"} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                    <span>📄</span> Query Console{connSelected && ": Demo"}
+                                                    {dbSelected && " > classicmodels"} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
                                                 </div>
                                             )}
                                             {s >= 60 && (
@@ -2465,46 +2530,49 @@ const QuickDBStory: FC = () => {
                                                             ref={set("topConnSelectBtn")}
                                                             style={{
                                                                 padding: "3px 10px",
-                                                                background: s >= 25 && s <= 26 ? "rgba(0,120,212,0.3)" : "#252526",
-                                                                border: s >= 25 && s <= 26 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                background: (s >= 25 && s <= 26) || (s === 27 && !connSelected) ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                border: (s >= 25 && s <= 26) || (s === 27 && !connSelected) ? "1px solid #0078d4" : "1px solid #3a3a3a",
                                                                 borderRadius: 4,
-                                                                color: s >= 27 ? "#fff" : "#aaa",
+                                                                color: connSelected ? "#fff" : "#aaa",
                                                                 cursor: "pointer",
                                                                 display: "flex",
                                                                 alignItems: "center",
                                                                 gap: 6,
                                                             }}
                                                         >
-                                                            <span>{s >= 27 ? "Demo · mysql" : "Select connection"}</span>
+                                                            <span>{connSelected ? "Demo · mysql" : "Select connection"}</span>
                                                             <span style={{ opacity: 0.6 }}>▾</span>
                                                         </div>
 
                                                         {/* Database Selector — doesn't exist until a
-                                                            connection is actually picked (step 27+); you
-                                                            can't choose a database with no connection
-                                                            selected yet. */}
-                                                        {s >= 27 && (
+                                                            connection is actually picked; you can't choose
+                                                            a database with no connection selected yet. */}
+                                                        {connSelected && (
                                                             <div
                                                                 ref={set("topDbSelectBtn")}
                                                                 style={{
                                                                     padding: "3px 10px",
-                                                                    background: s >= 28 && s <= 29 ? "rgba(0,120,212,0.3)" : "#252526",
-                                                                    border: s >= 28 && s <= 29 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                    background: (s >= 28 && s <= 29) || (s === 30 && !dbSelected) ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                    border: (s >= 28 && s <= 29) || (s === 30 && !dbSelected) ? "1px solid #0078d4" : "1px solid #3a3a3a",
                                                                     borderRadius: 4,
-                                                                    color: s >= 30 ? "#fff" : "#aaa",
+                                                                    color: dbSelected ? "#fff" : "#aaa",
                                                                     cursor: "pointer",
                                                                     display: "flex",
                                                                     alignItems: "center",
                                                                     gap: 6,
                                                                 }}
                                                             >
-                                                                <span>{s >= 30 ? "classicmodels" : "Select database"}</span>
+                                                                <span>{dbSelected ? "classicmodels" : "Select database"}</span>
                                                                 <span style={{ opacity: 0.6 }}>▾</span>
                                                             </div>
                                                         )}
 
-                                                        {/* Connection Options Popup (Step 26) */}
-                                                        {s === 26 && (
+                                                        {/* Connection Options Popup — stays mounted through
+                                                            the first part of step 27 too (until connSelected
+                                                            flips), so the cursor has something to actually
+                                                            click on the whole time it's still traveling
+                                                            toward this option. */}
+                                                        {(s === 26 || (s === 27 && !connSelected)) && (
                                                             <div
                                                                 style={{
                                                                     position: "absolute",
@@ -2528,8 +2596,8 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                         )}
 
-                                                        {/* Database Options Popup (Step 29) */}
-                                                        {s === 29 && (
+                                                        {/* Database Options Popup — same fix, mirrored. */}
+                                                        {(s === 29 || (s === 30 && !dbSelected)) && (
                                                             <div
                                                                 style={{
                                                                     position: "absolute",
@@ -2678,10 +2746,22 @@ const QuickDBStory: FC = () => {
                                                                 <rect x="3.5" y="3.5" width="12" height="14" rx="1.5" />
                                                                 <path d="M8.5 8.5h12v14a1.5 1.5 0 01-1.5 1.5h-9a1.5 1.5 0 01-1.5-1.5v-14z" />
                                                             </svg>
-                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
-                                                                <path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" strokeLinejoin="round" />
-                                                                <path d="M8 4v5h7V4" strokeLinejoin="round" />
-                                                            </svg>
+                                                            {/* The actual save trigger — hovering/clicking
+                                                                THIS icon is what shows the "Update saved
+                                                                query (Shift-click to save as new)" tooltip
+                                                                and opens the modal, per the reference. Not
+                                                                the star icon on the far-right vertical bar,
+                                                                which only opens the Saved Queries list. */}
+                                                            <div
+                                                                ref={set("saveQueryAsBtn")}
+                                                                title="Update saved query (Shift-click to save as new)"
+                                                                style={{ color: s === 46 ? "#70baff" : "currentColor", cursor: "pointer", display: "flex" }}
+                                                            >
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                    <path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" strokeLinejoin="round" />
+                                                                    <path d="M8 4v5h7V4" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </div>
                                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
                                                                 <path d="M4 20V11M11 20V4M18 20v-8" strokeLinecap="round" />
                                                             </svg>
@@ -2693,8 +2773,10 @@ const QuickDBStory: FC = () => {
                                                     {/* Stage Body */}
                                                     <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
                                                         
-                                                        {/* Empty Connection Prompt (Step 24-26) */}
-                                                        {s >= 24 && s <= 26 ? (
+                                                        {/* Empty Connection Prompt — gated on connSelected,
+                                                            not a flat step range, so it stays up exactly as
+                                                            long as the connection dropdown popup above does. */}
+                                                        {!connSelected ? (
                                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#777", gap: 12 }}>
                                                                 <span style={{ fontSize: 32 }}>🔌</span>
                                                                 <div style={{ fontSize: 14, fontWeight: 600, color: "#ccc" }}>Select a connection</div>
@@ -2702,9 +2784,9 @@ const QuickDBStory: FC = () => {
                                                                     Choose a connection from the selector in the top-right. The SQL editor opens once a connection and database are set.
                                                                 </div>
                                                             </div>
-                                                        ) : s >= 27 && s <= 29 ? (
-                                                            /* Empty Database Prompt (Step 27-29): connection
-                                                               is picked, still need a database. */
+                                                        ) : !dbSelected ? (
+                                                            /* Empty Database Prompt: connection is picked,
+                                                               still need a database. */
                                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#777", gap: 12 }}>
                                                                 <span style={{ fontSize: 32 }}>🔌</span>
                                                                 <div style={{ fontSize: 14, fontWeight: 600, color: "#ccc" }}>Select a database</div>
@@ -2713,7 +2795,7 @@ const QuickDBStory: FC = () => {
                                                                 </div>
                                                             </div>
                                                         ) : (
-                                                            /* Active Editor & Results (Step 30+) */
+                                                            /* Active Editor & Results — shows once dbSelected */
                                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
 
                                                                 {/* SQL QUERY section header — a separate bar
@@ -2742,7 +2824,13 @@ const QuickDBStory: FC = () => {
                                                                         SQL QUERY
                                                                     </span>
                                                                     <span>
-                                                                        {s <= 31 ? "0 lines · 0 chars" : s >= 52 ? "1 line · 55 chars" : "1 line · 97 chars"}
+                                                                        {s <= 31
+                                                                            ? "0 lines · 0 chars"
+                                                                            : s === 53
+                                                                              ? "3 lines · 102 chars"
+                                                                              : s >= 54
+                                                                                ? "6 lines · 156 chars"
+                                                                                : "1 line · 97 chars"}
                                                                     </span>
                                                                 </div>
 
@@ -2771,52 +2859,137 @@ const QuickDBStory: FC = () => {
                                                                         transition: "height 0.3s ease",
                                                                     }}
                                                                 >
-                                                                    <div style={{ display: "flex", gap: 16 }}>
-                                                                        <div style={{ color: "#555", width: 14 }}>1</div>
-                                                                        <div style={{ color: "#d4d4d4", flex: 1, whiteSpace: "pre-wrap" }}>
-                                                                            {s === 31 && (
-                                                                                <span style={{ color: "#6a6a6a", fontStyle: "italic" }}>Write SQL statements...</span>
-                                                                            )}
-                                                                            {s === 32 && <span>s</span>}
-                                                                            {s === 33 && <KW>SELECT</KW>}
-                                                                            {s === 34 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> *
-                                                                                </span>
-                                                                            )}
-                                                                            {s === 35 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW>
-                                                                                </span>
-                                                                            )}
-                                                                            {s === 36 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers
-                                                                                </span>
-                                                                            )}
-                                                                            {s === 37 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW>
-                                                                                </span>
-                                                                            )}
-                                                                            {s >= 38 && s < 52 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW> payments <KW>ON</KW> payments.customerNumber = customers.customerNumber;
-                                                                                </span>
-                                                                            )}
-                                                                            {s >= 52 && s <= 55 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> my_table
-                                                                                </span>
-                                                                            )}
-                                                                            {s >= 56 && (
-                                                                                <span>
-                                                                                    <KW>SELECT</KW> * <KW>FROM</KW> {s === 56 ? secondEditTable : SECOND_EDIT_TABLE_AFTER} <KW>ORDER BY</KW> {s === 56 ? secondEditOrderCol : SECOND_EDIT_ORDERCOL_AFTER} <KW>DESC LIMIT</KW> 10;
-                                                                                </span>
-                                                                            )}
-                                                                            <span style={{ borderLeft: "2px solid #0078d4", marginLeft: 2 }} />
+                                                                    <div style={{ display: "flex", flexDirection: "column" }}>
+                                                                        {/* Line 1 — the original first query. Once
+                                                                            the SQL Snippets flow starts (step 51+)
+                                                                            this line stays put; the reference
+                                                                            composes the SECOND query below it on
+                                                                            its own new lines rather than replacing
+                                                                            it, so both queries are visible at once
+                                                                            (matching the "Query 1" tab holding a
+                                                                            multi-statement buffer). */}
+                                                                        <div style={{ display: "flex", gap: 16 }}>
+                                                                            <div style={{ color: "#555", width: 14, flexShrink: 0 }}>1</div>
+                                                                            <div style={{ color: "#d4d4d4", flex: 1, whiteSpace: "pre-wrap" }}>
+                                                                                {s === 31 && (
+                                                                                    <span style={{ color: "#6a6a6a", fontStyle: "italic" }}>Write SQL statements...</span>
+                                                                                )}
+                                                                                {s === 32 && <span>s</span>}
+                                                                                {s === 33 && <KW>SELECT</KW>}
+                                                                                {s === 34 && (
+                                                                                    <span>
+                                                                                        <KW>SELECT</KW> *
+                                                                                    </span>
+                                                                                )}
+                                                                                {s === 35 && (
+                                                                                    <span>
+                                                                                        <KW>SELECT</KW> * <KW>FROM</KW>
+                                                                                    </span>
+                                                                                )}
+                                                                                {s === 36 && (
+                                                                                    <span>
+                                                                                        <KW>SELECT</KW> * <KW>FROM</KW> customers
+                                                                                    </span>
+                                                                                )}
+                                                                                {s === 37 && (
+                                                                                    <span>
+                                                                                        <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW>
+                                                                                    </span>
+                                                                                )}
+                                                                                {s >= 38 && (
+                                                                                    <span>
+                                                                                        <KW>SELECT</KW> * <KW>FROM</KW> customers <KW>LEFT JOIN</KW> payments <KW>ON</KW> payments.customerNumber = customers.customerNumber;
+                                                                                    </span>
+                                                                                )}
+                                                                                {s < 53 && <span style={{ borderLeft: "2px solid #0078d4", marginLeft: 2 }} />}
+                                                                            </div>
                                                                         </div>
+
+                                                                        {s >= 53 && (
+                                                                            <>
+                                                                                <div style={{ display: "flex", gap: 16 }}>
+                                                                                    <div style={{ color: "#555", width: 14, flexShrink: 0 }}>2</div>
+                                                                                    <div style={{ flex: 1 }}>&nbsp;</div>
+                                                                                </div>
+
+                                                                                {s === 53 ? (
+                                                                                    /* Typing "top" — this is what
+                                                                                       actually triggers the snippet
+                                                                                       autocomplete below, not a search
+                                                                                       box inside the side panel. */
+                                                                                    <div style={{ display: "flex", gap: 16 }}>
+                                                                                        <div style={{ color: "#555", width: 14, flexShrink: 0 }}>3</div>
+                                                                                        <div style={{ color: "#d4d4d4", flex: 1 }}>
+                                                                                            top
+                                                                                            <span style={{ borderLeft: "2px solid #0078d4", marginLeft: 2 }} />
+                                                                                        </div>
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <>
+                                                                                        <div style={{ display: "flex", gap: 16 }}>
+                                                                                            <div style={{ color: "#555", width: 14, flexShrink: 0 }}>3</div>
+                                                                                            <div style={{ color: "#d4d4d4", flex: 1 }}>
+                                                                                                <KW>SELECT</KW> *
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div style={{ display: "flex", gap: 16 }}>
+                                                                                            <div style={{ color: "#555", width: 14, flexShrink: 0 }}>4</div>
+                                                                                            <div style={{ color: "#d4d4d4", flex: 1 }}>
+                                                                                                <KW>FROM</KW> {s <= 55 ? SECOND_EDIT_TABLE_BEFORE : s === 56 ? secondEditTable : SECOND_EDIT_TABLE_AFTER}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div style={{ display: "flex", gap: 16 }}>
+                                                                                            <div style={{ color: "#555", width: 14, flexShrink: 0 }}>5</div>
+                                                                                            <div style={{ color: "#d4d4d4", flex: 1 }}>
+                                                                                                <KW>ORDER BY</KW> {s <= 55 ? SECOND_EDIT_ORDERCOL_BEFORE : s === 56 ? secondEditOrderCol : SECOND_EDIT_ORDERCOL_AFTER} <KW>DESC</KW>
+                                                                                            </div>
+                                                                                        </div>
+                                                                                        <div style={{ display: "flex", gap: 16 }}>
+                                                                                            <div style={{ color: "#555", width: 14, flexShrink: 0 }}>6</div>
+                                                                                            <div style={{ color: "#d4d4d4", flex: 1 }}>
+                                                                                                <KW>LIMIT</KW> 10;
+                                                                                                {s >= 56 && <span style={{ borderLeft: "2px solid #0078d4", marginLeft: 2 }} />}
+                                                                                            </div>
+                                                                                        </div>
+                                                                                    </>
+                                                                                )}
+                                                                            </>
+                                                                        )}
                                                                     </div>
+
+                                                                    {/* Snippet Autocomplete — a single wide row
+                                                                        (title + description inline), not the
+                                                                        two-pane keyword popup below: matches the
+                                                                        reference's distinct "text snippet" style
+                                                                        suggestion. */}
+                                                                    {s === 53 && (
+                                                                        <div
+                                                                            style={{
+                                                                                position: "absolute",
+                                                                                top: 78,
+                                                                                left: 30,
+                                                                                width: 460,
+                                                                                background: "#252526",
+                                                                                border: "1px solid #0078d4",
+                                                                                borderRadius: 4,
+                                                                                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                                                                                padding: "4px 8px",
+                                                                                fontSize: 12,
+                                                                                display: "flex",
+                                                                                alignItems: "baseline",
+                                                                                gap: 8,
+                                                                                whiteSpace: "nowrap",
+                                                                                overflow: "hidden",
+                                                                                zIndex: 40,
+                                                                            }}
+                                                                        >
+                                                                            <span style={{ color: "#c586c0", fontSize: 10, flexShrink: 0 }}>abc</span>
+                                                                            <span style={{ color: "#fff", fontWeight: 700, flexShrink: 0 }}>Top 10 newest rows</span>
+                                                                            <span style={{ color: "#888", textOverflow: "ellipsis", overflow: "hidden" }}>
+                                                                                Quick peek at the latest data in a table. Swap my_table / cr…
+                                                                            </span>
+                                                                        </div>
+                                                                    )}
 
                                                                     {/* IntelliSense Autocomplete Popup — two-pane, matching the
                                                                         reference screenshots: a suggestion list on the left,
@@ -3015,7 +3188,12 @@ const QuickDBStory: FC = () => {
                                                             connection/database/columns tree — that's a
                                                             different view (the sidebar's own tree already
                                                             covers it). */}
-                                                        {(s === 41 || s === 42) && (
+                                                        {/* Step 41 is hover-only (matches the reference's
+                                                            "hover schema explorer" tooltip screenshot, no
+                                                            drawer yet) — TARGETS[41,42] share the same icon,
+                                                            so the cursor already gets all of step 41 to
+                                                            arrive; the drawer only opens on 42's click. */}
+                                                        {s === 42 && (
                                                             <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
                                                                 <div style={{ fontWeight: 700, color: "#fff" }}>Schema Explorer</div>
                                                                 <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px", background: "#1c1c1c", border: "1px solid #3c3c3c", borderRadius: 4, color: "#666" }}>
@@ -3038,11 +3216,13 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                         )}
 
-                                                        {/* Local History Side Panel (Step 43–44) — a
-                                                            handful of varied entries (SELECT/UPDATE/INSERT,
-                                                            success and failure), matching the reference's
-                                                            populated panel rather than a single row. */}
-                                                        {(s === 43 || s === 44) && (
+                                                        {/* Local History Side Panel — a handful of varied
+                                                            entries (SELECT/UPDATE/INSERT, success and
+                                                            failure), matching the reference's populated
+                                                            panel rather than a single row. Same hover(43)/
+                                                            click(44) split as Schema Explorer above — opens
+                                                            on the click step only. */}
+                                                        {s === 44 && (
                                                             <div style={{ width: 300, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11, overflow: "auto" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
                                                                     <span>Local History</span>
@@ -3073,17 +3253,36 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                         )}
 
-                                                        {/* Saved Queries Side Panel & Modal (Step 45–50) */}
-                                                        {s >= 45 && s <= 50 && (
+                                                        {/* Saved Queries Side Panel & Modal — unlike the
+                                                            other three right-side panels, TARGETS[45] is
+                                                            this icon's ONLY step (no separate hover step
+                                                            first), so there's no prior step to have given
+                                                            the cursor travel time. Gated on savedPanelOpen
+                                                            (frac-based, opens mid-click) instead. */}
+                                                        {savedPanelOpen && s <= 50 && (
                                                             <>
-                                                                <div style={{ width: 280, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
                                                                     <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
                                                                         <span>Saved Queries</span>
-                                                                        <span ref={set("saveQueryAsBtn")} style={{ color: "#70baff", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                        <span style={{ color: "#70baff", fontSize: 11, cursor: "pointer" }}>Close</span>
                                                                     </div>
                                                                     {s === 50 ? (
-                                                                        <div style={{ padding: 8, background: "rgba(0,120,212,0.15)", border: "1px solid #0078d4", borderRadius: 4, color: "#fff", fontSize: 11 }}>
-                                                                            ⭐ How many total customers have made a payment?
+                                                                        // Full card — title, the actual SQL, and a
+                                                                        // last-updated timestamp, with edit/delete
+                                                                        // affordances, matching the reference. Not
+                                                                        // just a single starred line.
+                                                                        <div style={{ position: "relative", padding: "8px 0" }}>
+                                                                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: 8 }}>
+                                                                                <div style={{ color: "#fff", fontWeight: 700, fontSize: 12 }}>{QUERY_TITLE_AFTER}</div>
+                                                                                <div style={{ display: "flex", gap: 8, color: "#888", flexShrink: 0 }}>
+                                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M4 20h4L18.5 9.5a2.1 2.1 0 00-3-3L5 17v3z" strokeLinejoin="round" /></svg>
+                                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8"><path d="M5 7h14M9 7V5a1 1 0 011-1h4a1 1 0 011 1v2m-8 0l1 13a1 1 0 001 1h6a1 1 0 001-1l1-13" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                                                </div>
+                                                                            </div>
+                                                                            <div style={{ color: "#70baff", fontFamily: "ui-monospace, monospace", fontSize: 10.5, marginTop: 6, lineHeight: 1.4 }}>
+                                                                                SELECT * FROM customers LEFT JOIN payments ON payments.customerNumber = customers.customerNumber;
+                                                                            </div>
+                                                                            <div style={{ color: "#666", fontSize: 10, marginTop: 6 }}>Updated 10/08/2026, 20:28:39</div>
                                                                         </div>
                                                                     ) : (
                                                                         <div style={{ color: "#777", fontSize: 11, lineHeight: 1.5, textAlign: "center", marginTop: 8 }}>
@@ -3092,18 +3291,25 @@ const QuickDBStory: FC = () => {
                                                                     )}
                                                                 </div>
 
-                                                                {s >= 46 && (
+                                                                {saveModalOpen && (
                                                                 <div style={{ position: "absolute", inset: 0, background: "rgba(0,0,0,0.5)", backdropFilter: "blur(4px)", display: "flex", alignItems: "center", justifyContent: "center", zIndex: 60 }}>
-                                                                    <div style={{ width: 440, background: "#252526", border: "1px solid #0078d4", borderRadius: 8, padding: 18 }}>
-                                                                        <h4 style={{ margin: "0 0 12px", color: "#fff", fontSize: 13 }}>Update saved query</h4>
-                                                                        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+                                                                    <div style={{ width: 440, background: "#252526", border: "1px solid #0078d4", borderRadius: 8, padding: 18, position: "relative" }}>
+                                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                                                            <h4 style={{ margin: 0, color: "#fff", fontSize: 13 }}>Update saved query</h4>
+                                                                            <span style={{ color: "#888", fontSize: 14, cursor: "pointer", lineHeight: 1 }}>✕</span>
+                                                                        </div>
+                                                                        <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                                                                            <label style={{ color: "#999", fontSize: 10.5, fontWeight: 600 }}>Title</label>
                                                                             <input
                                                                                 ref={set("queryTitleModalInput")}
                                                                                 readOnly
                                                                                 value={s === 46 ? QUERY_TITLE_BEFORE : s === 47 ? queryTitleText : QUERY_TITLE_AFTER}
                                                                                 style={{ width: "100%", padding: "6px 10px", background: "#1e1e1e", border: "1px solid #0078d4", borderRadius: 4, color: "#fff", fontSize: 12, overflow: "hidden", textOverflow: "ellipsis" }}
                                                                             />
-                                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 4 }}>
+                                                                            <div style={{ color: "#777", fontSize: 10.5, marginTop: 2 }}>
+                                                                                Updates the existing entry. Shift-click Save to store a copy instead.
+                                                                            </div>
+                                                                            <div style={{ display: "flex", justifyContent: "flex-end", gap: 8, marginTop: 8 }}>
                                                                                 <button style={{ padding: "4px 12px", background: "#333", border: "none", borderRadius: 4, color: "#ccc", fontSize: 11 }}>Cancel</button>
                                                                                 <button ref={set("updateQueryModalBtn")} style={{ padding: "4px 14px", background: s >= 49 ? "#0078d4" : "#2a2a2a", border: s >= 49 ? "1px solid #4daafc" : "1px solid #3c3c3c", borderRadius: 4, color: "#fff", fontWeight: 600, fontSize: 11 }}>Update</button>
                                                                             </div>
@@ -3114,10 +3320,12 @@ const QuickDBStory: FC = () => {
                                                             </>
                                                         )}
 
-                                                        {/* SQL Snippets Side Panel (Step 51–59) — a full
-                                                            library of cards, matching the reference's
-                                                            populated panel rather than a single entry. */}
-                                                        {s >= 51 && s <= 59 && (
+                                                        {/* SQL Snippets Side Panel — a full library of
+                                                            cards, matching the reference's populated panel
+                                                            rather than a single entry. Same hover(51)/
+                                                            click(52) split as the other icon-triggered
+                                                            panels — opens on the click step, not the hover. */}
+                                                        {s >= 52 && s <= 59 && (
                                                             <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5, overflow: "auto" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", fontWeight: 600 }}>
                                                                     <span>SQL Snippets</span>
@@ -3126,13 +3334,12 @@ const QuickDBStory: FC = () => {
                                                                         <span ref={set("closeSnippetRightBtn")} style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
                                                                     </span>
                                                                 </div>
-                                                                <input
-                                                                    ref={set("snippetSearchInput")}
-                                                                    readOnly
-                                                                    value={s >= 53 ? "orderDetails" : ""}
-                                                                    placeholder="Filter snippets..."
-                                                                    style={{ width: "100%", padding: "5px 8px", background: "#1c1c1c", border: "1px solid #3c3c3c", borderRadius: 4, color: "#fff", fontSize: 11 }}
-                                                                />
+                                                                {/* No search box here at all — the reference
+                                                                    doesn't have one. "Top 10 newest rows" is
+                                                                    already the first card, and the "top" typing
+                                                                    that finds it happens in the editor itself
+                                                                    (step 53, see monacoSqlEditor), not in a
+                                                                    filter field inside this panel. */}
                                                                 <div
                                                                     ref={set("snippetCardItem")}
                                                                     style={{ padding: 10, background: s >= 54 ? "rgba(0,120,212,0.2)" : "#1c1c1c", border: "1px solid #0078d4", borderRadius: 4, cursor: "pointer" }}
@@ -3731,6 +3938,13 @@ const QuickDBStory: FC = () => {
                                 transformOrigin: "0 0",
                                 transition: "transform 0.16s ease-out",
                                 filter: "drop-shadow(0 3px 7px rgba(0,0,0,.7))",
+                                // Has to outrank every overlay it might need to
+                                // "click" through, including the save-query
+                                // modal's zIndex:60 backdrop — otherwise the
+                                // cursor glides to the right spot but renders
+                                // underneath the modal, invisible right when it
+                                // matters most (mid-click on its own button).
+                                zIndex: 999,
                             }}
                         >
                             {/* Default Arrow Pointer */}

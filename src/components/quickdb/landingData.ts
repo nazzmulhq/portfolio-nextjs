@@ -313,7 +313,7 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     50: "updateQueryModalBtn",
     51: "sqlSnippetsRightIcon",
     52: "sqlSnippetsRightIcon",
-    53: "snippetSearchInput",
+    53: "monacoSqlEditor",
     54: "snippetCardItem",
     55: "snippetCardItem",
     56: "monacoSqlEditor",
