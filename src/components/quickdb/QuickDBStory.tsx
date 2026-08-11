@@ -3068,6 +3068,50 @@ const QuickDBStory: FC = () => {
                                                                             detailBody="payments.customerNumber → customers.customerNumber"
                                                                         />
                                                                     )}
+
+                                                                    {/* Step 56 retargets the second query's table,
+                                                                        then its ORDER BY column — same two-pane
+                                                                        autocomplete as the first query's build-up
+                                                                        above, just anchored under lines 4 and 5
+                                                                        instead of line 1. Only once the old value
+                                                                        has fully backspaced out AND the first new
+                                                                        character has been typed — a real editor's
+                                                                        autocomplete doesn't appear mid-delete, only
+                                                                        once there's a fresh prefix to match against.
+                                                                        A string is "the first new character(s)
+                                                                        typed" here if it's a non-empty proper
+                                                                        prefix of the AFTER value — the delete
+                                                                        phase's strings are all prefixes of BEFORE
+                                                                        instead, so this can't fire early. */}
+                                                                    {s === 56 && secondEditTable.length > 0 && secondEditTable !== SECOND_EDIT_TABLE_AFTER && SECOND_EDIT_TABLE_AFTER.startsWith(secondEditTable) && (
+                                                                        <AutocompletePopup
+                                                                            top={100}
+                                                                            left={30}
+                                                                            items={[
+                                                                                { label: "orderdetails", hint: "table", active: true },
+                                                                                { label: "orders", hint: "table" },
+                                                                                { label: "orderdetails o", hint: "alias o" },
+                                                                                { label: "orders o", hint: "alias o" },
+                                                                            ]}
+                                                                            detailTitle="orderdetails"
+                                                                            detailBody="table"
+                                                                        />
+                                                                    )}
+                                                                    {s === 56 && secondEditOrderCol.length > 0 && secondEditOrderCol !== SECOND_EDIT_ORDERCOL_AFTER && SECOND_EDIT_ORDERCOL_AFTER.startsWith(secondEditOrderCol) && (
+                                                                        <AutocompletePopup
+                                                                            top={122}
+                                                                            left={30}
+                                                                            items={[
+                                                                                { label: "orderNumber", hint: "int · PK", active: true },
+                                                                                { label: "productCode", hint: "varchar(15) · PK" },
+                                                                                { label: "quantityOrdered", hint: "int" },
+                                                                                { label: "priceEach", hint: "decimal(10,2)" },
+                                                                                { label: "orderLineNumber", hint: "smallint" },
+                                                                            ]}
+                                                                            detailTitle="orderdetails.orderNumber"
+                                                                            detailBody="int · NOT NULL · PRIMARY KEY · FK → orders.orderNumber"
+                                                                        />
+                                                                    )}
                                                                 </div>
 
                                                                 {/* Results Grid Stage (Step 40+) */}
@@ -4191,8 +4235,10 @@ const AutocompletePopup: FC<{
     items: readonly { label: string; hint?: string; active?: boolean }[];
     detailTitle?: string;
     detailBody?: string;
-}> = ({ items, detailTitle, detailBody }) => (
-    <div style={{ position: "absolute", top: 34, left: 120, display: "flex", zIndex: 40 }}>
+    top?: number;
+    left?: number;
+}> = ({ items, detailTitle, detailBody, top = 34, left = 120 }) => (
+    <div style={{ position: "absolute", top, left, display: "flex", zIndex: 40 }}>
         <div
             style={{
                 width: 220,
