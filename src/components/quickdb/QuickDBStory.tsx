@@ -2405,7 +2405,11 @@ const QuickDBStory: FC = () => {
                                                         fontSize: 12,
                                                     }}
                                                 >
-                                                    <span>📄</span> Query Console: Demo &gt; classicmodels <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                    {/* Builds up as the connection, then the database,
+                                                        actually get picked — not the full "Demo >
+                                                        classicmodels" from the moment the console opens. */}
+                                                    <span>📄</span> Query Console{s >= 27 && ": Demo"}
+                                                    {s >= 30 && " > classicmodels"} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
                                                 </div>
                                             )}
                                             {s >= 60 && (
@@ -2446,15 +2450,114 @@ const QuickDBStory: FC = () => {
                                                     marginLeft: "auto",
                                                     display: "flex",
                                                     alignItems: "center",
-                                                    gap: 14,
+                                                    gap: 10,
                                                     padding: "0 14px",
-                                                    color: C.muted,
-                                                    fontSize: 13,
+                                                    position: "relative",
                                                 }}
                                             >
-                                                <span style={{ color: C.amber }}>✳</span>
-                                                <span>◫</span>
-                                                <span>···</span>
+                                                {/* Connection/database selectors live on THIS row (the
+                                                    file-tab bar), not the toolbar row below with Run —
+                                                    the reference screenshots show them lined up with the
+                                                    ✳/◫/⋯ icons at the very top, not next to Run/AI. */}
+                                                {s >= 24 && s <= 59 && (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
+                                                        <div
+                                                            ref={set("topConnSelectBtn")}
+                                                            style={{
+                                                                padding: "3px 10px",
+                                                                background: s >= 25 && s <= 26 ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                border: s >= 25 && s <= 26 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                borderRadius: 4,
+                                                                color: s >= 27 ? "#fff" : "#aaa",
+                                                                cursor: "pointer",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 6,
+                                                            }}
+                                                        >
+                                                            <span>{s >= 27 ? "Demo · mysql" : "Select connection"}</span>
+                                                            <span style={{ opacity: 0.6 }}>▾</span>
+                                                        </div>
+
+                                                        {/* Database Selector — doesn't exist until a
+                                                            connection is actually picked (step 27+); you
+                                                            can't choose a database with no connection
+                                                            selected yet. */}
+                                                        {s >= 27 && (
+                                                            <div
+                                                                ref={set("topDbSelectBtn")}
+                                                                style={{
+                                                                    padding: "3px 10px",
+                                                                    background: s >= 28 && s <= 29 ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                    border: s >= 28 && s <= 29 ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                    borderRadius: 4,
+                                                                    color: s >= 30 ? "#fff" : "#aaa",
+                                                                    cursor: "pointer",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 6,
+                                                                }}
+                                                            >
+                                                                <span>{s >= 30 ? "classicmodels" : "Select database"}</span>
+                                                                <span style={{ opacity: 0.6 }}>▾</span>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Connection Options Popup (Step 26) */}
+                                                        {s === 26 && (
+                                                            <div
+                                                                style={{
+                                                                    position: "absolute",
+                                                                    top: 30,
+                                                                    right: 74,
+                                                                    width: 160,
+                                                                    background: "#252526",
+                                                                    border: "1px solid #0078d4",
+                                                                    borderRadius: 4,
+                                                                    boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                                                                    zIndex: 50,
+                                                                    padding: 4,
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    ref={set("connOptionDemoItem")}
+                                                                    style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                                                                >
+                                                                    Demo · mysql
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        {/* Database Options Popup (Step 29) */}
+                                                        {s === 29 && (
+                                                            <div
+                                                                style={{
+                                                                    position: "absolute",
+                                                                    top: 30,
+                                                                    right: 74,
+                                                                    width: 150,
+                                                                    background: "#252526",
+                                                                    border: "1px solid #0078d4",
+                                                                    borderRadius: 4,
+                                                                    boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
+                                                                    zIndex: 50,
+                                                                    padding: 4,
+                                                                }}
+                                                            >
+                                                                <div
+                                                                    ref={set("dbOptionClassicItem")}
+                                                                    style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
+                                                                >
+                                                                    classicmodels
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                )}
+
+                                                <span style={{ color: C.amber, fontSize: 13 }}>✳</span>
+                                                <span style={{ color: C.muted, fontSize: 13 }}>◫</span>
+                                                <span style={{ color: C.muted, fontSize: 13 }}>···</span>
                                             </div>
                                         </div>
 
@@ -2555,106 +2658,43 @@ const QuickDBStory: FC = () => {
                                                         <span style={{ color: "#777", fontSize: 13, cursor: "pointer" }}>📊</span>
                                                         <span style={{ color: "#777", fontSize: 11, cursor: "pointer", background: "#282828", padding: "2px 6px", borderRadius: 3 }}>🤖 AI</span>
 
-                                                        {/* Dropdowns Right */}
-                                                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 8, position: "relative" }}>
-                                                            
-                                                            {/* Connection Selector */}
-                                                            <div
-                                                                ref={set("topConnSelectBtn")}
-                                                                style={{
-                                                                    padding: "3px 10px",
-                                                                    background: s >= 25 && s <= 26 ? "rgba(0,120,212,0.3)" : "#252526",
-                                                                    border: s >= 25 && s <= 26 ? "1px solid #0078d4" : "1px solid #3a3a3a",
-                                                                    borderRadius: 4,
-                                                                    color: s >= 27 ? "#fff" : "#aaa",
-                                                                    fontSize: 11,
-                                                                    cursor: "pointer",
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    gap: 6,
-                                                                }}
-                                                            >
-                                                                <span>{s >= 27 ? "Demo · mysql" : "Select connection"}</span>
-                                                                <span style={{ opacity: 0.6 }}>▾</span>
-                                                            </div>
-
-                                                            {/* Database Selector */}
-                                                            <div
-                                                                ref={set("topDbSelectBtn")}
-                                                                style={{
-                                                                    padding: "3px 10px",
-                                                                    background: s >= 28 && s <= 29 ? "rgba(0,120,212,0.3)" : "#252526",
-                                                                    border: s >= 28 && s <= 29 ? "1px solid #0078d4" : "1px solid #3a3a3a",
-                                                                    borderRadius: 4,
-                                                                    color: s >= 30 ? "#fff" : "#aaa",
-                                                                    fontSize: 11,
-                                                                    cursor: "pointer",
-                                                                    display: "flex",
-                                                                    alignItems: "center",
-                                                                    gap: 6,
-                                                                }}
-                                                            >
-                                                                <span>{s >= 30 ? "classicmodels" : "Select database"}</span>
-                                                                <span style={{ opacity: 0.6 }}>▾</span>
-                                                            </div>
+                                                        {/* Right side of the toolbar row — flat outline
+                                                            icons (format / undo / redo / duplicate / save
+                                                            / chart) plus the Templates/Go to dropdowns,
+                                                            matching the reference (this row never held the
+                                                            connection/database selectors — those live on
+                                                            the tab bar above). */}
+                                                        <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 10, color: "#777", fontSize: 12 }}>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <path d="M4 6h16M4 12h10M4 18h13" strokeLinecap="round" />
+                                                            </svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <path d="M9 14L4 9l5-5M4 9h10a5 5 0 015 5v1" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <path d="M15 14l5-5-5-5M20 9H10a5 5 0 00-5 5v1" strokeLinecap="round" strokeLinejoin="round" />
+                                                            </svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <rect x="3.5" y="3.5" width="12" height="14" rx="1.5" />
+                                                                <path d="M8.5 8.5h12v14a1.5 1.5 0 01-1.5 1.5h-9a1.5 1.5 0 01-1.5-1.5v-14z" />
+                                                            </svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <path d="M5 4h11l3 3v13a1 1 0 01-1 1H5a1 1 0 01-1-1V5a1 1 0 011-1z" strokeLinejoin="round" />
+                                                                <path d="M8 4v5h7V4" strokeLinejoin="round" />
+                                                            </svg>
+                                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8">
+                                                                <path d="M4 20V11M11 20V4M18 20v-8" strokeLinecap="round" />
+                                                            </svg>
+                                                            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Templates… <span style={{ opacity: 0.6 }}>▾</span></span>
+                                                            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Go to <span style={{ opacity: 0.6 }}>▾</span></span>
                                                         </div>
                                                     </div>
-
-                                                    {/* Connection Options Popup (Step 26) */}
-                                                    {s === 26 && (
-                                                        <div
-                                                            style={{
-                                                                position: "absolute",
-                                                                top: 42,
-                                                                right: 120,
-                                                                width: 160,
-                                                                background: "#252526",
-                                                                border: "1px solid #0078d4",
-                                                                borderRadius: 4,
-                                                                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
-                                                                zIndex: 50,
-                                                                padding: 4,
-                                                            }}
-                                                        >
-                                                            <div
-                                                                ref={set("connOptionDemoItem")}
-                                                                style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
-                                                            >
-                                                                Demo · mysql
-                                                            </div>
-                                                        </div>
-                                                    )}
-
-                                                    {/* Database Options Popup (Step 29) */}
-                                                    {s === 29 && (
-                                                        <div
-                                                            style={{
-                                                                position: "absolute",
-                                                                top: 42,
-                                                                right: 14,
-                                                                width: 150,
-                                                                background: "#252526",
-                                                                border: "1px solid #0078d4",
-                                                                borderRadius: 4,
-                                                                boxShadow: "0 8px 20px rgba(0,0,0,0.6)",
-                                                                zIndex: 50,
-                                                                padding: 4,
-                                                            }}
-                                                        >
-                                                            <div
-                                                                ref={set("dbOptionClassicItem")}
-                                                                style={{ padding: "4px 8px", background: "#04395e", color: "#fff", borderRadius: 3, fontSize: 11, cursor: "pointer" }}
-                                                            >
-                                                                classicmodels
-                                                            </div>
-                                                        </div>
-                                                    )}
 
                                                     {/* Stage Body */}
                                                     <div style={{ flex: 1, display: "flex", minHeight: 0, position: "relative" }}>
                                                         
-                                                        {/* Empty Connection Prompt (Step 24–29) */}
-                                                        {s >= 24 && s <= 29 ? (
+                                                        {/* Empty Connection Prompt (Step 24-26) */}
+                                                        {s >= 24 && s <= 26 ? (
                                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#777", gap: 12 }}>
                                                                 <span style={{ fontSize: 32 }}>🔌</span>
                                                                 <div style={{ fontSize: 14, fontWeight: 600, color: "#ccc" }}>Select a connection</div>
@@ -2662,15 +2702,66 @@ const QuickDBStory: FC = () => {
                                                                     Choose a connection from the selector in the top-right. The SQL editor opens once a connection and database are set.
                                                                 </div>
                                                             </div>
+                                                        ) : s >= 27 && s <= 29 ? (
+                                                            /* Empty Database Prompt (Step 27-29): connection
+                                                               is picked, still need a database. */
+                                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", color: "#777", gap: 12 }}>
+                                                                <span style={{ fontSize: 32 }}>🔌</span>
+                                                                <div style={{ fontSize: 14, fontWeight: 600, color: "#ccc" }}>Select a database</div>
+                                                                <div style={{ fontSize: 12, maxWidth: 380, textAlign: "center", color: "#777" }}>
+                                                                    Choose a database on &quot;Demo&quot; from the selector in the top-right to start writing SQL.
+                                                                </div>
+                                                            </div>
                                                         ) : (
                                                             /* Active Editor & Results (Step 30+) */
                                                             <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-                                                                
-                                                                {/* Monaco SQL Editor */}
+
+                                                                {/* SQL QUERY section header — a separate bar
+                                                                    above the editor, not a corner overlay
+                                                                    inside it, matching the reference. */}
+                                                                <div
+                                                                    style={{
+                                                                        height: 26,
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        justifyContent: "space-between",
+                                                                        padding: "0 12px",
+                                                                        background: "#1c1c1c",
+                                                                        borderBottom: "1px solid #2d2d2d",
+                                                                        fontSize: 10.5,
+                                                                        color: "#888",
+                                                                        fontWeight: 600,
+                                                                        letterSpacing: "0.04em",
+                                                                    }}
+                                                                >
+                                                                    <span style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                                            <rect x="3.5" y="3.5" width="17" height="17" rx="2" />
+                                                                            <path d="M8 9h8M8 13h5" strokeLinecap="round" />
+                                                                        </svg>
+                                                                        SQL QUERY
+                                                                    </span>
+                                                                    <span>
+                                                                        {s <= 31 ? "0 lines · 0 chars" : s >= 52 ? "1 line · 55 chars" : "1 line · 97 chars"}
+                                                                    </span>
+                                                                </div>
+
+                                                                {/* Monaco SQL Editor. Before Run (no results
+                                                                    panel below yet), it fills the whole
+                                                                    remaining stage — the reference shows a
+                                                                    tall, mostly-empty editor at this point,
+                                                                    not a fixed-height box floating over dead
+                                                                    space. Once results exist (step 40+) it
+                                                                    settles to a fixed height so the results
+                                                                    grid has real room too — every reference
+                                                                    screenshot with results still shows a
+                                                                    full-size editor above them, never a
+                                                                    shrunk one. */}
                                                                 <div
                                                                     ref={set("monacoSqlEditor")}
                                                                     style={{
-                                                                        height: s >= 40 ? 170 : 360,
+                                                                        height: s >= 40 ? 360 : undefined,
+                                                                        flex: s >= 40 ? "none" : 1,
                                                                         background: "#1e1e1e",
                                                                         padding: "12px 16px",
                                                                         fontFamily: "ui-monospace, monospace",
@@ -2680,9 +2771,6 @@ const QuickDBStory: FC = () => {
                                                                         transition: "height 0.3s ease",
                                                                     }}
                                                                 >
-                                                                    <div style={{ color: "#888", fontSize: 10, position: "absolute", top: 6, right: 12 }}>
-                                                                        {s >= 52 ? "1 line · 55 chars" : "1 line · 97 chars"}
-                                                                    </div>
                                                                     <div style={{ display: "flex", gap: 16 }}>
                                                                         <div style={{ color: "#555", width: 14 }}>1</div>
                                                                         <div style={{ color: "#d4d4d4", flex: 1, whiteSpace: "pre-wrap" }}>
@@ -2835,88 +2923,171 @@ const QuickDBStory: FC = () => {
                                                                         </div>
 
                                                                         <div style={{ flex: 1, overflow: "auto" }}>
-                                                                            <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, textAlign: "left" }}>
-                                                                                <thead>
-                                                                                    <tr style={{ background: "#252526", borderBottom: "1px solid #333", color: "#888" }}>
-                                                                                        <th style={{ padding: "6px 10px", width: 30 }}>#</th>
-                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "orderNumber" : "customerNumber"}</th>
-                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "productCode" : "customerName"}</th>
-                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "quantityOrdered" : "contactLastName"}</th>
-                                                                                        <th style={{ padding: "6px 10px" }}>{s >= 58 ? "priceEach" : "contactFirstName"}</th>
-                                                                                    </tr>
-                                                                                </thead>
-                                                                                <tbody>
-                                                                                    {[
-                                                                                        [1, s >= 58 ? "10425" : "103", s >= 58 ? "S10_1678" : "Atelier graphique", s >= 58 ? "33" : "Schmitt", s >= 58 ? "$95.70" : "Carine"],
-                                                                                        [2, s >= 58 ? "10424" : "103", s >= 58 ? "S12_1099" : "Atelier graphique", s >= 58 ? "50" : "Schmitt", s >= 58 ? "$100.00" : "Carine"],
-                                                                                        [3, s >= 58 ? "10423" : "103", s >= 58 ? "S18_2238" : "Atelier graphique", s >= 58 ? "28" : "Schmitt", s >= 58 ? "$68.44" : "Carine"],
-                                                                                        [4, s >= 58 ? "10422" : "112", s >= 58 ? "S24_3856" : "Signal Gift Stores", s >= 58 ? "41" : "King", s >= 58 ? "$120.50" : "Jean"],
-                                                                                    ].map(([r, c1, c2, c3, c4]) => (
-                                                                                        <tr key={r} style={{ borderBottom: "1px solid #222" }}>
-                                                                                            <td style={{ padding: "6px 10px", color: "#666" }}>{r}</td>
-                                                                                            <td style={{ padding: "6px 10px", color: "#70baff" }}>{c1}</td>
-                                                                                            <td style={{ padding: "6px 10px", color: "#ddd" }}>{c2}</td>
-                                                                                            <td style={{ padding: "6px 10px", color: "#aaa" }}>{c3}</td>
-                                                                                            <td style={{ padding: "6px 10px", color: "#34d399" }}>{c4}</td>
+                                                                            {s >= 58 ? (
+                                                                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, textAlign: "left" }}>
+                                                                                    <thead>
+                                                                                        <tr style={{ background: "#252526", borderBottom: "1px solid #333", color: "#888" }}>
+                                                                                            <th style={{ padding: "6px 10px", width: 30 }}>#</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>orderNumber</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>productCode</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>quantityOrdered</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>priceEach</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>orderLineNumber</th>
                                                                                         </tr>
-                                                                                    ))}
-                                                                                </tbody>
-                                                                            </table>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        {[
+                                                                                            [1, "10425", "S10_1678", "33", "$95.70", "1"],
+                                                                                            [2, "10425", "S12_1099", "50", "$100.00", "2"],
+                                                                                            [3, "10424", "S18_2238", "28", "$68.44", "1"],
+                                                                                            [4, "10424", "S24_3856", "41", "$120.50", "2"],
+                                                                                            [5, "10423", "S32_1268", "24", "$83.79", "1"],
+                                                                                            [6, "10423", "S32_2509", "11", "$50.32", "2"],
+                                                                                            [7, "10422", "S24_2300", "49", "$127.79", "1"],
+                                                                                            [8, "10422", "S24_1444", "55", "$53.75", "2"],
+                                                                                            [9, "10421", "S18_2795", "26", "$167.06", "1"],
+                                                                                            [10, "10421", "S700_3167", "24", "$68.80", "2"],
+                                                                                        ].map(([r, c1, c2, c3, c4, c5]) => (
+                                                                                            <tr key={r} style={{ borderBottom: "1px solid #222" }}>
+                                                                                                <td style={{ padding: "6px 10px", color: "#666" }}>{r}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#70baff" }}>{c1}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#ddd" }}>{c2}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c3}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#34d399" }}>{c4}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c5}</td>
+                                                                                            </tr>
+                                                                                        ))}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            ) : (
+                                                                                <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 11.5, textAlign: "left" }}>
+                                                                                    <thead>
+                                                                                        <tr style={{ background: "#252526", borderBottom: "1px solid #333", color: "#888" }}>
+                                                                                            <th style={{ padding: "6px 10px", width: 30 }}>#</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>customerNumber</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>customerName</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>contactLastName</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>contactFirstName</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>phone</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>addressLine1</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>addressLine2</th>
+                                                                                            <th style={{ padding: "6px 10px" }}>city</th>
+                                                                                        </tr>
+                                                                                    </thead>
+                                                                                    <tbody>
+                                                                                        {/* A real LEFT JOIN repeats a customer once per
+                                                                                            matching payment row — the reference shows the
+                                                                                            first customer 3x and the second 2x before
+                                                                                            settling into single rows, so this mirrors
+                                                                                            that instead of a flat, suspiciously-unique
+                                                                                            list of 297 "customers". All 8 CUST fields are
+                                                                                            shown as columns, matching the reference's
+                                                                                            actual column set (not just 4 of them). */}
+                                                                                        {CUST.flatMap((c, i) => {
+                                                                                            const repeats = i === 0 ? 3 : i === 1 ? 2 : 1;
+                                                                                            return Array.from({ length: repeats }, () => c);
+                                                                                        }).map((c, i) => (
+                                                                                            <tr key={i} style={{ borderBottom: "1px solid #222" }}>
+                                                                                                <td style={{ padding: "6px 10px", color: "#666" }}>{i + 1}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#70baff" }}>{c[0]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#ddd" }}>{c[1]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c[2]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#34d399" }}>{c[3]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c[4]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c[5]}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#666", fontStyle: "italic" }}>{c[6] || "NULL"}</td>
+                                                                                                <td style={{ padding: "6px 10px", color: "#aaa" }}>{c[7]}</td>
+                                                                                            </tr>
+                                                                                        ))}
+                                                                                    </tbody>
+                                                                                </table>
+                                                                            )}
                                                                         </div>
                                                                     </div>
                                                                 )}
                                                             </div>
                                                         )}
 
-                                                        {/* Webview Far Right Vertical Icon Bar */}
-                                                        <div style={{ width: 36, background: "#1c1c1c", borderLeft: "1px solid #2d2d2d", display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", gap: 12 }}>
-                                                            <div ref={set("schemaExpRightIcon")} title="Schema Explorer" style={{ color: s === 41 || s === 42 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>🗂</div>
-                                                            <div ref={set("queryHistoryRightIcon")} title="Query History" style={{ color: s === 43 || s === 44 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>📜</div>
-                                                            <div ref={set("savedQueriesRightIcon")} title="Saved Queries" style={{ color: s >= 45 && s <= 50 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>⭐</div>
-                                                            <div ref={set("sqlSnippetsRightIcon")} title="SQL Snippets" style={{ color: s >= 51 && s <= 59 ? "#70baff" : "#888", cursor: "pointer", fontSize: 15 }}>⚡</div>
-                                                        </div>
-
-                                                        {/* Schema Explorer Drawer (Step 41–42) */}
+                                                        {/* Schema Explorer Drawer (Step 41–42) — a flat
+                                                            list of the 8 tables with a search box, a TABLE
+                                                            badge, and an Insert action each, matching the
+                                                            reference exactly. Not a nested
+                                                            connection/database/columns tree — that's a
+                                                            different view (the sidebar's own tree already
+                                                            covers it). */}
                                                         {(s === 41 || s === 42) && (
-                                                            <div style={{ width: 220, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 8, fontSize: 11.5 }}>
-                                                                <div style={{ fontWeight: 700, color: "#fff" }}>🗂 Schema Explorer</div>
-                                                                <div style={{ color: "#70baff" }}>▼ classicmodels (8)</div>
-                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>▼ customers (122)</div>
-                                                                <div style={{ paddingLeft: 20, color: "#888", fontSize: 11 }}>🔑 customerNumber INT</div>
-                                                                <div style={{ paddingLeft: 20, color: "#888", fontSize: 11 }}>customerName VARCHAR</div>
-                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>► orders (326)</div>
-                                                                <div style={{ paddingLeft: 10, color: "#ddd" }}>► payments (273)</div>
+                                                            <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                <div style={{ fontWeight: 700, color: "#fff" }}>Schema Explorer</div>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: 6, padding: "5px 8px", background: "#1c1c1c", border: "1px solid #3c3c3c", borderRadius: 4, color: "#666" }}>
+                                                                    <span>⌕</span>
+                                                                    <span style={{ fontSize: 11 }}>Search tables or columns...</span>
+                                                                </div>
+                                                                <div style={{ display: "flex", flexDirection: "column" }}>
+                                                                    {TABLES.map(t => (
+                                                                        <div
+                                                                            key={t[0]}
+                                                                            style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 4px", borderBottom: "1px solid #2a2a2a" }}
+                                                                        >
+                                                                            <span style={{ color: "#666", fontSize: 9 }}>›</span>
+                                                                            <span style={{ color: "#ddd", flex: 1 }}>{t[0]}</span>
+                                                                            <span style={{ color: "#666", fontSize: 9, letterSpacing: "0.05em" }}>TABLE</span>
+                                                                            <span style={{ color: "#70baff", fontSize: 10.5, cursor: "pointer" }}>Insert</span>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
                                                             </div>
                                                         )}
 
-                                                        {/* Local History Side Panel (Step 43–44) */}
+                                                        {/* Local History Side Panel (Step 43–44) — a
+                                                            handful of varied entries (SELECT/UPDATE/INSERT,
+                                                            success and failure), matching the reference's
+                                                            populated panel rather than a single row. */}
                                                         {(s === 43 || s === 44) && (
-                                                            <div style={{ width: 280, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                            <div style={{ width: 300, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11, overflow: "auto" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
                                                                     <span>Local History</span>
-                                                                    <span style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                    <span style={{ display: "flex", gap: 10 }}>
+                                                                        <span style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Clear</span>
+                                                                        <span style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                    </span>
                                                                 </div>
-                                                                <div style={{ padding: 8, background: "#1a1a1a", border: "1px solid #333", borderRadius: 4 }}>
-                                                                    <div style={{ display: "flex", justifyContent: "space-between", color: "#70baff", fontSize: 10 }}>
-                                                                        <span>SELECT ✓</span> <span>10/08/2026</span>
+                                                                {[
+                                                                    { kind: "SELECT", ok: true, time: "10/08/2026, 20:14:02", sql: "SELECT * FROM customers LEFT JOIN payments...", meta: "297 rows • 8ms" },
+                                                                    { kind: "UPDATE", ok: true, time: "10/08/2026, 20:11:59", sql: "UPDATE `classicmodels`.`customers` SET `ph...", meta: "1 rows • 2ms" },
+                                                                    { kind: "UPDATE", ok: true, time: "10/08/2026, 20:11:59", sql: "UPDATE `classicmodels`.`customers` SET `ph...", meta: "1 rows • 3ms" },
+                                                                    { kind: "SELECT", ok: true, time: "10/08/2026, 19:46:04", sql: "SELECT * FROM customers LEFT JOIN payments...", meta: "297 rows • 9ms" },
+                                                                    { kind: "SELECT", ok: true, time: "10/08/2026, 19:39:56", sql: "SELECT * FROM customers LEFT JOIN employee...", meta: "122 rows • 11ms" },
+                                                                    { kind: "INSERT", ok: false, time: "28/07/2026, 21:59:17", sql: "INSERT INTO `classicmodels`.`customers` (`...", meta: "Field 'customerNumber' doesn't have a default value" },
+                                                                ].map((h, i) => (
+                                                                    <div key={i} style={{ padding: 8, background: "#1a1a1a", border: "1px solid #333", borderRadius: 4 }}>
+                                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                            <span style={{ color: h.ok ? "#70baff" : "#f87171", fontWeight: 700, fontSize: 10 }}>
+                                                                                {h.kind} {h.ok ? "✓" : "✕"}
+                                                                            </span>
+                                                                            <span style={{ color: "#666", fontSize: 9.5 }}>{h.time}</span>
+                                                                        </div>
+                                                                        <div style={{ color: "#fff", marginTop: 4, fontSize: 11, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{h.sql}</div>
+                                                                        <div style={{ color: h.ok ? "#666" : "#f87171", marginTop: 4, fontSize: 10 }}>{h.meta}</div>
                                                                     </div>
-                                                                    <div style={{ color: "#fff", marginTop: 4, fontSize: 11 }}>SELECT * FROM customers LEFT JOIN payments...</div>
-                                                                    <div style={{ color: "#666", marginTop: 4, fontSize: 10 }}>297 rows • 8ms</div>
-                                                                </div>
+                                                                ))}
                                                             </div>
                                                         )}
 
                                                         {/* Saved Queries Side Panel & Modal (Step 45–50) */}
                                                         {s >= 45 && s <= 50 && (
                                                             <>
-                                                                <div style={{ width: 260, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
+                                                                <div style={{ width: 280, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
                                                                     <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
                                                                         <span>Saved Queries</span>
                                                                         <span ref={set("saveQueryAsBtn")} style={{ color: "#70baff", fontSize: 11, cursor: "pointer" }}>Close</span>
                                                                     </div>
-                                                                    {s === 50 && (
+                                                                    {s === 50 ? (
                                                                         <div style={{ padding: 8, background: "rgba(0,120,212,0.15)", border: "1px solid #0078d4", borderRadius: 4, color: "#fff", fontSize: 11 }}>
                                                                             ⭐ How many total customers have made a payment?
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div style={{ color: "#777", fontSize: 11, lineHeight: 1.5, textAlign: "center", marginTop: 8 }}>
+                                                                            No saved queries yet. Write a query and hit <span style={{ color: "#ccc", fontWeight: 600 }}>Save</span> to pin it here.
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -2943,12 +3114,17 @@ const QuickDBStory: FC = () => {
                                                             </>
                                                         )}
 
-                                                        {/* SQL Snippets Side Panel (Step 51–59) */}
+                                                        {/* SQL Snippets Side Panel (Step 51–59) — a full
+                                                            library of cards, matching the reference's
+                                                            populated panel rather than a single entry. */}
                                                         {s >= 51 && s <= 59 && (
-                                                            <div style={{ width: 300, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5 }}>
-                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#fff", fontWeight: 600 }}>
+                                                            <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5, overflow: "auto" }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", fontWeight: 600 }}>
                                                                     <span>SQL Snippets</span>
-                                                                    <span ref={set("closeSnippetRightBtn")} style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                    <span style={{ display: "flex", gap: 10, alignItems: "center" }}>
+                                                                        <span style={{ color: "#70baff", fontSize: 11, cursor: "pointer" }}>+ Save current query</span>
+                                                                        <span ref={set("closeSnippetRightBtn")} style={{ color: "#888", fontSize: 11, cursor: "pointer" }}>Close</span>
+                                                                    </span>
                                                                 </div>
                                                                 <input
                                                                     ref={set("snippetSearchInput")}
@@ -2962,10 +3138,58 @@ const QuickDBStory: FC = () => {
                                                                     style={{ padding: 10, background: s >= 54 ? "rgba(0,120,212,0.2)" : "#1c1c1c", border: "1px solid #0078d4", borderRadius: 4, cursor: "pointer" }}
                                                                 >
                                                                     <div style={{ color: "#fff", fontWeight: 600, fontSize: 11 }}>Top 10 newest rows</div>
+                                                                    <div style={{ color: "#888", fontSize: 10, marginTop: 3 }}>Quick peek at the latest data in a table. Swap my_table / created_at for yours.</div>
                                                                     <div style={{ color: "#70baff", fontSize: 10, marginTop: 4 }}>SELECT * FROM my_table ORDER BY created_at DESC LIMIT 10;</div>
                                                                 </div>
+                                                                {[
+                                                                    { title: "Count rows per group", desc: "How many rows share each value — great for status/category columns.", sql: "SELECT status, COUNT(*) AS row_count FROM orders GROUP BY status ORDER BY row_count DESC;" },
+                                                                    { title: "Find duplicate values", desc: "Rows whose email appears more than once. Change the column to any that should be unique.", sql: "SELECT email, COUNT(*) AS times FROM users GROUP BY email HAVING COUNT(*) > 1 ORDER BY times D…" },
+                                                                    { title: "Join two tables", desc: "Orders with their customer's name — the basic FK join pattern.", sql: "SELECT o.id, o.total, c.name AS customer FROM orders o JOIN customers c ON c.id = o.customer_i…" },
+                                                                    { title: "Monthly totals", desc: "Revenue per month. MySQL: DATE_FORMAT · Postgres: TO_CHAR(created_at, 'YYYY-MM') · SQLite: strftime('%Y-%m', created_at).", sql: "SELECT DATE_FORMAT(created_at, '%Y-%m') AS month, SUM(total) AS revenue FROM orders GROUP BY m…" },
+                                                                    { title: "NULL audit for a column", desc: "How many rows are missing a value — COUNT(col) skips NULLs, COUNT(*) doesn't.", sql: "SELECT COUNT(*) AS total_rows, COUNT(email) AS with_email, COUNT(*) - COUNT(email) AS null_ema…" },
+                                                                    { title: "Running total (window function)", desc: "Cumulative sum over time without a self-join. Works on MySQL 8+, Postgres, SQLite 3.25+.", sql: "SELECT id, created_at, total, SUM(total) OVER (ORDER BY created_at) AS running_total FROM orde…" },
+                                                                ].map((snip, i) => (
+                                                                    <div key={i} style={{ padding: 10, background: "#1c1c1c", border: "1px solid #333", borderRadius: 4, cursor: "pointer" }}>
+                                                                        <div style={{ color: "#fff", fontWeight: 600, fontSize: 11 }}>{snip.title}</div>
+                                                                        <div style={{ color: "#888", fontSize: 10, marginTop: 3 }}>{snip.desc}</div>
+                                                                        <div style={{ color: "#70baff", fontSize: 10, marginTop: 4, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{snip.sql}</div>
+                                                                    </div>
+                                                                ))}
                                                             </div>
                                                         )}
+
+                                                        {/* Webview Far Right Vertical Icon Bar — flat
+                                                            outline icons (table grid / clock / star /
+                                                            clipboard), matching the reference. Placed last
+                                                            in this flex row (not before the panels) so it
+                                                            stays pinned to the true right edge — a drawer
+                                                            opening pushes in to its LEFT, it never gets
+                                                            shoved off the edge by the panel appearing. */}
+                                                        <div style={{ width: 36, background: "#1c1c1c", borderLeft: "1px solid #2d2d2d", display: "flex", flexDirection: "column", alignItems: "center", padding: "8px 0", gap: 14 }}>
+                                                            <div ref={set("schemaExpRightIcon")} title="Schema Explorer" style={{ color: s === 41 || s === 42 ? "#70baff" : "#888", cursor: "pointer" }}>
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                                                    <rect x="3.5" y="4.5" width="17" height="15" rx="1.5" />
+                                                                    <path d="M3.5 9.5h17M9 9.5v10M15 9.5v10" />
+                                                                </svg>
+                                                            </div>
+                                                            <div ref={set("queryHistoryRightIcon")} title="Query History" style={{ color: s === 43 || s === 44 ? "#70baff" : "#888", cursor: "pointer" }}>
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                                                    <circle cx="12" cy="12" r="8.5" />
+                                                                    <path d="M12 7.5V12l3 2" strokeLinecap="round" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </div>
+                                                            <div ref={set("savedQueriesRightIcon")} title="Saved Queries" style={{ color: s >= 45 && s <= 50 ? "#70baff" : "#888", cursor: "pointer" }}>
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                                                    <path d="M12 3.5l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75-5.2 2.75 1-5.8-4.2-4.1 5.8-.85z" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </div>
+                                                            <div ref={set("sqlSnippetsRightIcon")} title="SQL Snippets" style={{ color: s >= 51 && s <= 59 ? "#70baff" : "#888", cursor: "pointer" }}>
+                                                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
+                                                                    <path d="M7 4.5h8.5L19 8v11.5a1 1 0 01-1 1H7a1 1 0 01-1-1v-14a1 1 0 011-1z" strokeLinejoin="round" />
+                                                                    <path d="M15 4.5V8h4" strokeLinejoin="round" />
+                                                                </svg>
+                                                            </div>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             )}
