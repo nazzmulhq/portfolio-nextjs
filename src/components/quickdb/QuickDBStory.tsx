@@ -124,7 +124,8 @@ type RefKey =
     | "sqlSnippetsRightIcon"
     | "snippetCardItem"
     | "closeSnippetRightBtn"
-    | "visualizeBarBtn";
+    | "visualizeBarBtn"
+    | "closeVizTabBtn";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -310,6 +311,7 @@ const QuickDBStory: FC = () => {
     const [connSelected, setConnSelected] = useState(false);
     const [dbSelected, setDbSelected] = useState(false);
     const [savedPanelOpen, setSavedPanelOpen] = useState(false);
+    const [vizTabClosed, setVizTabClosed] = useState(false);
     const [pastHover, setPastHover] = useState(false);
     const [pastClick, setPastClick] = useState(false);
     const [editPhase, setEditPhase] = useState<0 | 1 | 2 | 3 | 4 | 5>(0);
@@ -410,6 +412,7 @@ const QuickDBStory: FC = () => {
         connSelected: false,
         dbSelected: false,
         savedPanelOpen: false,
+        vizTabClosed: false,
         pastHover: false,
         pastClick: false,
         editPhase: 0 as 0 | 1 | 2 | 3 | 4 | 5,
@@ -838,6 +841,14 @@ const QuickDBStory: FC = () => {
             // rather than just picking the later of two steps.
             const savedPanelOpen = s > 45 || (s === 45 && e.frac >= 0.5);
 
+            // Step 62: hover then click the Visualization tab's own ✕,
+            // landing back on the Query Console tab and its results grid.
+            // Only ever set at s===62 — TARGETS[62] is the only step at this
+            // target, so it needs the same single-step frac-gating as
+            // savedPanelOpen/connSelected. There's no s>62 to also cover
+            // since this is the story's last step.
+            const vizTabClosed = s === 62 && e.frac >= 0.5;
+
             // Mirror of paymentsOpen: the customers tab stays CLOSED through
             // the first part of step 10, so the cursor visibly arrives at the
             // customers row in the sidebar tree and "clicks" it before the
@@ -965,6 +976,7 @@ const QuickDBStory: FC = () => {
                 connSelected !== e.connSelected ||
                 dbSelected !== e.dbSelected ||
                 savedPanelOpen !== e.savedPanelOpen ||
+                vizTabClosed !== e.vizTabClosed ||
                 isPastHover !== e.pastHover ||
                 isPastClick !== e.pastClick ||
                 editPhase !== e.editPhase ||
@@ -977,6 +989,7 @@ const QuickDBStory: FC = () => {
                 const changedConnSelected = connSelected !== e.connSelected;
                 const changedDbSelected = dbSelected !== e.dbSelected;
                 const changedSavedPanelOpen = savedPanelOpen !== e.savedPanelOpen;
+                const changedVizTabClosed = vizTabClosed !== e.vizTabClosed;
                 const changedPaymentsOpen = paymentsOpen !== e.paymentsOpen;
                 const changedPastHover = isPastHover !== e.pastHover;
                 const changedPastClick = isPastClick !== e.pastClick;
@@ -992,6 +1005,7 @@ const QuickDBStory: FC = () => {
                 e.connSelected = connSelected;
                 e.dbSelected = dbSelected;
                 e.savedPanelOpen = savedPanelOpen;
+                e.vizTabClosed = vizTabClosed;
                 e.pastHover = isPastHover;
                 e.pastClick = isPastClick;
                 e.editPhase = editPhase;
@@ -1004,6 +1018,7 @@ const QuickDBStory: FC = () => {
                 if (changedConnSelected) setConnSelected(connSelected);
                 if (changedDbSelected) setDbSelected(dbSelected);
                 if (changedSavedPanelOpen) setSavedPanelOpen(savedPanelOpen);
+                if (changedVizTabClosed) setVizTabClosed(vizTabClosed);
                 if (changedPaymentsOpen) setPaymentsOpen(paymentsOpen);
                 if (changedPastHover) setPastHover(isPastHover);
                 if (changedPastClick) setPastClick(isPastClick);
@@ -2457,7 +2472,14 @@ const QuickDBStory: FC = () => {
                                                     <span>📄</span> SQL Console <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
                                                 </div>
                                             )}
-                                            {s >= 24 && s <= 59 && (
+                                            {/* Query Console tab stays active through step 60 too —
+                                                TARGETS[60,61] both point at visualizeBarBtn (hover, then
+                                                click), same as the other icon-triggered panels, so the
+                                                Visualization tab shouldn't take over until 61's click,
+                                                not the instant 60 begins with the cursor still en route.
+                                                Also active again once vizTabClosed (step 62's click on
+                                                the Visualization tab's own ✕ lands back here). */}
+                                            {((s >= 24 && s <= 60) || vizTabClosed) && (
                                                 <div
                                                     style={{
                                                         padding: "0 14px",
@@ -2477,7 +2499,9 @@ const QuickDBStory: FC = () => {
                                                     {dbSelected && " > classicmodels"} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
                                                 </div>
                                             )}
-                                            {s >= 60 && (
+                                            {/* Hidden again once vizTabClosed — step 62 closes this
+                                                tab entirely, back to just Query Console above. */}
+                                            {s >= 61 && !vizTabClosed && (
                                                 <>
                                                     <div
                                                         style={{
@@ -2505,7 +2529,18 @@ const QuickDBStory: FC = () => {
                                                             fontSize: 12,
                                                         }}
                                                     >
-                                                        <span>📊</span> QuickDB Visualization <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                        <span>📊</span> QuickDB Visualization{" "}
+                                                        <span
+                                                            ref={set("closeVizTabBtn")}
+                                                            style={{
+                                                                opacity: s === 62 ? 1 : 0.6,
+                                                                fontSize: 10,
+                                                                cursor: "pointer",
+                                                                color: s === 62 ? "#70baff" : undefined,
+                                                            }}
+                                                        >
+                                                            ✕
+                                                        </span>
                                                     </div>
                                                 </>
                                             )}
@@ -2523,8 +2558,10 @@ const QuickDBStory: FC = () => {
                                                 {/* Connection/database selectors live on THIS row (the
                                                     file-tab bar), not the toolbar row below with Run —
                                                     the reference screenshots show them lined up with the
-                                                    ✳/◫/⋯ icons at the very top, not next to Run/AI. */}
-                                                {s >= 24 && s <= 59 && (
+                                                    ✳/◫/⋯ icons at the very top, not next to Run/AI. Stays
+                                                    through step 60 too, and again once vizTabClosed — see
+                                                    the tab-title comment above for why. */}
+                                                {((s >= 24 && s <= 60) || vizTabClosed) && (
                                                     <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11 }}>
                                                         <div
                                                             ref={set("topConnSelectBtn")}
@@ -2688,8 +2725,14 @@ const QuickDBStory: FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Step 24+: Active Query Console Webview Studio */}
-                                            {s >= 24 && s <= 59 && (
+                                            {/* Step 24+: Active Query Console Webview Studio. Runs
+                                                through step 60 (not just 59) — the Visualize button's
+                                                hover step, so the results grid is still what's on screen
+                                                while the cursor travels to it, matching the reference
+                                                (image 40: still the results table, Visualize just
+                                                highlighted on hover, no chart yet). Shows again once
+                                                vizTabClosed (step 62 closes the chart tab). */}
+                                            {((s >= 24 && s <= 60) || vizTabClosed) && (
                                                 <div style={{ flex: 1, display: "flex", flexDirection: "column", minWidth: 0, background: "#181818" }}>
                                                     
                                                     {/* Webview Studio Header Toolbar */}
@@ -3127,7 +3170,7 @@ const QuickDBStory: FC = () => {
                                                                                     display: "flex",
                                                                                     alignItems: "center",
                                                                                     gap: 4,
-                                                                                    background: s >= 60 ? "#0078d4" : "#2c2c2c",
+                                                                                    background: s >= 59 ? "#0078d4" : "#2c2c2c",
                                                                                     color: "#fff",
                                                                                     padding: "2px 8px",
                                                                                     borderRadius: 4,
@@ -3368,8 +3411,14 @@ const QuickDBStory: FC = () => {
                                                             cards, matching the reference's populated panel
                                                             rather than a single entry. Same hover(51)/
                                                             click(52) split as the other icon-triggered
-                                                            panels — opens on the click step, not the hover. */}
-                                                        {s >= 52 && s <= 59 && (
+                                                            panels — opens on the click step, not the hover.
+                                                            Stays open through the Visualize hover (59, 60)
+                                                            — there's no dedicated "close" step in the cursor
+                                                            path (TARGETS[59] heads straight to Visualize
+                                                            instead), and the drawer isn't force-closed early
+                                                            either; it only goes away because step 61 swaps
+                                                            the whole pane over to the Visualization view. */}
+                                                        {s >= 52 && s <= 60 && (
                                                             <div style={{ width: 320, background: "#222222", borderLeft: "1px solid #2d2d2d", padding: 12, display: "flex", flexDirection: "column", gap: 10, fontSize: 11.5, overflow: "auto" }}>
                                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", color: "#fff", fontWeight: 600 }}>
                                                                     <span>SQL Snippets</span>
@@ -3434,7 +3483,7 @@ const QuickDBStory: FC = () => {
                                                                     <path d="M12 3.5l2.6 5.3 5.8.85-4.2 4.1 1 5.8-5.2-2.75-5.2 2.75 1-5.8-4.2-4.1 5.8-.85z" strokeLinejoin="round" />
                                                                 </svg>
                                                             </div>
-                                                            <div ref={set("sqlSnippetsRightIcon")} title="SQL Snippets" style={{ color: s >= 51 && s <= 59 ? "#70baff" : "#888", cursor: "pointer" }}>
+                                                            <div ref={set("sqlSnippetsRightIcon")} title="SQL Snippets" style={{ color: s >= 51 && s <= 60 ? "#70baff" : "#888", cursor: "pointer" }}>
                                                                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6">
                                                                     <path d="M7 4.5h8.5L19 8v11.5a1 1 0 01-1 1H7a1 1 0 01-1-1v-14a1 1 0 011-1z" strokeLinejoin="round" />
                                                                     <path d="M15 4.5V8h4" strokeLinejoin="round" />
@@ -3445,49 +3494,193 @@ const QuickDBStory: FC = () => {
                                                 </div>
                                             )}
 
-                                            {/* Step 60-61: QuickDB Visualization Full View (Image 41) */}
-                                            {s >= 60 && (
-                                                <div style={{ flex: 1, display: "flex", minHeight: 0, background: "#141418" }}>
-                                                    
-                                                    {/* Left Controls Panel */}
-                                                    <div style={{ width: 280, background: "#1c1c22", borderRight: "1px solid #2d2d35", padding: 16, display: "flex", flexDirection: "column", gap: 16, fontSize: 11.5 }}>
-                                                        <div>
-                                                            <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>CHART TYPE</div>
-                                                            <div style={{ padding: "6px 10px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#fff", marginTop: 6 }}>
-                                                                XY CHART Line
-                                                            </div>
-                                                        </div>
-                                                        <div>
-                                                            <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>AXES & GROUPING</div>
-                                                            <div style={{ marginTop: 6, display: "flex", flexDirection: "column", gap: 8 }}>
-                                                                <div style={{ padding: "6px 10px", background: "#252530", borderRadius: 4, color: "#70baff" }}>
-                                                                    X: productCode <span style={{ color: "#34d399", float: "right" }}>STR</span>
-                                                                </div>
-                                                                <div style={{ padding: "6px 10px", background: "#252530", borderRadius: 4, color: "#70baff" }}>
-                                                                    Y: orderLineNumber <span style={{ color: "#f59e0b", float: "right" }}>NUM</span>
-                                                                </div>
-                                                            </div>
-                                                        </div>
+                                            {/* Step 61: QuickDB Visualization Full View — a real chart-
+                                                builder layout (chart type, axis config, aggregation,
+                                                style options, data inspector, and a labeled preview
+                                                canvas), matching the reference. The earlier version was
+                                                a bare two-box sketch with none of this.
+                                                Gated on s>=61, not 60 — TARGETS[60,61] both point at
+                                                visualizeBarBtn (hover, then click), so this shouldn't
+                                                take over the instant step 60 begins, before the cursor
+                                                has even set off toward the button. Step 60 still shows
+                                                the results grid with Visualize highlighted on hover
+                                                (image 40); only 61's click actually opens it (image 41).
+                                                Closes again once vizTabClosed — step 62 hovers and clicks
+                                                this view's own tab ✕, landing back on Query Console. */}
+                                            {s >= 61 && !vizTabClosed && (
+                                                <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: "#141418" }}>
+                                                    {/* Toolbar */}
+                                                    <div style={{ height: 38, flex: "none", background: "#1c1c22", borderBottom: "1px solid #2d2d35", display: "flex", alignItems: "center", padding: "0 14px", gap: 16, fontSize: 11.5, color: "#aaa" }}>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>⇄ Swap</span>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>+ Load Examples</span>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>⧉ Copy Spec</span>
+                                                        <span style={{ flex: 1, textAlign: "center", color: "#eee", fontWeight: 600, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                                                            SELECT * FROM orderdetails ORDER B…
+                                                        </span>
+                                                        <span>↻</span>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>💾 Save</span>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>⬇ Download</span>
+                                                        <span style={{ display: "flex", alignItems: "center", gap: 4 }}>Go to ▾</span>
+                                                        <span>?</span>
                                                     </div>
 
-                                                    {/* Right Preview Canvas SVG */}
-                                                    <div style={{ flex: 1, padding: 24, display: "flex", flexDirection: "column", gap: 16, background: "#0e0e12" }}>
-                                                        <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>SELECT * FROM orderdetails ORDER BY orderNumber DESC LIMIT 1</div>
-                                                        <div style={{ flex: 1, border: "1px solid rgba(255,255,255,0.08)", borderRadius: 8, padding: 20, position: "relative" }}>
-                                                            <svg width="100%" height="100%" viewBox="0 0 700 240" preserveAspectRatio="none">
-                                                                <line x1="0" y1="40" x2="700" y2="40" stroke="rgba(255,255,255,0.05)" />
-                                                                <line x1="0" y1="90" x2="700" y2="90" stroke="rgba(255,255,255,0.05)" />
-                                                                <line x1="0" y1="140" x2="700" y2="140" stroke="rgba(255,255,255,0.05)" />
-                                                                <polyline
-                                                                    fill="none"
-                                                                    stroke="#0078d4"
-                                                                    strokeWidth="2.5"
-                                                                    points="0,180 70,140 140,40 210,120 280,70 350,190 420,30 490,90 560,60 630,90 700,120"
-                                                                />
-                                                                {[[0,180],[70,140],[140,40],[210,120],[280,70],[350,190],[420,30],[490,90],[560,60],[630,90],[700,120]].map(([x,y],i) => (
-                                                                    <circle key={i} cx={x} cy={y} r="4" fill="#0078d4" stroke="#fff" strokeWidth="1.5" />
-                                                                ))}
-                                                            </svg>
+                                                    <div style={{ flex: 1, display: "flex", minHeight: 0 }}>
+                                                        {/* Left Controls Panel */}
+                                                        <div style={{ width: 280, background: "#1c1c22", borderRight: "1px solid #2d2d35", padding: 16, display: "flex", flexDirection: "column", gap: 18, fontSize: 11, overflow: "auto" }}>
+                                                            <div>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                    <span style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>CHART TYPE</span>
+                                                                    <span style={{ color: "#70baff", fontSize: 10.5 }}>Browse visual gallery →</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 8, padding: "6px 10px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#fff", display: "flex", justifyContent: "space-between" }}>
+                                                                    <span>Chart link</span>
+                                                                    <span style={{ opacity: 0.6 }}>▾</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 8, display: "flex", gap: 6 }}>
+                                                                    <span style={{ padding: "2px 8px", background: "#0078d4", color: "#fff", borderRadius: 3, fontSize: 10, fontWeight: 700 }}>XY CHART</span>
+                                                                    <span style={{ padding: "2px 8px", background: "#2a2a35", color: "#ccc", borderRadius: 3, fontSize: 10, fontWeight: 700 }}>Line</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 8, color: "#888", lineHeight: 1.4 }}>
+                                                                    Map an X axis (category or time) and a Y axis (numeric value).
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#ddd", fontWeight: 700 }}>
+                                                                    <span>Axes &amp; Grouping</span>
+                                                                    <span style={{ opacity: 0.6 }}>▾</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 10 }}>
+                                                                    <div>
+                                                                        <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.04em" }}>X FIELD (AXIS)</div>
+                                                                        <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                            <span style={{ color: "#fff" }}>productCode</span>
+                                                                            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                                                <span style={{ fontSize: 8.5, color: "#34d399", border: "1px solid #34d399", borderRadius: 2, padding: "0 3px" }}>ABC</span>
+                                                                                <span style={{ fontSize: 8.5, color: "#34d399", border: "1px solid #34d399", borderRadius: 2, padding: "0 3px" }}>STR</span>
+                                                                                <span style={{ opacity: 0.6 }}>▾</span>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.04em" }}>Y FIELD (AXIS / VALUE)</div>
+                                                                        <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                            <span style={{ color: "#fff" }}>orderLineNumber</span>
+                                                                            <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
+                                                                                <span style={{ fontSize: 8.5, color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 2, padding: "0 3px" }}>#</span>
+                                                                                <span style={{ fontSize: 8.5, color: "#f59e0b", border: "1px solid #f59e0b", borderRadius: 2, padding: "0 3px" }}>NUM</span>
+                                                                                <span style={{ opacity: 0.6 }}>▾</span>
+                                                                            </span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#ddd", fontWeight: 700 }}>
+                                                                    <span>Configuration</span>
+                                                                    <span style={{ opacity: 0.6 }}>▾</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                                                                    <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700, letterSpacing: "0.04em" }}>AGGREGATION</div>
+                                                                    <div style={{ padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#666" }}>—</div>
+                                                                    <div style={{ display: "flex", gap: 8 }}>
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700 }}>X AXIS LABEL</div>
+                                                                            <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#666" }}>Auto</div>
+                                                                        </div>
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700 }}>Y AXIS LABEL</div>
+                                                                            <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#666" }}>Auto</div>
+                                                                        </div>
+                                                                    </div>
+                                                                    <div style={{ display: "flex", gap: 8 }}>
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700 }}>WIDTH</div>
+                                                                            <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#666" }}>Auto</div>
+                                                                        </div>
+                                                                        <div style={{ flex: 1 }}>
+                                                                            <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700 }}>HEIGHT</div>
+                                                                            <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#666" }}>Auto</div>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", color: "#ddd", fontWeight: 700 }}>
+                                                                    <span>Style &amp; Options</span>
+                                                                    <span style={{ opacity: 0.6 }}>▾</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 8, padding: "6px 10px", background: "#252530", border: "1px dashed #3c3c4a", borderRadius: 4, color: "#70baff", textAlign: "center" }}>
+                                                                    + Add option (29)
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>CUSTOM</div>
+                                                                <div style={{ marginTop: 8 }}>
+                                                                    <div style={{ color: "#888", fontSize: 9.5, fontWeight: 700 }}>Height</div>
+                                                                    <div style={{ marginTop: 4, padding: "5px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#fff", display: "flex", justifyContent: "space-between" }}>
+                                                                        <span>200</span>
+                                                                        <span style={{ color: "#888" }}>🗑</span>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            <div>
+                                                                <div style={{ color: "#888", fontSize: 10, fontWeight: 700, letterSpacing: "0.05em" }}>DATA INSPECTOR</div>
+                                                                <div style={{ marginTop: 8, color: "#aaa" }}>
+                                                                    rows: <span style={{ color: "#70baff" }}>10</span> &nbsp; columns: <span style={{ color: "#70baff" }}>5</span>
+                                                                </div>
+                                                                <div style={{ marginTop: 8, display: "flex", flexWrap: "wrap", gap: 6 }}>
+                                                                    {[
+                                                                        ["orderNumber", "#"],
+                                                                        ["productCode", "abc"],
+                                                                        ["quantityOrdered", "#"],
+                                                                        ["priceEach", "#"],
+                                                                        ["orderLineNumber", "#"],
+                                                                    ].map(([name, kind]) => (
+                                                                        <span key={name} style={{ padding: "3px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#ccc", display: "flex", alignItems: "center", gap: 5 }}>
+                                                                            {name} <span style={{ color: "#666" }}>{kind}</span>
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Right Preview Canvas */}
+                                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: "#0e0e12" }}>
+                                                            <div style={{ height: 30, flex: "none", display: "flex", alignItems: "center", gap: 12, padding: "0 16px", borderBottom: "1px solid rgba(255,255,255,0.06)", fontSize: 10, color: "#888", fontWeight: 700, letterSpacing: "0.05em" }}>
+                                                                <span>PREVIEW CANVAS</span>
+                                                                <span style={{ color: "#70baff" }}>10 rows</span>
+                                                                <span>Chart link</span>
+                                                            </div>
+                                                            <div style={{ flex: 1, minHeight: 0, padding: 24, display: "flex", flexDirection: "column", gap: 16 }}>
+                                                                <div style={{ color: "#fff", fontWeight: 700, fontSize: 13 }}>SELECT * FROM orderdetails ORDER BY orderNumber DESC LIMIT 1</div>
+                                                                <div style={{ flex: 1, position: "relative" }}>
+                                                                    <svg width="100%" height="100%" viewBox="0 0 780 300" preserveAspectRatio="xMidYMid meet">
+                                                                        {[0, 2, 4, 6, 8, 10, 12, 14].map(v => {
+                                                                            const y = 260 - (v / 14) * 240;
+                                                                            return (
+                                                                                <g key={v}>
+                                                                                    <line x1="40" y1={y} x2="780" y2={y} stroke="rgba(255,255,255,0.06)" />
+                                                                                    <text x="0" y={y + 4} fill="#666" fontSize="11">{v}</text>
+                                                                                </g>
+                                                                            );
+                                                                        })}
+                                                                        <polyline
+                                                                            fill="none"
+                                                                            stroke="#0078d4"
+                                                                            strokeWidth="2"
+                                                                            points="40,171 116,86 192,257 268,120 344,171 420,17 496,138 572,103 648,60 724,120"
+                                                                        />
+                                                                        {["S50_1392", "S32_2509", "S32_1268", "S24_2840", "S24_2300", "S24_1444", "S18_4600", "S18_3232", "S18_2432", "S18_2319"].map((label, i) => (
+                                                                            <text key={label} x={40 + i * 76} y={282} fill="#888" fontSize="10" textAnchor="middle">{label}</text>
+                                                                        ))}
+                                                                    </svg>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>

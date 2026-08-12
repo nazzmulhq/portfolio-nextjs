@@ -67,9 +67,10 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["56", "Retarget to orderNumber"],
     ["57", "Hover Run again"],
     ["58", "10 rows returned"],
-    ["59", "Close snippets"],
+    ["59", "Head to Visualize"],
     ["60", "Hover Visualize"],
     ["61", "Chart rendered"],
+    ["62", "Close the chart tab"],
 ] as const;
 
 export interface StepDetail {
@@ -319,9 +320,10 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     56: "monacoSqlEditor",
     57: "topRunQueryBtn",
     58: "topRunQueryBtn",
-    59: "closeSnippetRightBtn",
+    59: "visualizeBarBtn",
     60: "visualizeBarBtn",
     61: "visualizeBarBtn",
+    62: "closeVizTabBtn",
 };
 
 export interface TypedField {
@@ -545,8 +547,10 @@ export const TOASTS: Record<number, string> = {
 /** Total steps in the story — STEPS.length would work too, but the scroll-
  *  span math below (P0 + STEP_COUNT * PSTEP) reads clearer spelled out.
  *  Grew from 20 to 61 when the Query Console beat (steps 21-61) was added
- *  on top of the original Data View story (steps 1-20). */
-export const STEP_COUNT = 61;
+ *  on top of the original Data View story (steps 1-20), then to 62 for the
+ *  closing beat — hovering and clicking the Visualization tab's own ✕ to
+ *  land back on the Query Console tab. */
+export const STEP_COUNT = 62;
 
 /**
  * Most steps are the same width, but a handful run a real character-by-
