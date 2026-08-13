@@ -6416,39 +6416,23 @@ const QuickDBStory: FC = () => {
                             inside your editor.
                         </h1>
                     </div>
-                    <div
-                        style={{
-                            display: "flex",
-                            flexDirection: "column",
-                            alignItems: "center",
-                            gap: 12,
-                        }}
-                    >
-                        <div
-                            style={{
-                                fontSize: "clamp(13px,1.2vw,16px)",
-                                color: C.muted,
-                                maxWidth: 540,
-                                textWrap: "pretty",
-                            }}
-                        >
-                            Browse and query 80+ engines without leaving the
-                            window you already have open.
-                        </div>
-                    </div>
+                    
                 </div>
 
                 {/* ── Viewport Floating Scroll Cue (100% Scale, fixed at bottom center of viewport) ── */}
                 <div
                     style={{
                         position: "absolute",
-                        bottom: 96,
+                        bottom: "10%",
                         left: "50%",
-                        transform: s === 1 ? "translate(-50%, 0)" : "translate(-50%, 24px)",
+                        transform: s === 1 ? "translate(-50%, 0)" : "translate(-50%, 18px)",
                         zIndex: 90,
                         opacity: s === 1 ? 1 : 0,
                         pointerEvents: s === 1 ? "auto" : "none",
-                        transition: "opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+                        transition: "opacity 0.4s cubic-bezier(0.16, 1, 0.3, 1), transform 0.4s cubic-bezier(0.16, 1, 0.3, 1)",
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
                     }}
                 >
                     <div
@@ -6462,10 +6446,10 @@ const QuickDBStory: FC = () => {
                             }
                         }}
                         style={{
-                            display: "flex",
+                            display: "inline-flex",
                             alignItems: "center",
-                            gap: 16,
-                            padding: "14px 28px",
+                            gap: 12,
+                            padding: "8px 18px",
                             borderRadius: 999,
                             cursor: "pointer",
                         }}
@@ -6473,106 +6457,110 @@ const QuickDBStory: FC = () => {
                         {/* Animated Mouse Icon */}
                         <div
                             style={{
-                                width: 22,
-                                height: 36,
-                                borderRadius: 12,
-                                border: "2px solid #3fdd9f",
+                                width: 16,
+                                height: 26,
+                                borderRadius: 8,
+                                border: "1.5px solid #3fdd9f",
                                 position: "relative",
                                 display: "flex",
                                 justifyContent: "center",
-                                paddingTop: 6,
+                                paddingTop: 4,
                                 flexShrink: 0,
-                                boxShadow: "0 0 14px rgba(63, 221, 159, 0.45)",
+                                boxShadow: "0 0 10px rgba(63, 221, 159, 0.35)",
                             }}
                         >
                             <div
                                 className="qd-wheel-anim"
                                 style={{
-                                    width: 4,
-                                    height: 9,
-                                    borderRadius: 3,
-                                    background: "linear-gradient(180deg, #7ff0c4, #3fdd9f)",
-                                    boxShadow: "0 0 10px #3fdd9f",
+                                    width: 3,
+                                    height: 6,
+                                    borderRadius: 2,
+                                    background: "#7ff0c4",
+                                    boxShadow: "0 0 6px #3fdd9f",
                                 }}
                             />
                         </div>
 
-                        <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                            <span
+                                style={{
+                                    font: `700 12.5px ${MONO}`,
+                                    letterSpacing: ".06em",
+                                    color: "#ffffff",
+                                    textShadow: "0 0 10px rgba(63, 221, 159, 0.4)",
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
+                                SCROLL DOWN TO EXPLORE
+                            </span>
+                            <span
+                                style={{
+                                    fontSize: 10.5,
+                                    fontWeight: 600,
+                                    color: "#94a3b8",
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 6,
+                                    whiteSpace: "nowrap",
+                                }}
+                            >
                                 <span
                                     style={{
-                                        font: `700 14px ${MONO}`,
-                                        letterSpacing: ".08em",
-                                        color: "#ffffff",
-                                        textShadow: "0 0 14px rgba(63, 221, 159, 0.5)",
+                                        width: 5,
+                                        height: 5,
+                                        borderRadius: "50%",
+                                        background: "#3fdd9f",
+                                        boxShadow: "0 0 6px #3fdd9f",
                                     }}
-                                >
-                                    SCROLL DOWN TO EXPLORE
-                                </span>
-                                <span
-                                    style={{
-                                        fontSize: 9.5,
-                                        fontWeight: 700,
-                                        fontFamily: MONO,
-                                        background: "rgba(63, 221, 159, 0.15)",
-                                        border: "1px solid rgba(63, 221, 159, 0.45)",
-                                        color: "#7ff0c4",
-                                        padding: "2px 8px",
-                                        borderRadius: 10,
-                                        textTransform: "uppercase",
-                                        letterSpacing: ".06em",
-                                        display: "inline-flex",
-                                        alignItems: "center",
-                                        gap: 5,
-                                    }}
-                                >
-                                    <span
-                                        style={{
-                                            width: 6,
-                                            height: 6,
-                                            borderRadius: "50%",
-                                            background: "#3fdd9f",
-                                            boxShadow: "0 0 6px #3fdd9f",
-                                        }}
-                                    />
-                                    INTERACTIVE STORY
-                                </span>
-                            </div>
-                            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
-                                Scroll down or click here to watch live VS Code walkthrough
+                                />
+                                Live VS Code Story
                             </span>
                         </div>
 
-                        {/* Glowing Bouncing Action Button Circle */}
+                        {/* Small Action Down Arrow Circle */}
                         <div
                             className="qd-arrow-double"
                             style={{
-                                width: 36,
-                                height: 36,
+                                width: 26,
+                                height: 26,
                                 borderRadius: "50%",
-                                background: "linear-gradient(135deg, #16b981, #3fdd9f)",
+                                background: "rgba(63, 221, 159, 0.15)",
+                                border: "1px solid rgba(63, 221, 159, 0.45)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
-                                marginLeft: 4,
                                 flexShrink: 0,
-                                boxShadow: "0 0 20px rgba(63, 221, 159, 0.65)",
-                                color: "#03130d",
+                                color: "#7ff0c4",
+                                boxShadow: "0 0 12px rgba(63, 221, 159, 0.3)",
                             }}
                         >
                             <svg
-                                width="18"
-                                height="18"
+                                width="13"
+                                height="13"
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
-                                strokeWidth="3.2"
+                                strokeWidth="3"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             >
                                 <line x1="12" y1="5" x2="12" y2="19" />
                                 <polyline points="19 12 12 19 5 12" />
                             </svg>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 10, textAlign: "center" }}>
+                        <div
+                            style={{
+                                fontSize: "clamp(13px, 1.2vw, 16px)",
+                                color: "rgb(157, 157, 157)",
+                                maxWidth: 540,
+                                textWrap: "pretty",
+                                textAlign: "center",
+                            }}
+                        >
+                            Browse and query 80+ engines without leaving the window you already have open.
                         </div>
                     </div>
                 </div>
