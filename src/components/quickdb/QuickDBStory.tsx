@@ -1179,7 +1179,7 @@ const QuickDBStory: FC = () => {
             const stepStart = STEP_STARTS[s - 1];
             const stepEnd = STEP_STARTS[s];
             e.frac = clamp01((p - stepStart) / (stepEnd - stepStart));
-            e.visible = p >= 0.06 && p <= 0.995;
+            e.visible = s >= 1 && p <= 0.998;
             aimCursor(s);
 
             // Steps 63-84 (AI & MCP): one combined object, computed and
@@ -2092,7 +2092,7 @@ const QuickDBStory: FC = () => {
                                                 style={{
                                                     margin: "0 14px",
                                                     height: 26,
-                                                    border: `1px solid ${C.line3}`,
+                                                    border: `1px solid ${s >= 3 ? C.blue : C.line3}`,
                                                     background: C.raised,
                                                     borderRadius: 2,
                                                     display: "flex",
@@ -2104,22 +2104,46 @@ const QuickDBStory: FC = () => {
                                             >
                                                 <span
                                                     ref={set("extSearch")}
-                                                    style={{ color: C.faint }}
+                                                    style={{
+                                                        color: s >= 3 ? C.textStrong : C.faint,
+                                                        fontWeight: s >= 3 ? 600 : 400,
+                                                    }}
                                                 >
-                                                    Search Extensions in
-                                                    Marketplace
+                                                    {s <= 2
+                                                        ? "Search Extensions in Marketplace"
+                                                        : s > 3
+                                                          ? "quickdb"
+                                                          : "quickdb".slice(
+                                                                0,
+                                                                Math.min(
+                                                                    7,
+                                                                    Math.max(
+                                                                        1,
+                                                                        Math.floor(
+                                                                            (eng.current?.frac ||
+                                                                                0) *
+                                                                                8.5,
+                                                                        ),
+                                                                    ),
+                                                                ),
+                                                            )}
                                                 </span>
-                                                {s === 2 && <Caret />}
+                                                {(s === 2 || s === 3) && <Caret />}
                                                 <span
                                                     style={{
                                                         marginLeft: "auto",
                                                         display: "flex",
+                                                        alignItems: "center",
                                                         gap: 8,
                                                         color: C.muted,
                                                         fontSize: 12,
                                                     }}
                                                 >
-                                                    ⌫ ⚟
+                                                    {s >= 3 ? (
+                                                        <span style={{ fontSize: 11, color: C.faint }}>✕</span>
+                                                    ) : (
+                                                        <>⌫ ⚟</>
+                                                    )}
                                                 </span>
                                             </div>
 
@@ -6257,7 +6281,7 @@ const QuickDBStory: FC = () => {
                                 position: "absolute",
                                 left: 0,
                                 top: 0,
-                                opacity: 0,
+                                opacity: 1,
                                 pointerEvents: "none",
                                 transformOrigin: "0 0",
                                 transition: "transform 0.16s ease-out",
@@ -6443,11 +6467,6 @@ const QuickDBStory: FC = () => {
                             gap: 16,
                             padding: "14px 28px",
                             borderRadius: 999,
-                            background: "linear-gradient(135deg, rgba(14, 20, 35, 0.95) 0%, rgba(9, 12, 22, 0.96) 100%)",
-                            backdropFilter: "blur(20px)",
-                            WebkitBackdropFilter: "blur(20px)",
-                            border: "1.5px solid rgba(0, 180, 255, 0.65)",
-                            boxShadow: "0 14px 50px rgba(0, 120, 212, 0.5), 0 0 30px rgba(0, 180, 255, 0.35)",
                             cursor: "pointer",
                         }}
                     >
@@ -6457,13 +6476,13 @@ const QuickDBStory: FC = () => {
                                 width: 22,
                                 height: 36,
                                 borderRadius: 12,
-                                border: "2px solid #00c3ff",
+                                border: "2px solid #3fdd9f",
                                 position: "relative",
                                 display: "flex",
                                 justifyContent: "center",
                                 paddingTop: 6,
                                 flexShrink: 0,
-                                boxShadow: "0 0 12px rgba(0, 195, 255, 0.4)",
+                                boxShadow: "0 0 14px rgba(63, 221, 159, 0.45)",
                             }}
                         >
                             <div
@@ -6472,8 +6491,8 @@ const QuickDBStory: FC = () => {
                                     width: 4,
                                     height: 9,
                                     borderRadius: 3,
-                                    background: "linear-gradient(180deg, #00f0ff, #0088ff)",
-                                    boxShadow: "0 0 8px #00f0ff",
+                                    background: "linear-gradient(180deg, #7ff0c4, #3fdd9f)",
+                                    boxShadow: "0 0 10px #3fdd9f",
                                 }}
                             />
                         </div>
@@ -6485,7 +6504,7 @@ const QuickDBStory: FC = () => {
                                         font: `700 14px ${MONO}`,
                                         letterSpacing: ".08em",
                                         color: "#ffffff",
-                                        textShadow: "0 0 12px rgba(0, 195, 255, 0.5)",
+                                        textShadow: "0 0 14px rgba(63, 221, 159, 0.5)",
                                     }}
                                 >
                                     SCROLL DOWN TO EXPLORE
@@ -6495,19 +6514,31 @@ const QuickDBStory: FC = () => {
                                         fontSize: 9.5,
                                         fontWeight: 700,
                                         fontFamily: MONO,
-                                        background: "rgba(0, 240, 255, 0.15)",
-                                        border: "1px solid rgba(0, 240, 255, 0.4)",
-                                        color: "#00f0ff",
+                                        background: "rgba(63, 221, 159, 0.15)",
+                                        border: "1px solid rgba(63, 221, 159, 0.45)",
+                                        color: "#7ff0c4",
                                         padding: "2px 8px",
                                         borderRadius: 10,
                                         textTransform: "uppercase",
                                         letterSpacing: ".06em",
+                                        display: "inline-flex",
+                                        alignItems: "center",
+                                        gap: 5,
                                     }}
                                 >
+                                    <span
+                                        style={{
+                                            width: 6,
+                                            height: 6,
+                                            borderRadius: "50%",
+                                            background: "#3fdd9f",
+                                            boxShadow: "0 0 6px #3fdd9f",
+                                        }}
+                                    />
                                     INTERACTIVE STORY
                                 </span>
                             </div>
-                            <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 500 }}>
+                            <span style={{ fontSize: 12, color: "#94a3b8", fontWeight: 500 }}>
                                 Scroll down or click here to watch live VS Code walkthrough
                             </span>
                         </div>
@@ -6519,14 +6550,14 @@ const QuickDBStory: FC = () => {
                                 width: 36,
                                 height: 36,
                                 borderRadius: "50%",
-                                background: "linear-gradient(135deg, #0078d4, #00c3ff)",
+                                background: "linear-gradient(135deg, #16b981, #3fdd9f)",
                                 display: "flex",
                                 alignItems: "center",
                                 justifyContent: "center",
                                 marginLeft: 4,
                                 flexShrink: 0,
-                                boxShadow: "0 0 16px rgba(0, 195, 255, 0.6)",
-                                color: "#ffffff",
+                                boxShadow: "0 0 20px rgba(63, 221, 159, 0.65)",
+                                color: "#03130d",
                             }}
                         >
                             <svg
@@ -6535,7 +6566,7 @@ const QuickDBStory: FC = () => {
                                 viewBox="0 0 24 24"
                                 fill="none"
                                 stroke="currentColor"
-                                strokeWidth="3"
+                                strokeWidth="3.2"
                                 strokeLinecap="round"
                                 strokeLinejoin="round"
                             >
