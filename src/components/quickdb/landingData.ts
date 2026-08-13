@@ -104,6 +104,14 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["93", "Send to the Agent"],
     ["94", "Agent is working"],
     ["95", "7 products, 270 items"],
+    ["96", "Open Extensions"],
+    ["97", "Open the quickdb MCP server"],
+    ["98", "Open Claude Code"],
+    ["99", "Configure MCP servers"],
+    ["100", "Ask about Atelier Graphique"],
+    ["101", "Send to Claude Code"],
+    ["102", "Approve the tool call"],
+    ["103", "Run the query"],
 ] as const;
 
 export interface StepDetail {
@@ -390,6 +398,14 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     93: "agentSendBtn",
     94: "agentSendBtn",
     95: "agentSendBtn",
+    96: "extIcon",
+    97: "mcpServerQuickdbItem",
+    98: "claudeCodeIcon",
+    99: "claudeCodeMcpOption",
+    100: "claudeCodeInput",
+    101: "claudeCodeSendBtn",
+    102: "claudeCodeYesBtn",
+    103: "claudeCodeYesBtn",
 };
 
 export interface TypedField {
@@ -744,8 +760,13 @@ export const TOASTS: Record<number, string> = {
  *  then to 95 for the epilogue proving that Update actually wired quickdb
  *  into the real editor: open the editor's own Settings → Customizations
  *  (the 48 registered tools listed), close it, then drive the editor's own
- *  Agent panel with an @mcp:quickdb mention through to a real answer. */
-export const STEP_COUNT = 95;
+ *  Agent panel with an @mcp:quickdb mention through to a real answer, then
+ *  to 103 for a second proof in a plain VS Code window: the Extensions
+ *  view's own "MCP Servers - Installed" list (quickdb, registered outside
+ *  any QuickDB-specific UI), then the Claude Code extension's panel driven
+ *  through its /mcp servers picker, a real question, a tool-call permission
+ *  prompt, and the same answer arrived at a third way. */
+export const STEP_COUNT = 103;
 
 /**
  * Most steps are the same width, but a handful run a real character-by-
@@ -782,6 +803,8 @@ export const STEP_WEIGHTS: Record<number, number> = {
     72: 4,
     // 92: the same question, typed again into the editor's own Agent panel.
     92: 4,
+    // 100: the same question a third time, into Claude Code's chat input.
+    100: 4,
 };
 
 /** The original fixed track height, and how many equal-width steps it was

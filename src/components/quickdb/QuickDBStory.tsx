@@ -172,7 +172,13 @@ type RefKey =
     | "settingsModalCloseBtn"
     | "agentChatInput"
     | "mcpAutocompleteQuickdbOption"
-    | "agentSendBtn";
+    | "agentSendBtn"
+    | "mcpServerQuickdbItem"
+    | "claudeCodeIcon"
+    | "claudeCodeMcpOption"
+    | "claudeCodeInput"
+    | "claudeCodeSendBtn"
+    | "claudeCodeYesBtn";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -340,6 +346,29 @@ const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
  * pointer ALWAYS arrives first at the element before any click pulse, hover, or action triggers.
  */
 const GLIDE_EASE = 0.28;
+
+/**
+ * The intro zoom-in (laptop → full-bleed VS Code) and its chrome/hero fades
+ * were originally tuned as fractions of `p` (scroll progress over the WHOLE
+ * track) — 0.075 for the zoom, 0.05-0.105 for the bezel/glow fade, 0.03 for
+ * the hero fade — back when the track was just the 20-step, 3500vh original.
+ * Since then STEP_COUNT has grown a lot (Query Console, AI & MCP, the IDE
+ * epilogue), and each added step keeps its own fixed vh width (UNIT_VH) —
+ * so TRACK_VH has grown right along with it while the *intro's* own vh
+ * budget (P0_VH) stayed fixed. A fraction of the whole track no longer
+ * means the same fraction of the intro: those old 0.075/0.05/0.105/0.03
+ * thresholds, read literally against the new bigger `p`, now stretch the
+ * zoom out over several steps' worth of scrolling instead of finishing
+ * before step 1 even starts — so the extensions drawer opens and "quickdb"
+ * starts typing while the laptop is still visibly zooming in.
+ *
+ * Fix: rescale those thresholds by how much the track has grown relative
+ * to its original size (P0 / 0.11 — P0 is P0_VH/TRACK_VH today, and 0.11
+ * was exactly P0_VH/ORIGINAL_TRACK_VH), so the zoom keeps finishing within
+ * the same fixed vh budget it always had, however many steps get added
+ * after it.
+ */
+const INTRO_SCALE = P0 / 0.11;
 
 /**
  * Steps 63-84 (AI Settings → AI SQL Assistant → AI Chat → its own Query
@@ -558,6 +587,94 @@ const computeIdeState = (s: number, frac: number): IdeState => {
     };
 };
 
+/**
+ * Steps 96-103: a second, independent proof that step 84's Update actually
+ * registered quickdb — this time from a plain VS Code window rather than
+ * the editor's own Settings/Agent (steps 85-95): its Extensions view lists
+ * quickdb under "MCP Servers - Installed" outside any QuickDB-specific UI,
+ * and the separate Claude Code extension's own panel reaches the same
+ * answer a third way, through its /mcp servers picker and a real
+ * tool-call permission prompt. Which activity-bar view is active
+ * (`view`) also decides what the left sidebar shows — see the render
+ * side for the quickdb/extensions/claudeCode branch.
+ */
+interface VscState {
+    /** Which activity-bar destination is selected — drives the sidebar's content, not just an icon highlight. */
+    view: "quickdb" | "extensions" | "claudeCode";
+    /** The "MCP Server: quickdb" config tab is open (step 97's click). */
+    mcpServerTabOpen: boolean;
+    /** The "/mcp" slash-command palette is open under Claude Code's input (step 99, until its own click). */
+    mcpPaletteOpen: boolean;
+    /** The "MCP servers" modal (quickdb Connected, claude.ai * Needs Auth) is open — opened by 99's click, closes once step 100 starts typing. */
+    mcpModalOpen: boolean;
+    /** Characters of "mcp quickdb\n" + AI_CHAT_QUESTION revealed in Claude Code's input (step 100). */
+    questionChars: number;
+    /** The question was sent to Claude Code — a new session appears in the left list (step 101's click). */
+    sent: boolean;
+    /** 0 = idle, 1 = "Thinking… · N tokens", 2 = "Working…" + the first (blocked) tool-call line — step 101 tail into 102. */
+    workingPhase: 0 | 1 | 2;
+    /** The "Do you want to proceed with mcp__quickdb__quickdb_execute_query?" dialog is showing (step 102, until 103's click). */
+    permissionOpen: boolean;
+    /** "Yes" was clicked (step 103) — the blocked call resolves and the rest of the trace plays out. */
+    approved: boolean;
+    /** How far the post-approval trace has revealed, driven by step 103's own frac: 0 nothing yet (dialog just closed) → 1 the first call's real error ("No database selected") → 2 the self-correcting quickdb_list_databases lookup → 3 the retried query's results table → 4 the final numbered-list answer. */
+    tracePhase: 0 | 1 | 2 | 3 | 4;
+}
+
+const VSC_INITIAL: VscState = {
+    view: "quickdb",
+    mcpServerTabOpen: false,
+    mcpPaletteOpen: false,
+    mcpModalOpen: false,
+    questionChars: 0,
+    sent: false,
+    workingPhase: 0,
+    permissionOpen: false,
+    approved: false,
+    tracePhase: 0,
+};
+
+const CLAUDE_CODE_PROMPT = `mcp quickdb\n${AI_CHAT_QUESTION}`;
+
+const computeVscState = (s: number, frac: number): VscState => {
+    if (s < 96) return VSC_INITIAL;
+    const past = (step: number) => clickLanded(s, frac, step);
+    const mcpServerTabOpen = past(97);
+    const claudeCodeOpen = past(98);
+    const mcpModalOpen = past(99) && !past(100);
+    const sent = past(101);
+    const approved = past(103);
+    return {
+        view: claudeCodeOpen ? "claudeCode" : past(96) ? "extensions" : "quickdb",
+        mcpServerTabOpen,
+        mcpPaletteOpen: claudeCodeOpen && s === 99 && !past(99),
+        mcpModalOpen,
+        questionChars:
+            s > 100
+                ? CLAUDE_CODE_PROMPT.length
+                : s === 100
+                  ? Math.round(clamp01((frac - 0.1) / 0.85) * CLAUDE_CODE_PROMPT.length)
+                  : 0,
+        sent,
+        workingPhase: !sent ? 0 : s === 101 && frac < 0.6 ? 1 : 2,
+        permissionOpen: sent && !approved,
+        approved,
+        tracePhase: !approved
+            ? 0
+            : s === 103
+              ? frac < 0.2
+                  ? 0
+                  : frac < 0.4
+                    ? 1
+                    : frac < 0.6
+                      ? 2
+                      : frac < 0.8
+                        ? 3
+                        : 4
+              : 4,
+    };
+};
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | SVGElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | SVGElement | null) => {
@@ -605,6 +722,8 @@ const QuickDBStory: FC = () => {
     const [ai, setAi] = useState<AiMcpState>(AI_MCP_INITIAL);
     // Steps 85-95 (editor Settings + Agent panel epilogue) — see IdeState's own comment.
     const [ide, setIde] = useState<IdeState>(IDE_INITIAL);
+    // Steps 96-103 (VS Code Extensions + Claude Code epilogue) — see VscState's own comment.
+    const [vsc, setVsc] = useState<VscState>(VSC_INITIAL);
 
     const jumpToStep = (stepNum: number) => {
         const track = refs.current.track;
@@ -690,6 +809,7 @@ const QuickDBStory: FC = () => {
         secondEditOrderCol: SECOND_EDIT_ORDERCOL_AFTER,
         ai: AI_MCP_INITIAL as AiMcpState,
         ide: IDE_INITIAL as IdeState,
+        vsc: VSC_INITIAL as VscState,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -955,7 +1075,7 @@ const QuickDBStory: FC = () => {
                     ? `inset 2px 0 0 0 ${C.blue}`
                     : "none";
             };
-            mark(el("extIcon"), s >= 2 && s <= 6);
+            mark(el("extIcon"), (s >= 2 && s <= 6) || s >= 96);
             mark(el("qdbIcon"), s >= 7);
 
             const msg = TOASTS[s];
@@ -1020,13 +1140,13 @@ const QuickDBStory: FC = () => {
                 (vp.h * 0.46) / sh,
             );
             const k =
-                start + (full - start) * easeInOutCubic(clamp01(p / 0.075));
+                start + (full - start) * easeInOutCubic(clamp01(p / (0.075 * INTRO_SCALE)));
             const lap = el("lap");
             if (lap)
                 lap.style.transform = `translate(-50%,-50%) scale(${k.toFixed(4)})`;
 
             // Bezel, base and glow dissolve as the screen goes full-bleed.
-            const chrome = 1 - clamp01((p - 0.05) / 0.055);
+            const chrome = 1 - clamp01((p - 0.05 * INTRO_SCALE) / (0.055 * INTRO_SCALE));
             (["bez", "base", "glow"] as const).forEach(n => {
                 const node = el(n);
                 if (node) node.style.opacity = String(chrome);
@@ -1034,7 +1154,7 @@ const QuickDBStory: FC = () => {
             const scr = el("screen");
             if (scr) scr.style.borderRadius = `${(12 * chrome).toFixed(2)}px`;
             const hero = el("hero");
-            if (hero) hero.style.opacity = String(1 - clamp01(p / 0.03));
+            if (hero) hero.style.opacity = String(1 - clamp01(p / (0.03 * INTRO_SCALE)));
 
             e.p = p;
             const cap = el("cap");
@@ -1084,6 +1204,21 @@ const QuickDBStory: FC = () => {
             if (ideChanged) {
                 e.ide = nextIde;
                 setIde(nextIde);
+            }
+
+            // Steps 96-103 (VS Code Extensions + Claude Code epilogue) —
+            // same shallow-diff-every-tick treatment as AiMcpState/IdeState.
+            const nextVsc = computeVscState(s, e.frac);
+            let vscChanged = false;
+            for (const k in nextVsc) {
+                if (nextVsc[k as keyof VscState] !== e.vsc[k as keyof VscState]) {
+                    vscChanged = true;
+                    break;
+                }
+            }
+            if (vscChanged) {
+                e.vsc = nextVsc;
+                setVsc(nextVsc);
             }
 
             const n =
@@ -1614,7 +1749,7 @@ const QuickDBStory: FC = () => {
                     >
                         {/* macOS menu bar */}
                         {/* macOS-style top status bar with realtime time, date, battery, & weather */}
-                        <QuickDBTopMenuBar />
+                        <QuickDBTopMenuBar appName={s >= 96 ? "Code" : "Editor"} />
 
                         {/* window bar */}
                         <div
@@ -1906,6 +2041,25 @@ const QuickDBStory: FC = () => {
                                         <circle cx="12" cy="12" r="3.2" />
                                         <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.7 15H3.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 4.7 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.2 4V3.7a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2Z" />
                                     </ActIcon>
+                                    {/* Steps 98-103: Claude Code extension's own activity-bar icon
+                                        — a second proof of the MCP wiring, from a totally separate
+                                        extension's UI rather than QuickDB's own webview. */}
+                                    {s >= 96 && (
+                                        <div
+                                            ref={set("claudeCodeIcon")}
+                                            style={{
+                                                width: 48,
+                                                height: 48,
+                                                display: "grid",
+                                                placeItems: "center",
+                                                color: vsc.view === "claudeCode" ? "#fff" : "#d97757",
+                                                fontSize: 20,
+                                                boxShadow: vsc.view === "claudeCode" ? `inset 2px 0 0 0 ${C.blue}` : "none",
+                                            }}
+                                        >
+                                            ✱
+                                        </div>
+                                    )}
                                 </div>
                             </div>
 
@@ -2166,7 +2320,7 @@ const QuickDBStory: FC = () => {
                                         </div>
                                     )}
 
-                                    {sideQdb && (
+                                    {sideQdb && vsc.view === "quickdb" && (
                                         <div
                                             style={{
                                                 flex: 1,
@@ -2769,6 +2923,134 @@ const QuickDBStory: FC = () => {
                                             </div>
                                         </div>
                                     )}
+
+                                    {/* Steps 96-97: a real VS Code Extensions view — Installed /
+                                        Recommended lists (decorative), and "MCP Servers - Installed"
+                                        with quickdb as the one actually clicked (step 97, opens its
+                                        config tab). */}
+                                    {vsc.view === "extensions" && (
+                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, overflow: "auto" }}>
+                                            <PanelTitle>Extensions</PanelTitle>
+                                            <div
+                                                style={{
+                                                    margin: "0 14px",
+                                                    height: 26,
+                                                    border: `1px solid ${C.line3}`,
+                                                    background: C.raised,
+                                                    borderRadius: 2,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    padding: "0 8px",
+                                                    color: C.muted,
+                                                    fontSize: 12,
+                                                }}
+                                            >
+                                                Search Extensions in Marketplace
+                                            </div>
+
+                                            <div style={{ marginTop: 8, fontSize: 11, letterSpacing: ".06em", color: C.textDim, fontWeight: 600 }}>
+                                                <TreeRow label="INSTALLED" badge="36" />
+                                            </div>
+                                            {[
+                                                ["</tag>", "Auto Close Tag", "Automatically add HTML/XML close tag, sam…", "Jun Han", "#e2b13c"],
+                                                ["◧", "Auto Import", "Automatically finds, parses and provides cod…", "steoates", "#7cc4f5"],
+                                                ["⛭", "Auto Rename Tag", "Auto rename paired HTML/XML tag", "Jun Han", "#7cc4f5"],
+                                                ["//", "Better Comments", "Improve your code commenting by annotatin…", "Aaron Bond", "#a8cf8f"],
+                                                ["◐", "Better Folding", "Improve the folding experience in VS Code", "Mohammad Baqer", "#9d9d9d"],
+                                                ["✱", "Claude Code for VS Code", "Claude Code for VS Code: Harness the powe…", "Anthropic", "#d97757"],
+                                            ].map(([icon, name, desc, author, tint]) => (
+                                                <div key={name} style={{ display: "flex", gap: 10, padding: "8px 12px", background: name === "Claude Code for VS Code" ? C.raised : "transparent" }}>
+                                                    <div style={{ width: 32, height: 32, flex: "none", borderRadius: 6, background: "#252526", display: "grid", placeItems: "center", color: tint, fontSize: 13 }}>{icon}</div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontSize: 12.5, color: C.textStrong, fontWeight: 600 }}>{name}</div>
+                                                        <div style={{ fontSize: 11, color: C.muted, whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{desc}</div>
+                                                        <div style={{ fontSize: 11, color: C.faint, display: "flex", alignItems: "center", gap: 4 }}>
+                                                            {name === "Claude Code for VS Code" && <span style={{ color: "#7cd68f" }}>✓</span>} {author}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <div style={{ marginTop: 8, fontSize: 11, letterSpacing: ".06em", color: C.textDim, fontWeight: 600 }}>
+                                                <TreeRow label="RECOMMENDED" badge="8" />
+                                            </div>
+                                            {["Dev Containers", "Container Tools", "Microsoft Edge Tools for VS …"].map(name => (
+                                                <div key={name} style={{ display: "flex", gap: 10, padding: "8px 12px" }}>
+                                                    <div style={{ width: 32, height: 32, flex: "none", borderRadius: 6, background: "#252526", display: "grid", placeItems: "center", color: "#4daafc", fontSize: 13 }}>⬡</div>
+                                                    <div style={{ minWidth: 0 }}>
+                                                        <div style={{ fontSize: 12.5, color: C.textStrong, fontWeight: 600 }}>{name}</div>
+                                                        <div style={{ fontSize: 11, color: C.faint }}>Microsoft</div>
+                                                    </div>
+                                                </div>
+                                            ))}
+
+                                            <div
+                                                style={{
+                                                    marginTop: 8,
+                                                    fontSize: 11,
+                                                    letterSpacing: ".06em",
+                                                    color: C.textDim,
+                                                    fontWeight: 600,
+                                                    height: 23,
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 8,
+                                                    padding: "0 10px",
+                                                    background: "#04395e",
+                                                    outline: `1px solid ${C.blue}`,
+                                                }}
+                                            >
+                                                <span style={{ fontSize: 9, color: C.muted }}>›</span>
+                                                MCP SERVERS - INSTALLED
+                                            </div>
+                                            {["console-ninja", "quickdb"].map(name => (
+                                                <div
+                                                    key={name}
+                                                    ref={name === "quickdb" ? set("mcpServerQuickdbItem") : undefined}
+                                                    style={{
+                                                        display: "flex",
+                                                        alignItems: "center",
+                                                        gap: 10,
+                                                        padding: "8px 12px",
+                                                        cursor: name === "quickdb" ? "pointer" : undefined,
+                                                        background: name === "quickdb" && vsc.mcpServerTabOpen ? C.raised : "transparent",
+                                                    }}
+                                                >
+                                                    <div style={{ width: 32, height: 32, flex: "none", borderRadius: 6, background: "#252526", display: "grid", placeItems: "center", color: "#c79bff", fontSize: 14 }}>📎</div>
+                                                    <div style={{ fontSize: 13, color: C.textStrong, fontWeight: 600 }}>{name}</div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+
+                                    {/* Steps 98-103: the Claude Code extension's own panel — session
+                                        list (left) driving a chat main pane; opened at step 98, the
+                                        session itself only appears once step 101 sends the message. */}
+                                    {vsc.view === "claudeCode" && (
+                                        <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+                                            <PanelTitle>Claude Code</PanelTitle>
+                                            <div style={{ padding: "10px 14px", color: "#d97757", fontSize: 12.5, display: "flex", alignItems: "center", gap: 6 }}>
+                                                <span style={{ fontSize: 14 }}>+</span> New session
+                                            </div>
+                                            <div style={{ display: "flex", margin: "0 14px 10px", border: `1px solid ${C.line3}`, borderRadius: 4, overflow: "hidden", fontSize: 11.5 }}>
+                                                <div style={{ flex: 1, textAlign: "center", padding: "4px 0", background: C.raised, color: C.textStrong }}>Local</div>
+                                                <div style={{ flex: 1, textAlign: "center", padding: "4px 0", color: C.muted }}>Web</div>
+                                            </div>
+                                            <div style={{ margin: "0 14px 10px", height: 24, border: `1px solid ${C.line3}`, borderRadius: 4, display: "flex", alignItems: "center", padding: "0 8px", color: C.muted, fontSize: 11.5 }}>
+                                                Search sessions…
+                                            </div>
+                                            <div style={{ flex: 1, minHeight: 0, overflow: "auto" }}>
+                                                {vsc.sent ? (
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 14px", background: C.raised, fontSize: 12.5, color: C.textStrong }}>
+                                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: vsc.approved ? "#7cd68f" : "#4daafc", flex: "none" }} />
+                                                        Query Atelier Graphique customer orders
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ padding: "8px 14px", color: C.faint, fontSize: 12.5 }}>No sessions yet</div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -2963,6 +3245,7 @@ const QuickDBStory: FC = () => {
                                                 accumulate the same way Settings/SQL Assistant did. See
                                                 aiOpenTabs/aiActiveTab. */}
                                             {s >= 63 &&
+                                                vsc.view === "quickdb" &&
                                                 aiOpenTabs(ai).map(t => {
                                                     const label =
                                                         t === "settings"
@@ -3052,6 +3335,63 @@ const QuickDBStory: FC = () => {
                                                     >
                                                         <span>📄</span> Query Console: Demo &gt; classicmodels <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
                                                     </div>
+                                                </>
+                                            )}
+
+                                            {/* Steps 96-103: "MCP Setup" stays open in the background
+                                                (inactive, never clicked again) once the story moves into
+                                                the VS Code Extensions / Claude Code epilogue, joined by
+                                                "MCP Server: quickdb" (step 97) and "Claude Code" (step 98)
+                                                as they open. */}
+                                            {s >= 96 && (
+                                                <>
+                                                    <div
+                                                        style={{
+                                                            padding: "0 14px",
+                                                            background: "#181818",
+                                                            borderRight: "1px solid #2d2d2d",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            color: "#888",
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        <span>🧩</span> MCP Setup <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                    </div>
+                                                    {vsc.mcpServerTabOpen && (
+                                                        <div
+                                                            style={{
+                                                                padding: "0 14px",
+                                                                background: vsc.view === "extensions" ? "#1e1e1e" : "#181818",
+                                                                borderTop: vsc.view === "extensions" ? "2px solid #0078d4" : "none",
+                                                                borderRight: vsc.view === "extensions" ? "none" : "1px solid #2d2d2d",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                color: vsc.view === "extensions" ? "#fff" : "#888",
+                                                                fontSize: 12,
+                                                            }}
+                                                        >
+                                                            <span>📎</span> MCP Server: quickdb <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                        </div>
+                                                    )}
+                                                    {vsc.view === "claudeCode" && (
+                                                        <div
+                                                            style={{
+                                                                padding: "0 14px",
+                                                                background: "#1e1e1e",
+                                                                borderTop: "2px solid #0078d4",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                color: "#fff",
+                                                                fontSize: 12,
+                                                            }}
+                                                        >
+                                                            <span>✱</span> {vsc.sent ? "Query Atelier Graphique …" : "Claude Code"} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                        </div>
+                                                    )}
                                                 </>
                                             )}
 
@@ -4674,7 +5014,7 @@ const QuickDBStory: FC = () => {
                                                 Clients grid (only Antigravity is actually interacted
                                                 with: expand per-database access, grant Read on
                                                 classicmodels, Update). */}
-                                            {activeAiTab === "mcpSetup" && (
+                                            {activeAiTab === "mcpSetup" && !vsc.mcpServerTabOpen && vsc.view !== "claudeCode" && (
                                               <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
                                                 <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#181818", padding: "20px 24px", position: "relative" }}>
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
@@ -4821,7 +5161,7 @@ const QuickDBStory: FC = () => {
                                                     agent panel would (idle "Agent" → the mentioned server's
                                                     name once picked → a generated title once it starts
                                                     actually working). */}
-                                                {ide.agentPanelOpen && (
+                                                {ide.agentPanelOpen && vsc.view === "quickdb" && (
                                                     <div style={{ width: 320, flex: "none", background: "#1c1c1c", borderLeft: "1px solid #2d2d2d", display: "flex", flexDirection: "column" }}>
                                                         <div style={{ height: 38, flex: "none", display: "flex", alignItems: "center", padding: "0 12px", borderBottom: "1px solid #2d2d2d", fontSize: 12.5, fontWeight: 700, color: "#fff" }}>
                                                             {ide.workingPhase >= 2 || ide.resultReady ? "Atelier Graphique Order Analysis" : ide.mcpPicked ? "quickdb" : "Agent"}
@@ -4966,6 +5306,250 @@ const QuickDBStory: FC = () => {
                                                     </div>
                                                 )}
                                               </div>
+                                            )}
+
+                                            {/* Step 97: the "MCP Server: quickdb" config tab opened from
+                                                the Extensions view's MCP Servers list — the real server
+                                                entry (command/args/env), not a QuickDB-drawn mockup. */}
+                                            {vsc.view === "extensions" && vsc.mcpServerTabOpen && (
+                                                <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#181818", padding: "28px 40px" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 16, marginBottom: 16 }}>
+                                                        <div style={{ width: 56, height: 56, borderRadius: 10, background: "#252526", display: "grid", placeItems: "center", color: "#c79bff", fontSize: 24 }}>📎</div>
+                                                        <div style={{ fontSize: 22, fontWeight: 700, color: "#fff" }}>quickdb</div>
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: 8, marginBottom: 20 }}>
+                                                        <span style={{ padding: "5px 14px", background: "#0078d4", color: "#fff", borderRadius: 4, fontSize: 12 }}>Uninstall</span>
+                                                        <span style={{ padding: "5px 14px", border: "1px solid #3a3a3a", color: "#ccc", borderRadius: 4, fontSize: 12 }}>Disable</span>
+                                                    </div>
+                                                    <div style={{ borderBottom: "2px solid #0078d4", display: "inline-block", padding: "4px 0", color: "#fff", fontSize: 11.5, fontWeight: 700, letterSpacing: "0.04em", marginBottom: 20 }}>
+                                                        CONFIGURATION
+                                                    </div>
+                                                    {([
+                                                        ["Name:", "quickdb", false],
+                                                        ["Type:", "stdio", false],
+                                                        ["Command:", "node", true],
+                                                    ] as const).map(([label, val, mono]) => (
+                                                        <div key={label} style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 13 }}>
+                                                            <span style={{ width: 90, color: "#999", flex: "none" }}>{label}</span>
+                                                            <span style={{ color: "#eee", fontFamily: mono ? MONO : undefined }}>{val}</span>
+                                                        </div>
+                                                    ))}
+                                                    <div style={{ display: "flex", gap: 16, marginBottom: 14, fontSize: 13, alignItems: "flex-start" }}>
+                                                        <span style={{ width: 90, color: "#999", flex: "none" }}>Arguments:</span>
+                                                        <span style={{ color: "#ccc", fontFamily: MONO, fontSize: 12, background: "#1e1e1e", padding: "4px 8px", borderRadius: 4 }}>
+                                                            /Users/nazmulhaque/.vscode/extensions/quickdb.quickdb-1.2.9/dist/server.js
+                                                        </span>
+                                                    </div>
+                                                    <div style={{ display: "flex", gap: 16, fontSize: 13, alignItems: "flex-start" }}>
+                                                        <span style={{ width: 90, color: "#999", flex: "none" }}>Environment:</span>
+                                                        <span style={{ color: "#ccc", fontFamily: MONO, fontSize: 11.5, background: "#1e1e1e", padding: "8px", borderRadius: 4, lineHeight: 1.6, maxWidth: 900 }}>
+                                                            QUICKDB_CONNECTIONS=[{"{"}&quot;id&quot;:&quot;383303c1-2cd4-42dd-a4b3-e53dfae48231&quot;,&quot;name&quot;:&quot;Demo&quot;,&quot;type&quot;:&quot;mysql&quot;,&quot;engine&quot;:&quot;mysql&quot;,&quot;host&quot;:&quot;localhost&quot;,&quot;port&quot;:3306,&quot;database&quot;:&quot;&quot;{"}"}]
+                                                            <br />
+                                                            QUICKDB_OVERRIDES={"{}"}
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 98-103: the Claude Code extension's own panel — a
+                                                third, completely independent proof of the MCP wiring.
+                                                Welcome state until step 101 sends a message, then a plain
+                                                (non-QuickDB-styled) trace: thinking → a blocked tool call
+                                                → permission prompt → the real error/retry/success beats →
+                                                the final answer, mirroring AI Chat's round trip one more
+                                                time through a different client entirely. */}
+                                            {vsc.view === "claudeCode" && (
+                                                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#141414", position: "relative" }}>
+                                                    <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", position: "relative" }}>
+                                                        {!vsc.sent ? (
+                                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: 40 }}>
+                                                                <div style={{ fontSize: 20, display: "flex", alignItems: "center", gap: 8 }}>
+                                                                    <span style={{ color: "#d97757" }}>✱</span> <span style={{ color: "#eee" }}>Claude Code</span>
+                                                                </div>
+                                                                <div style={{ fontSize: 30 }}>👾</div>
+                                                                <div style={{ color: "#999", fontSize: 13, textAlign: "center", maxWidth: 420, lineHeight: 1.6 }}>
+                                                                    You&apos;ve come to the absolutely right place!
+                                                                </div>
+                                                                <div style={{ border: "1px solid #333", borderRadius: 8, background: "#1c1c1c", padding: "10px 14px", fontSize: 12, color: "#aaa", maxWidth: 340, textAlign: "center" }}>
+                                                                    Tackle your toughest work with Opus 5. Switch anytime with /model.
+                                                                </div>
+                                                            </div>
+                                                        ) : (
+                                                            <div style={{ padding: "16px 24px", display: "flex", flexDirection: "column", gap: 12, fontSize: 13, color: "#ddd" }}>
+                                                                <div>
+                                                                    <div style={{ color: "#eee" }}>mcp quickdb</div>
+                                                                    <div style={{ color: "#ccc" }}>{AI_CHAT_QUESTION}</div>
+                                                                </div>
+
+                                                                {vsc.workingPhase === 1 && vsc.tracePhase === 0 && (
+                                                                    <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
+                                                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666" }} /> Thinking… · 37 tokens
+                                                                    </div>
+                                                                )}
+                                                                {vsc.workingPhase === 2 && vsc.tracePhase === 0 && !vsc.permissionOpen && (
+                                                                    <div style={{ color: "#d97757", display: "flex", alignItems: "center", gap: 8 }}>✱ Working…</div>
+                                                                )}
+
+                                                                {(vsc.permissionOpen || vsc.tracePhase >= 1) && (
+                                                                    <>
+                                                                        <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666" }} /> Thought for 2s
+                                                                        </div>
+                                                                        <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666" }} /> Thought for 0s
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: vsc.tracePhase >= 1 ? "#e05252" : "#e2b13c" }} />
+                                                                                <b style={{ color: "#eee" }}>Quickdb</b> <span style={{ color: "#777" }}>[quickdb_execute_query]</span>{" "}
+                                                                                <span style={{ fontFamily: MONO, color: "#999" }}>SELECT p.productName, od.quantityOrdered…</span>
+                                                                            </div>
+                                                                            {vsc.tracePhase >= 1 && (
+                                                                                <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#1c1414", border: "1px solid #3a2020", borderRadius: 6, fontFamily: MONO, fontSize: 11.5 }}>
+                                                                                    <div style={{ color: "#888" }}>OUT</div>
+                                                                                    <div style={{ color: "#e05252" }}>✗ **Error** (quickdb_execute_query)</div>
+                                                                                    <div style={{ marginTop: 4, color: "#c99" }}>No database selected</div>
+                                                                                </div>
+                                                                            )}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+
+                                                                {vsc.tracePhase >= 2 && (
+                                                                    <div>
+                                                                        <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666" }} /> Thought for 0s
+                                                                        </div>
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7cd68f" }} />
+                                                                            <b style={{ color: "#eee" }}>Quickdb</b> <span style={{ color: "#777" }}>[quickdb_list_databases]</span>
+                                                                        </div>
+                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#141c14", border: "1px solid #203a20", borderRadius: 6, fontFamily: MONO, fontSize: 11.5, color: "#9c9" }}>
+                                                                            <div style={{ color: "#888" }}>OUT</div>
+                                                                            {"{"} &quot;connectionName&quot;: &quot;Demo&quot;, &quot;connectionId&quot;: &quot;383303c1-2cd4-42dd-a4b3-e53dfae48231&quot; {"}"}
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {vsc.tracePhase >= 3 && (
+                                                                    <div>
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7cd68f" }} />
+                                                                            <b style={{ color: "#eee" }}>Quickdb</b> <span style={{ color: "#777" }}>[quickdb_execute_query]</span>{" "}
+                                                                            <span style={{ fontFamily: MONO, color: "#999" }}>SELECT p.productName, od.quantityOrdered…</span>
+                                                                        </div>
+                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#141c14", border: "1px solid #203a20", borderRadius: 6, fontSize: 11.5, color: "#ccc" }}>
+                                                                            <div style={{ color: "#7cd68f", marginBottom: 4 }}>Query Results (7 of 7 rows, 5ms)</div>
+                                                                            <div style={{ display: "grid", gridTemplateColumns: "20px 1fr 110px 90px", gap: 6, color: "#888", fontSize: 10.5 }}>
+                                                                                <span>#</span><span>productName</span><span>quantityOrdered</span><span>orderNumber</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+
+                                                                {vsc.tracePhase >= 4 && (
+                                                                    <div style={{ lineHeight: 1.7 }}>
+                                                                        <div>
+                                                                            Atelier graphique ordered <b style={{ color: "#fff" }}>7 distinct products</b>, across 3 orders (10123, 10298, 10345):
+                                                                        </div>
+                                                                        <ol style={{ margin: "8px 0 0", paddingLeft: 20 }}>
+                                                                            {AI_CHAT_RESULT_ROWS.map(([name]) => (
+                                                                                <li key={name}>{name}</li>
+                                                                            ))}
+                                                                        </ol>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+
+                                                        {vsc.mcpModalOpen && (
+                                                            <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.5)" }}>
+                                                                <div style={{ width: 420, background: "#1c1c1c", border: "1px solid #333", borderRadius: 10, padding: 20 }}>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+                                                                        <div style={{ fontSize: 15, color: "#eee", fontWeight: 600 }}>MCP servers</div>
+                                                                        <span style={{ color: "#888" }}>✕</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>User (1)</div>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#242424", borderRadius: 6, marginBottom: 16 }}>
+                                                                        <span style={{ color: "#eee", fontSize: 13 }}>quickdb</span>
+                                                                        <span style={{ padding: "2px 8px", background: "rgba(124,214,143,0.15)", color: "#7cd68f", borderRadius: 10, fontSize: 11 }}>✓ Connected</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 11, color: "#888", marginBottom: 8 }}>claude.ai (3)</div>
+                                                                    {["claude.ai Gmail", "claude.ai Google Calendar", "claude.ai Google Drive"].map(n => (
+                                                                        <div key={n} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "8px 12px", background: "#242424", borderRadius: 6, marginBottom: 8 }}>
+                                                                            <span style={{ color: "#eee", fontSize: 13 }}>{n}</span>
+                                                                            <span style={{ padding: "2px 8px", background: "rgba(226,177,60,0.15)", color: "#e2b13c", borderRadius: 10, fontSize: 11 }}>⚠ Needs Auth</span>
+                                                                        </div>
+                                                                    ))}
+                                                                    <div style={{ color: "#666", fontSize: 11.5, marginTop: 8 }}>Learn more about MCP</div>
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {vsc.permissionOpen && (
+                                                        <div style={{ position: "absolute", left: "50%", bottom: 74, transform: "translateX(-50%)", width: 480, background: "#1c1c1c", border: "1px solid #333", borderRadius: 8, padding: 14, zIndex: 30, boxShadow: "0 12px 34px rgba(0,0,0,.6)" }}>
+                                                            <div style={{ color: "#eee", fontSize: 12.5, marginBottom: 6 }}>
+                                                                Do you want to proceed with <b>mcp__quickdb__quickdb_execute_query</b>?
+                                                            </div>
+                                                            <div style={{ color: "#888", fontSize: 11, marginBottom: 10 }}>Details ⌄</div>
+                                                            <div ref={set("claudeCodeYesBtn")} style={{ padding: "8px 12px", background: "#0078d4", color: "#fff", borderRadius: 4, fontSize: 12.5, marginBottom: 4, cursor: "pointer" }}>
+                                                                1 Yes
+                                                            </div>
+                                                            <div style={{ padding: "8px 12px", color: "#ccc", fontSize: 12.5, marginBottom: 4 }}>
+                                                                2 Yes, allow mcp__quickdb__quickdb_execute_query for <u>this project (just you)</u>
+                                                            </div>
+                                                            <div style={{ padding: "8px 12px", color: "#ccc", fontSize: 12.5 }}>3 No</div>
+                                                        </div>
+                                                    )}
+
+                                                    <div style={{ padding: "10px 20px", borderTop: "1px solid #262626" }}>
+                                                        {vsc.sent && (
+                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", background: "#2a2010", border: "1px solid #4a3a18", borderRadius: 6, marginBottom: 6, fontSize: 11.5 }}>
+                                                                <span style={{ color: "#e2b13c" }}>You&apos;ve used 93% of your weekly limit · resets in 3d</span>
+                                                                <span style={{ color: "#7cc4f5", textDecoration: "underline" }}>View usage</span>
+                                                            </div>
+                                                        )}
+                                                        {vsc.mcpPaletteOpen && (
+                                                            <div style={{ background: "#1c1c1c", border: "1px solid #333", borderRadius: 8, marginBottom: 6, overflow: "hidden" }}>
+                                                                <div style={{ padding: "6px 12px", fontSize: 10.5, color: "#777" }}>Slash Commands</div>
+                                                                <div style={{ padding: "6px 12px", color: "#eee", fontSize: 12.5 }}>/mcp</div>
+                                                                <div style={{ padding: "6px 12px", fontSize: 10.5, color: "#777", borderTop: "1px solid #2a2a2a" }}>Customize</div>
+                                                                <div
+                                                                    ref={set("claudeCodeMcpOption")}
+                                                                    title="Configure Model Context Protocol servers"
+                                                                    style={{ padding: "8px 12px", background: "#2a2a2a", color: "#fff", fontSize: 12.5, cursor: "pointer" }}
+                                                                >
+                                                                    MCP servers
+                                                                </div>
+                                                            </div>
+                                                        )}
+                                                        <div
+                                                            ref={set("claudeCodeInput")}
+                                                            style={{ border: "1px solid #333", borderRadius: 8, padding: "8px 12px", minHeight: 20, fontSize: 12.5, color: vsc.questionChars && !vsc.sent ? "#eee" : "#666", whiteSpace: "pre-wrap" }}
+                                                        >
+                                                            {vsc.sent ? "Queue another message…" : vsc.questionChars ? CLAUDE_CODE_PROMPT.slice(0, vsc.questionChars) : ""}
+                                                        </div>
+                                                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
+                                                            <span
+                                                                ref={set("claudeCodeSendBtn")}
+                                                                style={{
+                                                                    width: 26,
+                                                                    height: 26,
+                                                                    borderRadius: 6,
+                                                                    background: vsc.sent ? "#d64545" : vsc.questionChars ? "#d9603f" : "#333",
+                                                                    color: "#fff",
+                                                                    display: "grid",
+                                                                    placeItems: "center",
+                                                                    cursor: "pointer",
+                                                                    fontSize: vsc.sent ? 10 : 14,
+                                                                }}
+                                                            >
+                                                                {vsc.sent ? "■" : "↑"}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )}
                                         </div>
                                     </div>

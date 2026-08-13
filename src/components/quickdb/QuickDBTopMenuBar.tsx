@@ -44,7 +44,7 @@ function getWeatherEmoji(wmoCode: number): string {
     return "🌤️";
 }
 
-export const QuickDBTopMenuBar: React.FC = () => {
+export const QuickDBTopMenuBar: React.FC<{ appName?: string }> = ({ appName = "Editor" }) => {
     const [dateTimeStr, setDateTimeStr] = useState<string>("");
     const [batteryLevel, setBatteryLevel] = useState<number | null>(null);
     const [isCharging, setIsCharging] = useState<boolean>(false);
@@ -159,7 +159,7 @@ export const QuickDBTopMenuBar: React.FC = () => {
             }}
         >
             <div style={{ width: 14, height: 14, borderRadius: "50%", background: "rgba(255,255,255,.9)" }} />
-            <span style={{ fontWeight: 600 }}>Editor</span>
+            <span style={{ fontWeight: 600 }}>{appName}</span>
             {["File", "Edit", "Selection", "View", "Go", "Run", "Terminal", "Window", "Help"].map((m) => (
                 <span key={m}>{m}</span>
             ))}
