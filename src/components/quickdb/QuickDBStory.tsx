@@ -6805,12 +6805,13 @@ const WelcomePane: FC = () => (
         }}
     >
         <div
+            className="qd-shine-effect"
             style={{
                 position: "relative",
-                width: 300,
-                height: 300,
-                borderRadius: 44,
-                border: "18px solid #232323",
+                width: 180,
+                height: 180,
+                borderRadius: 32,
+                border: "14px solid #232323",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -6821,9 +6822,9 @@ const WelcomePane: FC = () => (
                 alt="QuickDB"
                 src="/images/quickdb-logo.png"
                 style={{
-                    width: 200,
-                    height: 200,
-                    borderRadius: 22,
+                    width: 140,
+                    height: 140,
+                    borderRadius: 18,
                     objectFit: "cover",
                 }}
             />
