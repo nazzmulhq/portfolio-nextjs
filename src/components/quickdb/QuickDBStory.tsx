@@ -6411,6 +6411,7 @@ const QuickDBStory: FC = () => {
                 {/* ── Quick Feature Navigator Bottom Bar Client Component ── */}
                 <QuickDBBottomNav
                     navItems={NAV_ITEMS}
+                    currentStep={s}
                     jumpToStep={jumpToStep}
                     triggerToast={triggerToast}
                 />

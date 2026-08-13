@@ -13,15 +13,24 @@ export interface NavItem {
 
 export interface QuickDBBottomNavProps {
     navItems: readonly NavItem[];
+    currentStep?: number;
     jumpToStep: (stepNum: number) => void;
     triggerToast: (msg: string) => void;
 }
 
 export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
     navItems,
+    currentStep = 1,
     jumpToStep,
-    triggerToast,
 }) => {
+    const isNavActive = (itemStep?: number) => {
+        if (itemStep === undefined) return false;
+        if (itemStep <= 1) return currentStep < 21;
+        if (itemStep === 21) return currentStep >= 21 && currentStep < 63;
+        if (itemStep === 63) return currentStep >= 63;
+        return false;
+    };
+
     return (
         <div
             style={{
@@ -45,66 +54,36 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
             }}
         >
             {navItems.map((nav) => {
-                if (nav.live) {
-                    return (
-                        <button
-                            key={nav.label}
-                            onClick={() => jumpToStep(nav.step ?? 1)}
-                            style={{
-                                display: "inline-flex",
-                                alignItems: "center",
-                                gap: 6,
-                                padding: "4.5px 12px",
-                                borderRadius: 99,
-                                border: "1px solid rgba(0, 120, 212, 0.6)",
-                                background: "linear-gradient(135deg, #0078d4, #005a9e)",
-                                color: "#ffffff",
-                                fontSize: 11.5,
-                                fontWeight: 600,
-                                cursor: "pointer",
-                                whiteSpace: "nowrap",
-                                boxShadow: "0 2px 10px rgba(0, 120, 212, 0.45)",
-                            }}
-                        >
-                            <span style={{ fontSize: 11 }}>{nav.icon}</span>
-                            {nav.label}
-                        </button>
-                    );
-                }
-
+                const active = isNavActive(nav.step);
                 return (
                     <button
                         key={nav.label}
-                        onClick={() => triggerToast(`${nav.label} — Coming Soon! Data View (Steps 1–20) is active.`)}
+                        onClick={() => jumpToStep(nav.step ?? 1)}
                         style={{
                             display: "inline-flex",
                             alignItems: "center",
                             gap: 6,
-                            padding: "4.5px 11px",
+                            padding: "4.5px 12px",
                             borderRadius: 99,
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            background: "rgba(255, 255, 255, 0.04)",
-                            color: "#999999",
+                            border: active
+                                ? "1px solid rgba(0, 120, 212, 0.6)"
+                                : "1px solid rgba(255, 255, 255, 0.08)",
+                            background: active
+                                ? "linear-gradient(135deg, #0078d4, #005a9e)"
+                                : "rgba(255, 255, 255, 0.04)",
+                            color: active ? "#ffffff" : "#999999",
                             fontSize: 11.5,
+                            fontWeight: active ? 600 : 400,
                             cursor: "pointer",
                             whiteSpace: "nowrap",
+                            boxShadow: active
+                                ? "0 2px 10px rgba(0, 120, 212, 0.45)"
+                                : "none",
                             transition: "all 0.18s ease",
                         }}
                     >
-                        <span style={{ fontSize: 11, opacity: 0.6 }}>{nav.icon}</span>
+                        <span style={{ fontSize: 11, opacity: active ? 1 : 0.7 }}>{nav.icon}</span>
                         {nav.label}
-                        <span
-                            style={{
-                                fontSize: 8.5,
-                                font: `600 8.5px ${MONO}`,
-                                color: "rgba(255, 255, 255, 0.4)",
-                                background: "rgba(255, 255, 255, 0.06)",
-                                padding: "1px 4px",
-                                borderRadius: 3,
-                            }}
-                        >
-                            SOON
-                        </span>
                     </button>
                 );
             })}
