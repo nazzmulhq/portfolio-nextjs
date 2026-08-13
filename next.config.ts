@@ -1,11 +1,18 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-    reactStrictMode: true,
     basePath: process.env.NEXT_PUBLIC_BASE_PATH || "",
     images: {
         unoptimized: true,
     },
+
+	reactStrictMode: true,
+	reactCompiler: true,
+	experimental: {
+		serverActions: {
+			bodySizeLimit: "10mb",
+		},
+	},
     serverExternalPackages: ["typeorm", "pg", "argon2", "bcryptjs"],
     async rewrites() {
         return [
