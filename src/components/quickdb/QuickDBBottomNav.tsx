@@ -23,12 +23,26 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
     currentStep = 1,
     jumpToStep,
 }) => {
+    const [clickedStep, setClickedStep] = React.useState<number | null>(null);
+
+    React.useEffect(() => {
+        setClickedStep(null);
+    }, [currentStep]);
+
+    const activeStep = clickedStep !== null ? clickedStep : currentStep;
+
     const isNavActive = (itemStep?: number) => {
         if (itemStep === undefined) return false;
-        if (itemStep <= 1) return currentStep < 21;
-        if (itemStep === 21) return currentStep >= 21 && currentStep < 63;
-        if (itemStep === 63) return currentStep >= 63;
+        if (itemStep <= 1) return activeStep >= 1 && activeStep < 21;
+        if (itemStep === 21) return activeStep >= 21 && activeStep < 63;
+        if (itemStep === 63) return activeStep >= 63;
         return false;
+    };
+
+    const handleClick = (step?: number) => {
+        const target = step ?? 1;
+        setClickedStep(target);
+        jumpToStep(target);
     };
 
     return (
@@ -36,7 +50,7 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
             style={{
                 position: "absolute",
                 left: "50%",
-                bottom: 84,
+                bottom: 24,
                 transform: "translateX(-50%)",
                 display: "flex",
                 alignItems: "center",
@@ -46,7 +60,7 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
                 background: "rgba(14, 14, 20, 0.94)",
                 border: "1px solid rgba(255, 255, 255, 0.14)",
                 boxShadow: "0 16px 40px -10px rgba(0, 0, 0, 0.85)",
-                zIndex: 40,
+                zIndex: 100,
                 pointerEvents: "auto",
                 maxWidth: "94vw",
                 overflowX: "auto",
@@ -58,7 +72,7 @@ export const QuickDBBottomNav: React.FC<QuickDBBottomNavProps> = ({
                 return (
                     <button
                         key={nav.label}
-                        onClick={() => jumpToStep(nav.step ?? 1)}
+                        onClick={() => handleClick(nav.step)}
                         style={{
                             display: "inline-flex",
                             alignItems: "center",

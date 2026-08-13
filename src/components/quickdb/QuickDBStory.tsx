@@ -737,8 +737,12 @@ const QuickDBStory: FC = () => {
                 Math.max(0, Math.min(STEP_STARTS.length - 1, stepNum - 1))
             ];
         const trackTop = window.scrollY + r.top;
-        const targetY = trackTop + targetP * span;
-        window.scrollTo({ top: targetY, behavior: "smooth" });
+        const targetY = Math.ceil(trackTop + targetP * span) + (stepNum > 1 ? 4 : 0);
+        try {
+            window.scrollTo({ top: targetY, behavior: "smooth" });
+        } catch {
+            window.scrollTo(0, targetY);
+        }
     };
 
     const triggerToast = (msg: string) => {
@@ -6414,7 +6418,7 @@ const QuickDBStory: FC = () => {
                 <div
                     style={{
                         position: "absolute",
-                        bottom: 88,
+                        bottom: 96,
                         left: "50%",
                         transform: s === 1 ? "translate(-50%, 0)" : "translate(-50%, 24px)",
                         zIndex: 90,
