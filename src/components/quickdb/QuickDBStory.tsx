@@ -1145,8 +1145,8 @@ const QuickDBStory: FC = () => {
 
             const full = vp.w / DESIGN_W;
             const start = Math.min(
-                (vp.w * 0.52) / DESIGN_W,
-                (vp.h * 0.46) / sh,
+                (vp.w * 0.58) / DESIGN_W,
+                (vp.h * 0.48) / sh,
             );
             const k =
                 start + (full - start) * easeInOutCubic(clamp01(p / (0.075 * INTRO_SCALE)));
@@ -6366,9 +6366,8 @@ const QuickDBStory: FC = () => {
                         inset: 0,
                         display: "flex",
                         flexDirection: "column",
-                        justifyContent: "space-between",
                         alignItems: "center",
-                        padding: "5vh 24px",
+                        padding: "3.5vh 24px 0",
                         pointerEvents: "none",
                         textAlign: "center",
                     }}
@@ -6379,7 +6378,7 @@ const QuickDBStory: FC = () => {
                                 display: "inline-flex",
                                 alignItems: "center",
                                 gap: 9,
-                                padding: "6px 13px",
+                                padding: "5px 12px",
                                 borderRadius: 99,
                                 border: "1px solid #2a2a36",
                                 background: "rgba(20,20,26,.7)",
@@ -6403,10 +6402,10 @@ const QuickDBStory: FC = () => {
                         </div>
                         <h1
                             style={{
-                                margin: "18px 0 0",
-                                fontSize: "clamp(30px,4.1vw,58px)",
-                                lineHeight: 1.04,
-                                letterSpacing: "-.035em",
+                                margin: "10px 0 0",
+                                fontSize: "clamp(24px, 2.8vw, 46px)",
+                                lineHeight: 1.05,
+                                letterSpacing: "-.03em",
                                 fontWeight: 600,
                                 textWrap: "pretty",
                             }}
@@ -6415,15 +6414,26 @@ const QuickDBStory: FC = () => {
                             <br />
                             inside your editor.
                         </h1>
+                        <div
+                            style={{
+                                margin: "10px auto 0",
+                                fontSize: "clamp(13px, 1.1vw, 16px)",
+                                color: "#9d9d9d",
+                                maxWidth: 560,
+                                textWrap: "pretty",
+                                lineHeight: 1.5,
+                            }}
+                        >
+                            Browse and query 80+ engines without leaving the window you already have open.
+                        </div>
                     </div>
-                    
                 </div>
 
                 {/* ── Viewport Floating Scroll Cue (100% Scale, fixed at bottom center of viewport) ── */}
                 <div
                     style={{
                         position: "absolute",
-                        bottom: "10%",
+                        bottom: 92,
                         left: "50%",
                         transform: s === 1 ? "translate(-50%, 0)" : "translate(-50%, 18px)",
                         zIndex: 90,
@@ -6547,20 +6557,6 @@ const QuickDBStory: FC = () => {
                                 <line x1="12" y1="5" x2="12" y2="19" />
                                 <polyline points="19 12 12 19 5 12" />
                             </svg>
-                        </div>
-                    </div>
-
-                    <div style={{ marginTop: 10, textAlign: "center" }}>
-                        <div
-                            style={{
-                                fontSize: "clamp(13px, 1.2vw, 16px)",
-                                color: "rgb(157, 157, 157)",
-                                maxWidth: 540,
-                                textWrap: "pretty",
-                                textAlign: "center",
-                            }}
-                        >
-                            Browse and query 80+ engines without leaving the window you already have open.
                         </div>
                     </div>
                 </div>
