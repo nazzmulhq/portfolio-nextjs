@@ -1075,8 +1075,9 @@ const QuickDBStory: FC = () => {
                     ? `inset 2px 0 0 0 ${C.blue}`
                     : "none";
             };
-            mark(el("extIcon"), (s >= 2 && s <= 6) || s >= 96);
-            mark(el("qdbIcon"), s >= 7);
+            mark(el("extIcon"), (s >= 2 && s <= 6) || (s >= 96 && e.vsc.view === "extensions"));
+            mark(el("qdbIcon"), s >= 7 && s < 96);
+            mark(el("claudeCodeIcon"), s >= 96 && e.vsc.view === "claudeCode");
 
             const msg = TOASTS[s];
             const t = el("toast");
@@ -1945,6 +1946,7 @@ const QuickDBStory: FC = () => {
                                             display: "grid",
                                             placeItems: "center",
                                             position: "relative",
+                                            boxShadow: s >= 7 && s < 96 ? `inset 2px 0 0 0 ${C.blue}` : "none",
                                         }}
                                     >
                                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -1973,10 +1975,6 @@ const QuickDBStory: FC = () => {
                                 <ActIcon>
                                     <path d="M7 4.5l11 7.5-11 7.5z" />
                                 </ActIcon>
-                                <ActIcon>
-                                    <circle cx="12" cy="12" r="3.4" />
-                                    <path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.6 5.6l2.1 2.1M16.3 16.3l2.1 2.1M18.4 5.6l-2.1 2.1M7.7 16.3l-2.1 2.1" />
-                                </ActIcon>
                                 <div
                                     ref={set("extIcon")}
                                     style={{
@@ -1984,8 +1982,9 @@ const QuickDBStory: FC = () => {
                                         height: 48,
                                         display: "grid",
                                         placeItems: "center",
-                                        color: C.faint,
+                                        color: (s >= 2 && s <= 6) || (s >= 96 && vsc.view === "extensions") ? "#fff" : C.faint,
                                         position: "relative",
+                                        boxShadow: (s >= 2 && s <= 6) || (s >= 96 && vsc.view === "extensions") ? `inset 2px 0 0 0 ${C.blue}` : "none",
                                     }}
                                 >
                                     <svg
@@ -1996,36 +1995,37 @@ const QuickDBStory: FC = () => {
                                         stroke="currentColor"
                                         strokeWidth="1.4"
                                     >
-                                        <rect
-                                            x="3.5"
-                                            y="3.5"
-                                            width="7"
-                                            height="7"
-                                            rx="1"
-                                        />
-                                        <rect
-                                            x="13.5"
-                                            y="3.5"
-                                            width="7"
-                                            height="7"
-                                            rx="1"
-                                        />
-                                        <rect
-                                            x="3.5"
-                                            y="13.5"
-                                            width="7"
-                                            height="7"
-                                            rx="1"
-                                        />
-                                        <rect
-                                            x="13.5"
-                                            y="13.5"
-                                            width="7"
-                                            height="7"
-                                            rx="1"
-                                        />
+                                        <rect x="3.5" y="3.5" width="7" height="7" rx="1" />
+                                        <rect x="13.5" y="3.5" width="7" height="7" rx="1" />
+                                        <rect x="3.5" y="13.5" width="7" height="7" rx="1" />
+                                        <rect x="13.5" y="13.5" width="7" height="7" rx="1" />
                                     </svg>
                                 </div>
+                                {/* Steps 98-103: Claude Code extension icon placed directly below Extensions (extIcon) in upper Activity Bar */}
+                                {s >= 96 && (
+                                    <div
+                                        ref={set("claudeCodeIcon")}
+                                        style={{
+                                            width: 48,
+                                            height: 48,
+                                            display: "grid",
+                                            placeItems: "center",
+                                            color: vsc.view === "claudeCode" ? "#fff" : "#888",
+                                            position: "relative",
+                                            cursor: "pointer",
+                                            boxShadow: vsc.view === "claudeCode" ? `inset 2px 0 0 0 ${C.blue}` : "none",
+                                        }}
+                                    >
+                                        <svg
+                                            width="22"
+                                            height="22"
+                                            viewBox="0 0 100 100"
+                                            fill={vsc.view === "claudeCode" ? "#fff" : "#d97757"}
+                                        >
+                                            <path d="m19.6 66.5 19.7-11 .3-1-.3-.5h-1l-3.3-.2-11.2-.3L14 53l-9.5-.5-2.4-.5L0 49l.2-1.5 2-1.3 2.9.2 6.3.5 9.5.6 6.9.4L38 49.1h1.6l.2-.7-.5-.4-.4-.4L29 41l-10.6-7-5.6-4.1-3-2-1.5-2-.6-4.2 2.7-3 3.7.3.9.2 3.7 2.9 8 6.1L37 36l1.5 1.2.6-.4.1-.3-.7-1.1L33 25l-6-10.4-2.7-4.3-.7-2.6c-.3-1-.4-2-.4-3l3-4.2L28 0l4.2.6L33.8 2l2.6 6 4.1 9.3L47 29.9l2 3.8 1 3.4.3 1h.7v-.5l.5-7.2 1-8.7 1-11.2.3-3.2 1.6-3.8 3-2L61 2.6l2 2.9-.3 1.8-1.1 7.7L59 27.1l-1.5 8.2h.9l1-1.1 4.1-5.4 6.9-8.6 3-3.5L77 13l2.3-1.8h4.3l3.1 4.7-1.4 4.9-4.4 5.6-3.7 4.7-5.3 7.1-3.2 5.7.3.4h.7l12-2.6 6.4-1.1 7.6-1.3 3.5 1.6.4 1.6-1.4 3.4-8.2 2-9.6 2-14.3 3.3-.2.1.2.3 6.4.6 2.8.2h6.8l12.6 1 3.3 2 1.9 2.7-.3 2-5.1 2.6-6.8-1.6-16-3.8-5.4-1.3h-.8v.4l4.6 4.5 8.3 7.5L89 80.1l.5 2.4-1.3 2-1.4-.2-9.2-7-3.6-3-8-6.8h-.5v.7l1.8 2.7 9.8 14.7.5 4.5-.7 1.4-2.6 1-2.7-.6-5.8-8-6-9-4.7-8.2-.5.4-2.9 30.2-1.3 1.5-3 1.2-2.5-2-1.4-3 1.4-6.2 1.6-8 1.3-6.4 1.2-7.9.7-2.6v-.2H49L43 72l-9 12.3-7.2 7.6-1.7.7-3-1.5.3-2.8L24 86l10-12.8 6-7.9 4-4.6-.1-.5h-.3L17.2 77.4l-4.7.6-2-2 .2-3 1-1 8-5.5Z" />
+                                        </svg>
+                                    </div>
+                                )}
                                 <div
                                     style={{
                                         marginTop: "auto",
@@ -2041,25 +2041,6 @@ const QuickDBStory: FC = () => {
                                         <circle cx="12" cy="12" r="3.2" />
                                         <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-2.7 1.1v.3a2 2 0 1 1-4 0v-.2a1.6 1.6 0 0 0-2.7-1.1l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1A1.6 1.6 0 0 0 3.7 15H3.4a2 2 0 1 1 0-4h.2A1.6 1.6 0 0 0 4.7 8.3l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1A1.6 1.6 0 0 0 10.2 4V3.7a2 2 0 1 1 4 0v.2a1.6 1.6 0 0 0 2.7 1.1l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0 1.1 2.7h.3a2 2 0 1 1 0 4h-.2Z" />
                                     </ActIcon>
-                                    {/* Steps 98-103: Claude Code extension's own activity-bar icon
-                                        — a second proof of the MCP wiring, from a totally separate
-                                        extension's UI rather than QuickDB's own webview. */}
-                                    {s >= 96 && (
-                                        <div
-                                            ref={set("claudeCodeIcon")}
-                                            style={{
-                                                width: 48,
-                                                height: 48,
-                                                display: "grid",
-                                                placeItems: "center",
-                                                color: vsc.view === "claudeCode" ? "#fff" : "#d97757",
-                                                fontSize: 20,
-                                                boxShadow: vsc.view === "claudeCode" ? `inset 2px 0 0 0 ${C.blue}` : "none",
-                                            }}
-                                        >
-                                            ✱
-                                        </div>
-                                    )}
                                 </div>
                             </div>
 
@@ -3338,43 +3319,47 @@ const QuickDBStory: FC = () => {
                                                 </>
                                             )}
 
-                                            {/* Steps 96-103: "MCP Setup" stays open in the background
-                                                (inactive, never clicked again) once the story moves into
-                                                the VS Code Extensions / Claude Code epilogue, joined by
-                                                "MCP Server: quickdb" (step 97) and "Claude Code" (step 98)
-                                                as they open. */}
+                                            {/* Steps 96-103: In VS Code Extensions view (steps 96-97),
+                                                "MCP Setup" and "MCP Server: quickdb" tabs are shown. Once
+                                                the story moves into Claude Code panel (steps 98-103), those
+                                                tabs are closed, leaving only the active Claude Code / session
+                                                tab matching the reference image. */}
                                             {s >= 96 && (
                                                 <>
-                                                    <div
-                                                        style={{
-                                                            padding: "0 14px",
-                                                            background: "#181818",
-                                                            borderRight: "1px solid #2d2d2d",
-                                                            display: "flex",
-                                                            alignItems: "center",
-                                                            gap: 8,
-                                                            color: "#888",
-                                                            fontSize: 12,
-                                                        }}
-                                                    >
-                                                        <span>🧩</span> MCP Setup <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
-                                                    </div>
-                                                    {vsc.mcpServerTabOpen && (
-                                                        <div
-                                                            style={{
-                                                                padding: "0 14px",
-                                                                background: vsc.view === "extensions" ? "#1e1e1e" : "#181818",
-                                                                borderTop: vsc.view === "extensions" ? "2px solid #0078d4" : "none",
-                                                                borderRight: vsc.view === "extensions" ? "none" : "1px solid #2d2d2d",
-                                                                display: "flex",
-                                                                alignItems: "center",
-                                                                gap: 8,
-                                                                color: vsc.view === "extensions" ? "#fff" : "#888",
-                                                                fontSize: 12,
-                                                            }}
-                                                        >
-                                                            <span>📎</span> MCP Server: quickdb <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
-                                                        </div>
+                                                    {vsc.view !== "claudeCode" && (
+                                                        <>
+                                                            <div
+                                                                style={{
+                                                                    padding: "0 14px",
+                                                                    background: "#181818",
+                                                                    borderRight: "1px solid #2d2d2d",
+                                                                    display: "flex",
+                                                                    alignItems: "center",
+                                                                    gap: 8,
+                                                                    color: "#888",
+                                                                    fontSize: 12,
+                                                                }}
+                                                            >
+                                                                <span>🧩</span> MCP Setup <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                            </div>
+                                                            {vsc.mcpServerTabOpen && (
+                                                                <div
+                                                                    style={{
+                                                                        padding: "0 14px",
+                                                                        background: vsc.view === "extensions" ? "#1e1e1e" : "#181818",
+                                                                        borderTop: vsc.view === "extensions" ? "2px solid #0078d4" : "none",
+                                                                        borderRight: vsc.view === "extensions" ? "none" : "1px solid #2d2d2d",
+                                                                        display: "flex",
+                                                                        alignItems: "center",
+                                                                        gap: 8,
+                                                                        color: vsc.view === "extensions" ? "#fff" : "#888",
+                                                                        fontSize: 12,
+                                                                    }}
+                                                                >
+                                                                    <span>📎</span> MCP Server: quickdb <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                                </div>
+                                                            )}
+                                                        </>
                                                     )}
                                                     {vsc.view === "claudeCode" && (
                                                         <div
@@ -5488,18 +5473,26 @@ const QuickDBStory: FC = () => {
                                                     </div>
 
                                                     {vsc.permissionOpen && (
-                                                        <div style={{ position: "absolute", left: "50%", bottom: 74, transform: "translateX(-50%)", width: 480, background: "#1c1c1c", border: "1px solid #333", borderRadius: 8, padding: 14, zIndex: 30, boxShadow: "0 12px 34px rgba(0,0,0,.6)" }}>
-                                                            <div style={{ color: "#eee", fontSize: 12.5, marginBottom: 6 }}>
+                                                        <div style={{ position: "absolute", left: "50%", bottom: 160, transform: "translateX(-50%)", width: 480, background: "#1c1c1c", border: "1px solid #333", borderRadius: 8, padding: 16, zIndex: 30, boxShadow: "0 12px 34px rgba(0,0,0,.6)" }}>
+                                                            <div style={{ color: "#eee", fontSize: 12.5, fontWeight: 600, marginBottom: 4 }}>
                                                                 Do you want to proceed with <b>mcp__quickdb__quickdb_execute_query</b>?
                                                             </div>
-                                                            <div style={{ color: "#888", fontSize: 11, marginBottom: 10 }}>Details ⌄</div>
-                                                            <div ref={set("claudeCodeYesBtn")} style={{ padding: "8px 12px", background: "#0078d4", color: "#fff", borderRadius: 4, fontSize: 12.5, marginBottom: 4, cursor: "pointer" }}>
-                                                                1 Yes
+                                                            <div style={{ color: "#888", fontSize: 11, marginBottom: 12 }}>Details ⌄</div>
+                                                            <div ref={set("claudeCodeYesBtn")} style={{ padding: "8px 12px", background: "#0078d4", color: "#fff", borderRadius: 6, fontSize: 12.5, marginBottom: 6, cursor: "pointer", fontWeight: 600 }}>
+                                                                1 &nbsp;Yes
                                                             </div>
-                                                            <div style={{ padding: "8px 12px", color: "#ccc", fontSize: 12.5, marginBottom: 4 }}>
-                                                                2 Yes, allow mcp__quickdb__quickdb_execute_query for <u>this project (just you)</u>
+                                                            <div style={{ padding: "8px 12px", background: "#242424", border: "1px solid #333", color: "#ccc", borderRadius: 6, fontSize: 12.5, marginBottom: 6 }}>
+                                                                2 &nbsp;Yes, allow mcp__quickdb__quickdb_execute_query for <u style={{ textDecorationStyle: "dotted" }}>this project (just you)</u>
                                                             </div>
-                                                            <div style={{ padding: "8px 12px", color: "#ccc", fontSize: 12.5 }}>3 No</div>
+                                                            <div style={{ padding: "8px 12px", background: "#242424", border: "1px solid #333", color: "#ccc", borderRadius: 6, fontSize: 12.5, marginBottom: 10 }}>
+                                                                3 &nbsp;No
+                                                            </div>
+                                                            <div style={{ padding: "8px 12px", background: "#242424", border: "1px solid #333", color: "#666", borderRadius: 6, fontSize: 12, marginBottom: 8 }}>
+                                                                Tell Claude what to do instead
+                                                            </div>
+                                                            <div style={{ color: "#777", fontSize: 10.5 }}>
+                                                                Esc to cancel
+                                                            </div>
                                                         </div>
                                                     )}
 
