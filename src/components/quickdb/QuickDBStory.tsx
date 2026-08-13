@@ -9,11 +9,17 @@ import {
     useState,
 } from "react";
 import {
+    AI_CHAT_QUESTION,
+    AI_CHAT_RESULT_ROWS,
+    AI_CHAT_SQL,
     CATEGORIES,
     CUST,
     DESIGN_W,
     EMPTY_ROWS,
     FIELDS,
+    MCP_CLIENTS,
+    MCP_DATABASES,
+    MCP_TOOLS,
     P0,
     PAY_ROWS,
     PREVIEW_ROWS,
@@ -70,6 +76,19 @@ const C = {
 const MONO = "'JetBrains Mono', ui-monospace, monospace";
 const UI = "-apple-system, 'SF Pro Text', 'Segoe UI', system-ui, sans-serif";
 
+/** Badge tint per MCP tool category, used on the MCP Tools catalog (steps 79-80). */
+const BADGE_TINT: Record<string, string> = {
+    Help: "#9d9d9d",
+    Connections: "#7cc4f5",
+    Schema: "#c79bff",
+    Read: "#7cd68f",
+    Write: "#ff8a8a",
+    Stats: "#9aa5ff",
+    Reports: "#f5cf6a",
+    Visualization: "#ff9bb0",
+    Design: "#ffab6b",
+};
+
 /** Ref keys the cursor can aim at, plus the stage elements the engine drives. */
 type RefKey =
     | "track"
@@ -125,7 +144,28 @@ type RefKey =
     | "snippetCardItem"
     | "closeSnippetRightBtn"
     | "visualizeBarBtn"
-    | "closeVizTabBtn";
+    | "closeVizTabBtn"
+    | "aiSettingsNavItem"
+    | "aiProviderCloudBtn"
+    | "aiProviderLocalBtn"
+    | "aiSqlAssistantNavItem"
+    | "aiChatNavItem"
+    | "aiChatConnBtn"
+    | "aiChatConnDemoOption"
+    | "aiChatDbBtn"
+    | "aiChatDbClassicOption"
+    | "aiChatInput"
+    | "aiChatSendBtn"
+    | "aiChatRunBtn"
+    | "aiChatOpenConsoleBtn"
+    | "aiConsoleRunBtn"
+    | "aiConsoleCloseTabBtn"
+    | "mcpToolsNavItem"
+    | "mcpClientSetupLinkBtn"
+    | "mcpPerDbAccessLink"
+    | "mcpReadBtn"
+    | "mcpUpdateBtn"
+    | "toolsScrollWrap";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -294,6 +334,151 @@ const editPhaseFor = (step: number, frac: number): 0 | 1 | 2 | 3 | 4 | 5 => {
  */
 const GLIDE_EASE = 0.28;
 
+/**
+ * Steps 63-84 (AI Settings → AI SQL Assistant → AI Chat → its own Query
+ * Console round-trip → MCP Tools → MCP Setup) are a long, strictly linear
+ * chain of hover-then-click beats, same discipline as the rest of the story:
+ * a click's visible consequence can't land before the cursor has actually
+ * glided to and "clicked" its target. Rather than the usual one useState +
+ * one engine-ref field + one diff line per boolean (viable for a handful of
+ * toggles, unworkable for ~20 of them), every derived value here is a pure
+ * function of (step, frac) collapsed into one object, computed and
+ * shallow-diffed as a single unit in tick() — see AiMcpState below.
+ */
+interface AiMcpState {
+    /** AI Settings' Provider toggle (steps 63 default / 64 / 65). */
+    provider: "editor" | "cloud" | "local";
+    /** AI SQL Assistant tab is open and active (step 66, until Chat resets it at 67). */
+    sqlAssistantOpen: boolean;
+    /** AI Chat tab is open (step 67 on — stays true for the rest of the story). */
+    chatOpen: boolean;
+    /** Chat's Connection dropdown is open (step 68, through 69 until picked). */
+    connDropdownOpen: boolean;
+    /** "Demo (mysql)" picked as the chat's connection (step 69's click). */
+    connPicked: boolean;
+    /** Chat's Database dropdown is open (step 70, through 71 until picked). */
+    dbDropdownOpen: boolean;
+    /** "classicmodels" picked as the chat's database (step 71's click) — this is what enables the input bar. */
+    dbPicked: boolean;
+    /** Characters of AI_CHAT_QUESTION revealed so far (step 72's type-in). */
+    questionChars: number;
+    /** The question was sent — renders as a right-aligned bubble (step 73's click). */
+    sent: boolean;
+    /** The "thinking…" beat is done and the SQL reply + Run/Open-in-Console/Copy row is showing (step 74). */
+    responded: boolean;
+    /** The reply's own Run was clicked — results table appears inline in chat (step 75's click). */
+    ranInChat: boolean;
+    /** The AI-generated-query Query Console tab is open (step 76's click, until closed at 78). */
+    consoleOpen: boolean;
+    /** That console's own Run was clicked — its results grid is showing (step 77's click). */
+    consoleRan: boolean;
+    /** That console tab was closed via its own ✕ (step 78's click) — back to just AI Chat. */
+    consoleClosed: boolean;
+    /** MCP Tools tab is open (step 79's click). */
+    mcpToolsOpen: boolean;
+    /** Scroll offset (px) into the MCP Tools catalog list (steps 80-81). */
+    mcpScroll: number;
+    /** MCP Setup tab is open (step 81's click on "MCP client setup →"). */
+    mcpSetupOpen: boolean;
+    /** Antigravity card's "› Per-database access" row is expanded (step 82's click). */
+    perDbExpanded: boolean;
+    /** classicmodels row's Read toggle is on, under Antigravity (step 83's click). */
+    readSelected: boolean;
+    /** Antigravity's Update was clicked — the "configured" toast is showing (step 84's click). */
+    updateClicked: boolean;
+}
+
+const AI_MCP_INITIAL: AiMcpState = {
+    provider: "editor",
+    sqlAssistantOpen: false,
+    chatOpen: false,
+    connDropdownOpen: false,
+    connPicked: false,
+    dbDropdownOpen: false,
+    dbPicked: false,
+    questionChars: 0,
+    sent: false,
+    responded: false,
+    ranInChat: false,
+    consoleOpen: false,
+    consoleRan: false,
+    consoleClosed: false,
+    mcpToolsOpen: false,
+    mcpScroll: 0,
+    mcpSetupOpen: false,
+    perDbExpanded: false,
+    readSelected: false,
+    updateClicked: false,
+};
+
+/** A step's click "lands" once the cursor is past it — either scrolled fully
+ *  past (s > step) or into its own second half (s === step && frac >= 0.5),
+ *  same 0.5 threshold as every other single-step click gate in this file. */
+const clickLanded = (s: number, frac: number, step: number) =>
+    s > step || (s === step && frac >= 0.5);
+
+const computeAiMcpState = (s: number, frac: number): AiMcpState => {
+    if (s < 63) return AI_MCP_INITIAL;
+    const past = (step: number) => clickLanded(s, frac, step);
+    const connPicked = past(69);
+    const dbPicked = past(71);
+    const consoleClosed = past(78);
+    return {
+        provider: past(65) ? "local" : past(64) ? "cloud" : "editor",
+        sqlAssistantOpen: past(66) && !past(67),
+        chatOpen: past(67),
+        connDropdownOpen: !connPicked && (s === 68 || s === 69),
+        connPicked,
+        dbDropdownOpen: connPicked && !dbPicked && (s === 70 || s === 71),
+        dbPicked,
+        questionChars:
+            s > 72
+                ? AI_CHAT_QUESTION.length
+                : s === 72
+                  ? Math.round(clamp01((frac - 0.15) / 0.8) * AI_CHAT_QUESTION.length)
+                  : 0,
+        sent: past(73),
+        responded: s >= 74,
+        ranInChat: past(75),
+        consoleOpen: past(76) && !consoleClosed,
+        consoleRan: past(77),
+        consoleClosed,
+        mcpToolsOpen: past(79),
+        mcpScroll: s < 80 ? 0 : s === 80 ? Math.round(clamp01(frac) * 640) : 640,
+        mcpSetupOpen: past(81),
+        perDbExpanded: past(82),
+        readSelected: past(83),
+        updateClicked: past(84),
+    };
+};
+
+/** Which of the AI & MCP webview tabs is on top — the tab bar accumulates
+ *  (AI Settings, then +AI SQL Assistant) until AI Chat opens and resets it
+ *  to just itself, same as the reference recording. Checked in descending
+ *  step order and returns on the first match, which works because `past()`
+ *  is monotonic in s: whichever stage most recently landed wins. */
+type AiTab = "settings" | "sqlAssistant" | "chat" | "console" | "mcpTools" | "mcpSetup";
+
+const aiActiveTab = (ai: AiMcpState): AiTab => {
+    if (ai.mcpSetupOpen) return "mcpSetup";
+    if (ai.mcpToolsOpen) return "mcpTools";
+    if (ai.consoleOpen) return "console";
+    if (ai.chatOpen) return "chat";
+    if (ai.sqlAssistantOpen) return "sqlAssistant";
+    return "settings";
+};
+
+const aiOpenTabs = (ai: AiMcpState): readonly AiTab[] => {
+    if (ai.chatOpen) {
+        if (ai.mcpSetupOpen) return ["chat", "mcpTools", "mcpSetup"];
+        if (ai.mcpToolsOpen) return ["chat", "mcpTools"];
+        if (ai.consoleOpen) return ["chat", "console"];
+        return ["chat"];
+    }
+    if (ai.sqlAssistantOpen) return ["settings", "sqlAssistant"];
+    return ["settings"];
+};
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | SVGElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | SVGElement | null) => {
@@ -336,6 +521,9 @@ const QuickDBStory: FC = () => {
     const [queryTitleText, setQueryTitleText] = useState(QUERY_TITLE_AFTER);
     const [secondEditTable, setSecondEditTable] = useState(SECOND_EDIT_TABLE_AFTER);
     const [secondEditOrderCol, setSecondEditOrderCol] = useState(SECOND_EDIT_ORDERCOL_AFTER);
+    // Steps 63-84 (AI & MCP) — see AiMcpState's own comment for why this is
+    // one combined object instead of ~20 individual useState/engine-ref pairs.
+    const [ai, setAi] = useState<AiMcpState>(AI_MCP_INITIAL);
 
     const jumpToStep = (stepNum: number) => {
         const track = refs.current.track;
@@ -373,10 +561,7 @@ const QuickDBStory: FC = () => {
     const NAV_ITEMS = [
         { label: "Data View", icon: "▤", live: true, step: 1 },
         { label: "Query Console", icon: "⌘", live: true, step: 21 },
-        { label: "Query Builder", icon: "⚙", live: false },
-        { label: "ERD Maker", icon: "◫", live: false },
-        { label: "AI & MCP", icon: "⚡", live: false },
-        { label: "Make Dashboard", icon: "▮▮", live: false },
+        { label: "AI & MCP", icon: "⚡", live: true, step: 63 },
     ] as const;
 
     const DATA_VIEW_SUBSTEPS = [
@@ -422,6 +607,7 @@ const QuickDBStory: FC = () => {
         queryTitleText: QUERY_TITLE_AFTER,
         secondEditTable: SECOND_EDIT_TABLE_AFTER,
         secondEditOrderCol: SECOND_EDIT_ORDERCOL_AFTER,
+        ai: AI_MCP_INITIAL as AiMcpState,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -713,6 +899,16 @@ const QuickDBStory: FC = () => {
                     }, 3400);
                 }
             }
+            // Steps 63+ (AI & MCP): the group they target sits at the very
+            // bottom of the TOOLS tree, below QUERY HISTORY/SAVED QUERIES in
+            // source order but visually the last group in TOOLS — scroll the
+            // whole tree's wrapper down so it's actually in view instead of
+            // clipped past the sidebar's fixed height. Not frac-gated like a
+            // click's consequence would be: this is a passive scroll, not
+            // something the cursor's own click causes.
+            const toolsWrap = el("toolsScrollWrap");
+            if (toolsWrap) toolsWrap.scrollTop = s >= 63 ? toolsWrap.scrollHeight : 0;
+
             requestAnimationFrame(() => aimCursor(s));
             kickTyping();
         };
@@ -774,6 +970,24 @@ const QuickDBStory: FC = () => {
             e.frac = clamp01((p - stepStart) / (stepEnd - stepStart));
             e.visible = p >= 0.06 && p <= 0.995;
             aimCursor(s);
+
+            // Steps 63-84 (AI & MCP): one combined object, computed and
+            // shallow-diffed every tick rather than folded into the big
+            // step-gated diff block below — several of its fields (typing
+            // progress, scroll offset) change continuously within a single
+            // step as frac moves, not just when s itself changes.
+            const nextAi = computeAiMcpState(s, e.frac);
+            let aiChanged = false;
+            for (const k in nextAi) {
+                if (nextAi[k as keyof AiMcpState] !== e.ai[k as keyof AiMcpState]) {
+                    aiChanged = true;
+                    break;
+                }
+            }
+            if (aiChanged) {
+                e.ai = nextAi;
+                setAi(nextAi);
+            }
 
             const n =
                 s === 11
@@ -1055,6 +1269,8 @@ const QuickDBStory: FC = () => {
 
     /* ── derived view model (mirrors the design's renderVals) ──── */
     const s = step;
+    // Steps 63-84 (AI & MCP) — which of the AI/MCP tabs/panels is on top.
+    const activeAiTab = s >= 63 ? aiActiveTab(ai) : null;
     // Not just s === 15: the payments tab stays mounted into the first part
     // of step 16 so there's something for the cursor to close (see tick()).
     const pay = paymentsOpen;
@@ -2161,12 +2377,16 @@ const QuickDBStory: FC = () => {
 
                                             </div>
 
-                                            {/* tools */}
+                                            {/* tools — TOOLS + QUERY HISTORY + SAVED QUERIES. Scrollable
+                                                (not just clipped) so steps 63+ can bring the AI/MCP group,
+                                                added at the bottom of TOOLS, into view — see applyStep's
+                                                toolsScrollWrap handling below. */}
                                             <div
+                                                ref={set("toolsScrollWrap")}
                                                 style={{
                                                     flex: 1,
                                                     minHeight: 0,
-                                                    overflow: "hidden",
+                                                    overflow: "auto",
                                                     borderTop: `1px solid ${C.line}`,
                                                     marginTop: 8,
                                                 }}
@@ -2260,48 +2480,62 @@ const QuickDBStory: FC = () => {
                                                                     {g.count}
                                                                 </span>
                                                             </div>
-                                                            {g.items.map(it => (
-                                                                <div
-                                                                    key={it}
-                                                                    ref={
-                                                                        it === "SQL Console"
-                                                                            ? set("sidebarSqlConsole")
-                                                                            : undefined
-                                                                    }
-                                                                    style={{
-                                                                        height: 24,
-                                                                        display:
-                                                                            "flex",
-                                                                        alignItems:
-                                                                            "center",
-                                                                        gap: 8,
-                                                                        padding:
-                                                                            "0 12px 0 40px",
-                                                                        background:
-                                                                            it === "SQL Console" && s >= 21
+                                                            {g.items.map(it => {
+                                                                const ref: RefKey | undefined =
+                                                                    it === "SQL Console"
+                                                                        ? "sidebarSqlConsole"
+                                                                        : it === "AI Settings (Provider / Key)"
+                                                                          ? "aiSettingsNavItem"
+                                                                          : it === "AI SQL Assistant"
+                                                                            ? "aiSqlAssistantNavItem"
+                                                                            : it === "AI Chat"
+                                                                              ? "aiChatNavItem"
+                                                                              : it === "MCP Tools"
+                                                                                ? "mcpToolsNavItem"
+                                                                                : undefined;
+                                                                const active =
+                                                                    (it === "SQL Console" && s >= 21) ||
+                                                                    (it === "AI Settings (Provider / Key)" && activeAiTab === "settings") ||
+                                                                    (it === "AI SQL Assistant" && activeAiTab === "sqlAssistant") ||
+                                                                    (it === "AI Chat" && activeAiTab === "chat") ||
+                                                                    (it === "MCP Tools" && activeAiTab === "mcpTools") ||
+                                                                    (it === "Setup MCP for AI Clients" && activeAiTab === "mcpSetup");
+                                                                return (
+                                                                    <div
+                                                                        key={it}
+                                                                        ref={ref ? set(ref) : undefined}
+                                                                        style={{
+                                                                            height: 24,
+                                                                            display:
+                                                                                "flex",
+                                                                            alignItems:
+                                                                                "center",
+                                                                            gap: 8,
+                                                                            padding:
+                                                                                "0 12px 0 40px",
+                                                                            background: active
                                                                                 ? C.raised
                                                                                 : "transparent",
-                                                                        color:
-                                                                            it === "SQL Console" && s >= 21
+                                                                            color: active
                                                                                 ? C.text
                                                                                 : C.textDim,
-                                                                        fontWeight:
-                                                                            it === "SQL Console" && s >= 21
+                                                                            fontWeight: active
                                                                                 ? 600
                                                                                 : 400,
-                                                                    }}
-                                                                >
-                                                                    <span
-                                                                        style={{
-                                                                            color: C.muted,
-                                                                            fontSize: 11,
                                                                         }}
                                                                     >
-                                                                        ▫
-                                                                    </span>
-                                                                    {it}
-                                                                </div>
-                                                            ))}
+                                                                        <span
+                                                                            style={{
+                                                                                color: C.muted,
+                                                                                fontSize: 11,
+                                                                            }}
+                                                                        >
+                                                                            ▫
+                                                                        </span>
+                                                                        {it}
+                                                                    </div>
+                                                                );
+                                                            })}
                                                         </div>
                                                     ))}
                                                 </div>
@@ -2501,7 +2735,7 @@ const QuickDBStory: FC = () => {
                                             )}
                                             {/* Hidden again once vizTabClosed — step 62 closes this
                                                 tab entirely, back to just Query Console above. */}
-                                            {s >= 61 && !vizTabClosed && (
+                                            {s >= 61 && s <= 62 && !vizTabClosed && (
                                                 <>
                                                     <div
                                                         style={{
@@ -2544,6 +2778,64 @@ const QuickDBStory: FC = () => {
                                                     </div>
                                                 </>
                                             )}
+
+                                            {/* Steps 63-84: AI & MCP tabs. Accumulate (AI Settings, then
+                                                +AI SQL Assistant) until AI Chat opens and resets the bar
+                                                to just itself — same as the reference recording — then a
+                                                Query Console tab appears/disappears around the "Open in
+                                                Console" round trip (76-78), and MCP Tools/MCP Setup
+                                                accumulate the same way Settings/SQL Assistant did. See
+                                                aiOpenTabs/aiActiveTab. */}
+                                            {s >= 63 &&
+                                                aiOpenTabs(ai).map(t => {
+                                                    const label =
+                                                        t === "settings"
+                                                            ? "AI Settings"
+                                                            : t === "sqlAssistant"
+                                                              ? "AI SQL Assistant"
+                                                              : t === "chat"
+                                                                ? "AI Chat"
+                                                                : t === "console"
+                                                                  ? "Query Console: Demo > classicmodels"
+                                                                  : t === "mcpTools"
+                                                                    ? "MCP Tools"
+                                                                    : "MCP Setup";
+                                                    const icon = t === "console" ? "📄" : t === "mcpTools" || t === "mcpSetup" ? "🧩" : "✨";
+                                                    const isActive = activeAiTab === t;
+                                                    return (
+                                                        <div
+                                                            key={t}
+                                                            style={{
+                                                                padding: "0 14px",
+                                                                background: isActive ? "#1e1e1e" : "#181818",
+                                                                borderTop: isActive ? "2px solid #0078d4" : "none",
+                                                                borderRight: isActive ? "none" : "1px solid #2d2d2d",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                color: isActive ? "#fff" : "#888",
+                                                                fontSize: 12,
+                                                            }}
+                                                        >
+                                                            <span>{icon}</span> {label}{" "}
+                                                            {t === "console" ? (
+                                                                <span
+                                                                    ref={set("aiConsoleCloseTabBtn")}
+                                                                    style={{
+                                                                        opacity: s === 78 ? 1 : 0.6,
+                                                                        fontSize: 10,
+                                                                        cursor: "pointer",
+                                                                        color: s === 78 ? "#70baff" : undefined,
+                                                                    }}
+                                                                >
+                                                                    ✕
+                                                                </span>
+                                                            ) : (
+                                                                <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
 
                                             <div
                                                 style={{
@@ -3507,7 +3799,7 @@ const QuickDBStory: FC = () => {
                                                 (image 40); only 61's click actually opens it (image 41).
                                                 Closes again once vizTabClosed — step 62 hovers and clicks
                                                 this view's own tab ✕, landing back on Query Console. */}
-                                            {s >= 61 && !vizTabClosed && (
+                                            {s >= 61 && s <= 62 && !vizTabClosed && (
                                                 <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0, background: "#141418" }}>
                                                     {/* Toolbar */}
                                                     <div style={{ height: 38, flex: "none", background: "#1c1c22", borderBottom: "1px solid #2d2d35", display: "flex", alignItems: "center", padding: "0 14px", gap: 16, fontSize: 11.5, color: "#aaa" }}>
@@ -3683,6 +3975,621 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                         </div>
                                                     </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 63-65: AI Settings — Provider toggle (Editor model /
+                                                Cloud (API key) / Local (Ollama)), each with its own
+                                                description + config box, plus the shared GENERATION box
+                                                underneath every provider. */}
+                                            {activeAiTab === "settings" && (
+                                                <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#181818", padding: "28px 40px", fontSize: 12.5, color: "#ccc" }}>
+                                                    <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between", marginBottom: 28 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                                                            <span style={{ fontSize: 22 }}>✨</span>
+                                                            <div>
+                                                                <div style={{ fontSize: 17, fontWeight: 700, color: "#fff" }}>AI Settings</div>
+                                                                <div style={{ fontSize: 12, color: "#888", marginTop: 2 }}>Choose how QuickDB&apos;s AI features run</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: "flex", gap: 8, flex: "none" }}>
+                                                            <span style={{ padding: "6px 14px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Test providers</span>
+                                                            <span style={{ padding: "6px 14px", background: "#e8e8e8", color: "#181818", borderRadius: 5, fontWeight: 700 }}>Save</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ maxWidth: 620 }}>
+                                                        <div style={{ fontSize: 11, fontWeight: 700, color: "#999", marginBottom: 8 }}>Provider</div>
+                                                        <div style={{ display: "flex", border: "1px solid #3a3a3a", borderRadius: 6, overflow: "hidden", marginBottom: 12 }}>
+                                                            {(["editor", "cloud", "local"] as const).map(p => (
+                                                                <div
+                                                                    key={p}
+                                                                    ref={p === "cloud" ? set("aiProviderCloudBtn") : p === "local" ? set("aiProviderLocalBtn") : undefined}
+                                                                    style={{
+                                                                        flex: 1,
+                                                                        textAlign: "center",
+                                                                        padding: "8px 0",
+                                                                        cursor: "pointer",
+                                                                        fontWeight: 600,
+                                                                        background: ai.provider === p ? "#e8e8e8" : "transparent",
+                                                                        color: ai.provider === p ? "#181818" : "#ccc",
+                                                                        borderRight: p !== "local" ? "1px solid #3a3a3a" : "none",
+                                                                    }}
+                                                                >
+                                                                    {p === "editor" ? "Editor model" : p === "cloud" ? "Cloud (API key)" : "Local (Ollama)"}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+
+                                                        <div style={{ color: "#999", marginBottom: 18, lineHeight: 1.6 }}>
+                                                            {ai.provider === "editor" && "Uses your editor's built-in language model (Copilot / Continue / Cursor). No key needed — just be signed in to that model."}
+                                                            {ai.provider === "cloud" && "Calls Anthropic, OpenAI, or Google Gemini directly with your own API key (stored securely in SecretStorage)."}
+                                                            {ai.provider === "local" && "Calls a self-hosted Ollama server — fully local & private. Pick an installed model or pull a new one below."}
+                                                        </div>
+
+                                                        {ai.provider === "editor" && (
+                                                            <div style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 16, marginBottom: 20, lineHeight: 1.6 }}>
+                                                                The model is managed by your editor. Make sure Copilot (or a compatible language-model provider) is installed and signed in. Use <b style={{ color: "#fff" }}>Test providers</b> above to confirm.
+                                                            </div>
+                                                        )}
+
+                                                        {ai.provider === "cloud" && (
+                                                            <div style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 16, marginBottom: 20 }}>
+                                                                <div style={{ fontSize: 10.5, fontWeight: 700, color: "#888", letterSpacing: "0.05em", marginBottom: 12 }}>CLOUD</div>
+                                                                <div style={{ display: "flex", border: "1px solid #3a3a3a", borderRadius: 6, overflow: "hidden", marginBottom: 12, maxWidth: 420 }}>
+                                                                    {["Anthropic (Claude)", "OpenAI", "Google (Gemini)"].map((p, i) => (
+                                                                        <div key={p} style={{ flex: 1, textAlign: "center", padding: "6px 0", fontSize: 11.5, fontWeight: 600, background: i === 0 ? "#e8e8e8" : "transparent", color: i === 0 ? "#181818" : "#ccc", borderRight: i < 2 ? "1px solid #3a3a3a" : "none" }}>{p}</div>
+                                                                    ))}
+                                                                </div>
+                                                                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                                                                    <div style={{ flex: 1, padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666" }}>API key (sk-ant-…)</div>
+                                                                    <span style={{ padding: "7px 14px", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Save key</span>
+                                                                </div>
+                                                                <div style={{ color: "#70baff", fontSize: 11, marginBottom: 14 }}>Get a key at console.anthropic.com →</div>
+                                                                <div style={{ fontSize: 11.5, color: "#ccc", marginBottom: 4 }}>Model <span style={{ color: "#777" }}>(blank = default)</span></div>
+                                                                <div style={{ padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666", marginBottom: 12 }}>claude-sonnet-4-5</div>
+                                                                <div style={{ fontSize: 11.5, color: "#ccc", marginBottom: 4 }}>Custom API base URL <span style={{ color: "#777" }}>(optional)</span></div>
+                                                                <div style={{ padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666" }}>https://api.openai.com</div>
+                                                                <div style={{ color: "#777", fontSize: 11, marginTop: 8, lineHeight: 1.6 }}>Point the OpenAI vendor at any OpenAI-compatible endpoint — LM Studio, vLLM, OpenRouter, Groq, Together or Azure. Leave blank for the official API.</div>
+                                                            </div>
+                                                        )}
+
+                                                        {ai.provider === "local" && (
+                                                            <div style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 16, marginBottom: 20 }}>
+                                                                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                                                                    <div style={{ fontSize: 10.5, fontWeight: 700, color: "#888", letterSpacing: "0.05em" }}>LOCAL (OLLAMA)</div>
+                                                                    <span style={{ padding: "2px 8px", background: "rgba(124,214,143,0.15)", color: "#7cd68f", borderRadius: 10, fontSize: 10.5 }}>reachable · 5 models</span>
+                                                                </div>
+                                                                <div style={{ display: "flex", gap: 8, marginBottom: 12, alignItems: "center" }}>
+                                                                    <div style={{ fontSize: 11.5, color: "#ccc" }}>URL</div>
+                                                                    <div style={{ flex: 1, padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>http://localhost:11434</div>
+                                                                    <span style={{ padding: "7px 14px", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Check</span>
+                                                                </div>
+                                                                <div style={{ fontSize: 11.5, color: "#ccc", marginBottom: 4 }}>Active model <span style={{ color: "#777" }}>(blank = default llama3.1)</span></div>
+                                                                <div style={{ padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666", marginBottom: 12 }}>Pick an installed model ▾</div>
+                                                                <div style={{ fontSize: 11.5, color: "#ccc", marginBottom: 4 }}>Pull a model</div>
+                                                                <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
+                                                                    <div style={{ flex: 1, padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666" }}>e.g. qwen2.5-coder:7b</div>
+                                                                    <span style={{ padding: "7px 14px", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Pull</span>
+                                                                </div>
+                                                                <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: 12 }}>
+                                                                    {["qwen2.5-coder:7b", "sqlcoder:7b", "llama3.1:8b", "llama3.2:3b"].map(m => (
+                                                                        <span key={m} style={{ padding: "3px 8px", background: "#252530", border: "1px solid #3c3c4a", borderRadius: 4, color: "#aaa", fontSize: 10.5 }}>{m}</span>
+                                                                    ))}
+                                                                </div>
+                                                                <div style={{ color: "#70baff", fontSize: 11 }}>Browse the full Ollama model library →</div>
+                                                            </div>
+                                                        )}
+
+                                                        <div style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 16 }}>
+                                                            <div style={{ fontSize: 10.5, fontWeight: 700, color: "#888", letterSpacing: "0.05em", marginBottom: 14 }}>GENERATION</div>
+                                                            <div style={{ display: "flex", gap: 24, marginBottom: 12 }}>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ color: "#ccc", marginBottom: 6 }}>Temperature <span style={{ color: "#fff", fontWeight: 700 }}>0.20</span></div>
+                                                                    <div style={{ height: 3, background: "#3a3a3a", borderRadius: 2, position: "relative" }}>
+                                                                        <div style={{ position: "absolute", left: "20%", top: -4, width: 11, height: 11, borderRadius: "50%", background: "#e8e8e8" }} />
+                                                                    </div>
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#777", marginTop: 4 }}><span>exact</span><span>creative</span></div>
+                                                                    <div style={{ color: "#777", fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Low values keep generated SQL predictable — 0–0.3 is a good range.</div>
+                                                                </div>
+                                                                <div style={{ flex: 1 }}>
+                                                                    <div style={{ color: "#ccc", marginBottom: 6 }}>Max tokens</div>
+                                                                    <div style={{ padding: "6px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc", maxWidth: 120 }}>1024</div>
+                                                                    <div style={{ color: "#777", fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Upper bound on the reply length. Raise it if long schemas get truncated.</div>
+                                                                </div>
+                                                            </div>
+                                                            <div style={{ color: "#ccc", marginBottom: 6 }}>Request timeout</div>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                <div style={{ padding: "6px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc", maxWidth: 90 }}>60</div>
+                                                                <span style={{ color: "#888" }}>s</span>
+                                                            </div>
+                                                            <div style={{ color: "#777", fontSize: 11, marginTop: 6, lineHeight: 1.5 }}>Gives up instead of spinning forever when a model stalls.</div>
+                                                        </div>
+
+                                                        <div style={{ color: "#777", fontSize: 11, marginTop: 16, marginBottom: 24, lineHeight: 1.6 }}>
+                                                            All four AI tools (SQL Assistant, Chat, Advisor, Data Quality) use whatever you pick here. Don&apos;t forget to <b style={{ color: "#ccc" }}>Save</b>.
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Step 66: AI SQL Assistant — a brief glance at the NL→SQL
+                                                tab before the cursor moves on to AI Chat; nothing here is
+                                                actually clicked in the reference flow. */}
+                                            {activeAiTab === "sqlAssistant" && (
+                                                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#181818" }}>
+                                                    <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #2b2b2b" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                            <span style={{ fontSize: 18 }}>✨</span>
+                                                            <div>
+                                                                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>AI SQL Assistant</div>
+                                                                <div style={{ fontSize: 11, color: "#888" }}>Editor model</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: "flex", gap: 8, fontSize: 11 }}>
+                                                            <span style={{ padding: "4px 10px", background: "#252526", border: "1px solid #3a3a3a", borderRadius: 4, color: "#ccc" }}>Demo (mysql)</span>
+                                                            <span style={{ padding: "4px 10px", background: "#252526", border: "1px solid #3a3a3a", borderRadius: 4, color: "#ccc" }}>classicmodels</span>
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", padding: "10px 24px", gap: 4, borderBottom: "1px solid #2b2b2b", fontSize: 12 }}>
+                                                        {["NL → SQL", "Explain", "Optimize", "Fix", "Document"].map((t, i) => (
+                                                            <span key={t} style={{ padding: "5px 12px", borderRadius: 5, background: i === 0 ? "#2a2a2a" : "transparent", color: i === 0 ? "#fff" : "#888", fontWeight: i === 0 ? 600 : 400 }}>{t}</span>
+                                                        ))}
+                                                        <span style={{ marginLeft: "auto", padding: "5px 14px", background: "#e8e8e8", color: "#181818", borderRadius: 5, fontWeight: 700, fontSize: 11.5 }}>Generate</span>
+                                                    </div>
+                                                    <div style={{ padding: "16px 24px" }}>
+                                                        <div style={{ padding: "10px 12px", background: "#1e1e1e", border: "1px solid #3a3a3a", borderRadius: 6, color: "#666", fontSize: 12.5, minHeight: 60 }}>
+                                                            Describe what you want, e.g. &quot;top 10 customers by total order value last month&quot;
+                                                        </div>
+                                                    </div>
+                                                    <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#777" }}>
+                                                        <span style={{ fontSize: 24 }}>✨</span>
+                                                        <div style={{ fontSize: 12.5 }}>Pick a connection, describe your query, and let AI write the SQL.</div>
+                                                        <div style={{ fontSize: 11 }}>Schema is sent as context so columns are accurate.</div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 67-75: AI Chat — connection/database pick, type and
+                                                send a question, a simulated "thinking…" pause, the SQL
+                                                reply with Run/Open in Console/Copy, and its own inline
+                                                results once Run is clicked. */}
+                                            {activeAiTab === "chat" && (
+                                                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#181818" }}>
+                                                    <div style={{ padding: "16px 24px", display: "flex", alignItems: "center", justifyContent: "space-between", borderBottom: "1px solid #2b2b2b" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                            <span style={{ fontSize: 18 }}>💬</span>
+                                                            <div>
+                                                                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>AI Chat</div>
+                                                                <div style={{ fontSize: 11, color: "#888" }}>Grounded in your schema · Editor model</div>
+                                                            </div>
+                                                        </div>
+                                                        <div style={{ display: "flex", gap: 8, fontSize: 11, position: "relative" }}>
+                                                            {ai.sent ? (
+                                                                <span style={{ padding: "4px 12px", border: "1px solid #3a3a3a", borderRadius: 4, color: "#ccc" }}>Clear</span>
+                                                            ) : (
+                                                                <>
+                                                                    <div
+                                                                        ref={set("aiChatConnBtn")}
+                                                                        style={{
+                                                                            padding: "4px 10px",
+                                                                            background: ai.connDropdownOpen ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                            border: ai.connDropdownOpen ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                            borderRadius: 4,
+                                                                            color: ai.connPicked ? "#fff" : "#888",
+                                                                            cursor: "pointer",
+                                                                            display: "flex",
+                                                                            alignItems: "center",
+                                                                            gap: 4,
+                                                                        }}
+                                                                    >
+                                                                        {ai.connPicked ? "Demo (mysql)" : "Connection"} <span style={{ opacity: 0.6 }}>▾</span>
+                                                                    </div>
+                                                                    {ai.connPicked && (
+                                                                        <div
+                                                                            ref={set("aiChatDbBtn")}
+                                                                            style={{
+                                                                                padding: "4px 10px",
+                                                                                background: ai.dbDropdownOpen ? "rgba(0,120,212,0.3)" : "#252526",
+                                                                                border: ai.dbDropdownOpen ? "1px solid #0078d4" : "1px solid #3a3a3a",
+                                                                                borderRadius: 4,
+                                                                                color: ai.dbPicked ? "#fff" : "#888",
+                                                                                cursor: "pointer",
+                                                                                display: "flex",
+                                                                                alignItems: "center",
+                                                                                gap: 4,
+                                                                            }}
+                                                                        >
+                                                                            {ai.dbPicked ? "classicmodels" : "Database"} <span style={{ opacity: 0.6 }}>▾</span>
+                                                                        </div>
+                                                                    )}
+                                                                    {ai.connDropdownOpen && (
+                                                                        <div style={{ position: "absolute", top: 28, left: 0, background: "#252526", border: "1px solid #454545", borderRadius: 4, minWidth: 130, zIndex: 20, boxShadow: "0 8px 24px rgba(0,0,0,.5)" }}>
+                                                                            <div ref={set("aiChatConnDemoOption")} style={{ padding: "8px 12px", background: "rgba(0,120,212,0.25)", color: "#fff", cursor: "pointer", whiteSpace: "nowrap" }}>
+                                                                                Demo (mysql)
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                    {ai.dbDropdownOpen && (
+                                                                        <div style={{ position: "absolute", top: 28, right: 0, background: "#252526", border: "1px solid #454545", borderRadius: 4, minWidth: 150, zIndex: 20, boxShadow: "0 8px 24px rgba(0,0,0,.5)" }}>
+                                                                            {MCP_DATABASES.map(db => (
+                                                                                <div
+                                                                                    key={db}
+                                                                                    ref={db === "classicmodels" ? set("aiChatDbClassicOption") : undefined}
+                                                                                    style={{
+                                                                                        padding: "8px 12px",
+                                                                                        background: db === "classicmodels" ? "rgba(0,120,212,0.25)" : "transparent",
+                                                                                        color: db === "classicmodels" ? "#fff" : "#ccc",
+                                                                                        cursor: "pointer",
+                                                                                        whiteSpace: "nowrap",
+                                                                                    }}
+                                                                                >
+                                                                                    {db}
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ flex: 1, minHeight: 0, overflow: "auto", display: "flex", flexDirection: "column", padding: 24, gap: 16 }}>
+                                                        {!ai.sent && (
+                                                            <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#777" }}>
+                                                                <span style={{ fontSize: 24 }}>💬</span>
+                                                                <div style={{ fontSize: 12.5, textAlign: "center" }}>Ask about your data, request a query, or iterate — the assistant knows your schema.</div>
+                                                                <div style={{ fontSize: 11, textAlign: "center" }}>e.g. &quot;how many orders per status last week?&quot; then &quot;now only paid ones&quot;.</div>
+                                                            </div>
+                                                        )}
+
+                                                        {ai.sent && (
+                                                            <>
+                                                                <div style={{ alignSelf: "flex-end", maxWidth: "70%", padding: "10px 16px", background: "#2a2a2a", color: "#fff", borderRadius: 10, fontSize: 12.5 }}>
+                                                                    {AI_CHAT_QUESTION}
+                                                                </div>
+
+                                                                {!ai.responded && (
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, color: "#888", fontSize: 12.5 }}>
+                                                                        <span>⚙</span> thinking…
+                                                                    </div>
+                                                                )}
+
+                                                                {ai.responded && (
+                                                                    <div style={{ maxWidth: 620, border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", overflow: "hidden" }}>
+                                                                        <pre style={{ margin: 0, padding: 14, fontFamily: MONO, fontSize: 12, color: "#7ee787", whiteSpace: "pre-wrap", lineHeight: 1.6 }}>{AI_CHAT_SQL}</pre>
+                                                                        <div style={{ display: "flex", gap: 8, padding: "10px 14px", borderTop: "1px solid #2f2f2f" }}>
+                                                                            <span ref={set("aiChatRunBtn")} style={{ padding: "5px 14px", background: ai.ranInChat ? "#0078d4" : "#2a2a2a", color: "#fff", borderRadius: 5, fontSize: 11.5, cursor: "pointer" }}>
+                                                                                Run
+                                                                            </span>
+                                                                            <span ref={set("aiChatOpenConsoleBtn")} style={{ padding: "5px 14px", background: "#2a2a2a", color: "#ccc", borderRadius: 5, fontSize: 11.5, cursor: "pointer" }}>
+                                                                                Open in Console
+                                                                            </span>
+                                                                            <span style={{ padding: "5px 14px", background: "#2a2a2a", color: "#ccc", borderRadius: 5, fontSize: 11.5, cursor: "pointer" }}>Copy</span>
+                                                                        </div>
+                                                                        {ai.ranInChat && (
+                                                                            <div style={{ borderTop: "1px solid #2f2f2f" }}>
+                                                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", padding: "6px 14px", fontSize: 10.5, color: "#888", borderBottom: "1px solid #2b2b2b" }}>
+                                                                                    <span>productName</span><span>totalOrdered</span>
+                                                                                </div>
+                                                                                {AI_CHAT_RESULT_ROWS.map(([name, n]) => (
+                                                                                    <div key={name} style={{ display: "grid", gridTemplateColumns: "1fr 120px", padding: "6px 14px", fontSize: 11.5, color: "#ccc", borderBottom: "1px solid #232323" }}>
+                                                                                        <span>{name}</span><span>{n}</span>
+                                                                                    </div>
+                                                                                ))}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+                                                            </>
+                                                        )}
+                                                    </div>
+
+                                                    <div style={{ padding: "14px 24px", borderTop: "1px solid #2b2b2b", display: "flex", gap: 10 }}>
+                                                        <div
+                                                            ref={set("aiChatInput")}
+                                                            style={{
+                                                                flex: 1,
+                                                                padding: "9px 12px",
+                                                                background: "#1e1e1e",
+                                                                border: "1px solid #3a3a3a",
+                                                                borderRadius: 6,
+                                                                color: ai.dbPicked && !ai.sent && ai.questionChars ? "#eee" : "#666",
+                                                                fontSize: 12.5,
+                                                            }}
+                                                        >
+                                                            {ai.dbPicked
+                                                                ? !ai.sent && ai.questionChars
+                                                                    ? AI_CHAT_QUESTION.slice(0, ai.questionChars)
+                                                                    : "Ask anything about your database… (Enter to send, Shift+Enter for newline)"
+                                                                : ai.connPicked
+                                                                  ? "Pick a database first"
+                                                                  : "Pick a connection first"}
+                                                        </div>
+                                                        <span
+                                                            ref={set("aiChatSendBtn")}
+                                                            style={{
+                                                                padding: "9px 20px",
+                                                                borderRadius: 6,
+                                                                fontSize: 12.5,
+                                                                fontWeight: 600,
+                                                                background: ai.dbPicked && !ai.sent ? (s === 73 ? "#0078d4" : "#2a2a2a") : "#222",
+                                                                color: ai.dbPicked && !ai.sent ? "#fff" : "#555",
+                                                                cursor: ai.dbPicked && !ai.sent ? "pointer" : "default",
+                                                            }}
+                                                        >
+                                                            Send
+                                                        </span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 76-78: the Query Console tab opened via AI Chat's
+                                                "Open in Console" — the same generated SQL, run again, then
+                                                closed via its own tab ✕ (wired in the tab bar above). */}
+                                            {activeAiTab === "console" && (
+                                                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#1e1e1e" }}>
+                                                    <div style={{ height: 38, flex: "none", display: "flex", alignItems: "center", padding: "0 14px", gap: 10, borderBottom: "1px solid #2d2d2d", fontSize: 11.5, color: "#ccc" }}>
+                                                        <span
+                                                            ref={set("aiConsoleRunBtn")}
+                                                            style={{
+                                                                padding: "5px 14px",
+                                                                borderRadius: 5,
+                                                                background: ai.consoleRan ? "#0078d4" : "#1e1e1e",
+                                                                border: ai.consoleRan ? "none" : "1px solid #3a3a3a",
+                                                                color: "#fff",
+                                                                cursor: "pointer",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 6,
+                                                            }}
+                                                        >
+                                                            ▷ Run
+                                                        </span>
+                                                        <span style={{ marginLeft: "auto", color: "#888" }}>Demo · mysql</span>
+                                                        <span style={{ padding: "3px 10px", background: "#252526", border: "1px solid #3a3a3a", borderRadius: 4 }}>classicmodels</span>
+                                                    </div>
+
+                                                    <div style={{ padding: "10px 14px", display: "flex", justifyContent: "space-between", fontSize: 10.5, color: "#888", borderBottom: "1px solid #2b2b2b" }}>
+                                                        <span style={{ letterSpacing: "0.05em", fontWeight: 700 }}>SQL QUERY</span>
+                                                        <span>7 lines · 303 chars</span>
+                                                    </div>
+
+                                                    <div style={{ padding: "10px 14px", fontFamily: MONO, fontSize: 12.5, lineHeight: 1.7, color: "#d4d4d4", flex: ai.consoleRan ? "none" : 1 }}>
+                                                        {AI_CHAT_SQL.split("\n").map((line, i) => (
+                                                            <div key={i} style={{ display: "flex", gap: 14 }}>
+                                                                <span style={{ color: "#5a5a5a", width: 18, textAlign: "right", flex: "none" }}>{i + 1}</span>
+                                                                <span>{line}</span>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    {ai.consoleRan && (
+                                                        <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", borderTop: "1px solid #2b2b2b" }}>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "6px 14px", fontSize: 11 }}>
+                                                                <span style={{ color: "#7cd68f" }}>OK</span><span style={{ color: "#ccc" }}>7 rows</span><span style={{ color: "#888" }}>2 cols · 6ms</span>
+                                                            </div>
+                                                            <div style={{ flex: 1, overflow: "auto" }}>
+                                                                <div style={{ display: "grid", gridTemplateColumns: "1fr 120px", padding: "6px 14px", fontSize: 10.5, color: "#888", borderBottom: "1px solid #2b2b2b", position: "sticky", top: 0, background: "#1e1e1e" }}>
+                                                                    <span>productName</span><span>totalOrdered</span>
+                                                                </div>
+                                                                {AI_CHAT_RESULT_ROWS.map(([name, n]) => (
+                                                                    <div key={name} style={{ display: "grid", gridTemplateColumns: "1fr 120px", padding: "6px 14px", fontSize: 11.5, color: "#ccc", borderBottom: "1px solid #232323" }}>
+                                                                        <span>{name}</span><span>{n}</span>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    <div style={{ height: 22, flex: "none", display: "flex", alignItems: "center", gap: 14, padding: "0 10px", borderTop: "1px solid #2b2b2b", fontSize: 10.5, color: "#888" }}>
+                                                        <span>{ai.consoleRan ? "7 rows · 6ms" : "Ready"}</span>
+                                                        <span style={{ marginLeft: "auto" }}>Ln 1, Col 1 · Ctrl/Cmd+Enter: Run</span>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 79-81: MCP Tools — the 48-tool catalog, category
+                                                pills, stat cards, and a scrollable two-column card grid
+                                                (scroll driven by ai.mcpScroll, steps 80-81), plus the
+                                                "MCP client setup →" link that opens MCP Setup. */}
+                                            {activeAiTab === "mcpTools" && (
+                                                <div style={{ flex: 1, minHeight: 0, display: "flex", flexDirection: "column", background: "#181818" }}>
+                                                    <div style={{ padding: "16px 24px", display: "flex", alignItems: "flex-start", justifyContent: "space-between", borderBottom: "1px solid #2b2b2b" }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                            <span style={{ fontSize: 18 }}>🧩</span>
+                                                            <div>
+                                                                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>MCP Tools</div>
+                                                                <div style={{ fontSize: 11, color: "#888" }}>48 tools exposed to AI agents · 4 write-gated</div>
+                                                            </div>
+                                                        </div>
+                                                        <span
+                                                            ref={set("mcpClientSetupLinkBtn")}
+                                                            style={{ padding: "6px 14px", background: s >= 81 ? "#0078d4" : "#2a2a2a", color: "#fff", borderRadius: 5, fontSize: 11.5, cursor: "pointer", flex: "none" }}
+                                                        >
+                                                            MCP client setup →
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: "flex", gap: 4, padding: "10px 24px", fontSize: 11, color: "#888", flexWrap: "wrap", borderBottom: "1px solid #2b2b2b" }}>
+                                                        {["All (48)", "Connections (2)", "Schema (12)", "Read (44)", "Write (4)", "Stats (11)", "Visualization (4)", "Design (1)", "Admin (0)", "Reports (5)", "AI (0)", "Monitor (0)"].map((t, i) => (
+                                                            <span key={t} style={{ padding: "4px 10px", borderRadius: 4, background: i === 0 ? "#2a2a2a" : "transparent", color: i === 0 ? "#fff" : "#888" }}>{t}</span>
+                                                        ))}
+                                                    </div>
+
+                                                    <div style={{ display: "flex", gap: 12, padding: "16px 24px" }}>
+                                                        {([["48", "Total Tools", "#fff"], ["4", "Write Tools", "#ff8a8a"], ["44", "Read Tools", "#7cd68f"], ["0", "AI Tools", "#9aa5ff"]] as const).map(([n, label, color]) => (
+                                                            <div key={label} style={{ flex: 1, border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: "14px 0", textAlign: "center" }}>
+                                                                <div style={{ fontSize: 20, fontWeight: 700, color }}>{n}</div>
+                                                                <div style={{ fontSize: 10.5, color: "#888", marginTop: 4 }}>{label}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div style={{ padding: "0 24px 10px", fontSize: 11, color: "#888", lineHeight: 1.5 }}>
+                                                        These tools are available to any MCP client (the in-editor @quickdb chat participant, Claude Desktop, etc.). <span style={{ color: "#ff8a8a" }}>Write tools</span> require auto-detected write privileges or explicit user overrides in the MCP Setup.
+                                                    </div>
+
+                                                    <div style={{ flex: 1, minHeight: 0, overflow: "hidden", padding: "0 24px 24px" }}>
+                                                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, transform: `translateY(-${ai.mcpScroll}px)` }}>
+                                                            {MCP_TOOLS.map(tool => (
+                                                                <div key={tool.name} style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 12 }}>
+                                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                                                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span style={{ fontFamily: MONO, fontSize: 12, color: "#eee", fontWeight: 700 }}>{tool.name}</span>
+                                                                            <span style={{ fontSize: 9.5, padding: "1px 7px", borderRadius: 8, background: `${BADGE_TINT[tool.badge]}22`, color: BADGE_TINT[tool.badge] }}>{tool.badge}</span>
+                                                                        </div>
+                                                                        <span style={{ fontSize: 10.5, color: "#888" }}>Copy</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 11, color: "#999", marginTop: 6, lineHeight: 1.5 }}>{tool.desc}</div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Steps 81-84: MCP Setup — Connections toggle, the AI
+                                                Clients grid (only Antigravity is actually interacted
+                                                with: expand per-database access, grant Read on
+                                                classicmodels, Update). */}
+                                            {activeAiTab === "mcpSetup" && (
+                                                <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#181818", padding: "20px 24px", position: "relative" }}>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                            <span style={{ fontSize: 18 }}>🧩</span>
+                                                            <div>
+                                                                <div style={{ fontSize: 14, fontWeight: 700, color: "#fff" }}>Setup MCP for AI Clients</div>
+                                                                <div style={{ fontSize: 11, color: "#888" }}>Connect your databases to AI coding assistants</div>
+                                                            </div>
+                                                        </div>
+                                                        <span style={{ padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc", fontSize: 11, flex: "none" }}>↻ Refresh</span>
+                                                    </div>
+
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10.5, color: "#888", fontWeight: 700, letterSpacing: "0.05em", marginBottom: 8 }}>
+                                                        <span>STEP 1</span><span style={{ color: "#ccc", fontWeight: 400, letterSpacing: 0 }}>Connections</span>
+                                                        <span style={{ marginLeft: "auto", color: "#888", fontWeight: 400 }}>1 / 1 enabled</span>
+                                                    </div>
+                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: "10px 14px", marginBottom: 24 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 12.5, color: "#fff" }}>
+                                                            <span style={{ color: "#4daafc" }}>⛁</span> Demo <span style={{ color: "#888", fontWeight: 400 }}>mysql</span>
+                                                        </div>
+                                                        <span style={{ width: 30, height: 16, borderRadius: 8, background: "#0078d4", position: "relative", display: "inline-block" }}>
+                                                            <span style={{ position: "absolute", right: 2, top: 2, width: 12, height: 12, borderRadius: "50%", background: "#fff" }} />
+                                                        </span>
+                                                    </div>
+
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 10.5, color: "#888", fontWeight: 700, letterSpacing: "0.05em", marginBottom: 12 }}>
+                                                        <span>STEP 2</span><span style={{ color: "#ccc", fontWeight: 400, letterSpacing: 0 }}>AI Clients</span>
+                                                        <span style={{ color: "#888", fontWeight: 400 }}>6 detected · 6 configured</span>
+                                                        <span style={{ marginLeft: "auto", padding: "5px 12px", background: "#e8e8e8", color: "#181818", borderRadius: 5, fontWeight: 700, fontSize: 11 }}>Setup All Detected</span>
+                                                    </div>
+
+                                                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+                                                        {MCP_CLIENTS.map(c => {
+                                                            const isAg = c.name === "Antigravity";
+                                                            const read = isAg && ai.readSelected;
+                                                            return (
+                                                                <div key={c.name} style={{ border: "1px solid #2f2f2f", borderRadius: 8, background: "#1e1e1e", padding: 14 }}>
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 4 }}>
+                                                                        <span style={{ color: c.tint }}>{c.icon}</span>
+                                                                        <span style={{ fontSize: 12.5, fontWeight: 700, color: "#fff" }}>{c.name}</span>
+                                                                        <span style={{ fontSize: 10.5, color: c.configured ? "#7cd68f" : "#888" }}>{c.configured ? "✓ Configured" : "Not found"}</span>
+                                                                    </div>
+                                                                    <div style={{ fontSize: 10, color: "#666", marginBottom: 10, wordBreak: "break-all" }}>{c.path}</div>
+
+                                                                    <div style={{ display: "flex", justifyContent: "space-between", fontSize: 10, color: "#888", marginBottom: 6 }}>
+                                                                        <span style={{ letterSpacing: "0.04em" }}>DATABASES &amp; PERMISSIONS</span>
+                                                                        <span style={{ color: "#70baff" }}>Deselect all</span>
+                                                                    </div>
+                                                                    <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: 11.5, color: "#ccc", marginBottom: 4 }}>
+                                                                        <span style={{ color: "#7cd68f" }}>✓</span>
+                                                                        <span style={{ color: "#4daafc" }}>⛁</span> Demo
+                                                                        <div style={{ marginLeft: "auto", display: "flex", gap: 4, fontSize: 10 }}>
+                                                                            <span style={{ padding: "2px 7px", borderRadius: 3, background: "#0078d4", color: "#fff" }}>Auto</span>
+                                                                            <span style={{ padding: "2px 7px", borderRadius: 3, background: "#2a2a2a", color: "#ccc" }}>Read</span>
+                                                                            <span style={{ padding: "2px 7px", borderRadius: 3, background: "#2a2a2a", color: "#ccc" }}>Write</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div
+                                                                        ref={isAg ? set("mcpPerDbAccessLink") : undefined}
+                                                                        style={{
+                                                                            fontSize: 10.5,
+                                                                            color: "#888",
+                                                                            cursor: isAg ? "pointer" : undefined,
+                                                                            textDecoration: isAg && ai.perDbExpanded ? "underline" : "none",
+                                                                            marginBottom: 6,
+                                                                        }}
+                                                                    >
+                                                                        › Per-database access{isAg && ai.perDbExpanded ? " (1 set)" : ""}
+                                                                    </div>
+
+                                                                    {isAg && ai.perDbExpanded && (
+                                                                        <div style={{ marginBottom: 8 }}>
+                                                                            {MCP_DATABASES.map(db => {
+                                                                                const isClassic = db === "classicmodels";
+                                                                                const dbRead = isClassic && read;
+                                                                                return (
+                                                                                    <div key={db} style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 11, color: "#ccc", padding: "3px 0" }}>
+                                                                                        <span style={{ flex: 1 }}>{db}</span>
+                                                                                        {dbRead && <span style={{ color: "#666", fontSize: 9.5 }}>↺ inherit</span>}
+                                                                                        <div style={{ display: "flex", gap: 4, fontSize: 10 }}>
+                                                                                            <span style={{ padding: "2px 7px", borderRadius: 3, background: !dbRead ? "#0078d4" : "#2a2a2a", color: "#fff" }}>Auto</span>
+                                                                                            <span
+                                                                                                ref={isClassic ? set("mcpReadBtn") : undefined}
+                                                                                                style={{
+                                                                                                    padding: "2px 7px",
+                                                                                                    borderRadius: 3,
+                                                                                                    background: dbRead ? "#2e7d32" : "#2a2a2a",
+                                                                                                    color: "#fff",
+                                                                                                    cursor: isClassic ? "pointer" : undefined,
+                                                                                                }}
+                                                                                            >
+                                                                                                Read
+                                                                                            </span>
+                                                                                            <span style={{ padding: "2px 7px", borderRadius: 3, background: "#2a2a2a", color: "#ccc" }}>Write</span>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
+                                                                        </div>
+                                                                    )}
+
+                                                                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 8 }}>
+                                                                        <div style={{ fontSize: 10, color: "#888" }}>
+                                                                            1 / 1 databases
+                                                                            <br />
+                                                                            <span style={{ color: "#e2b13c" }}>↳ 48 tools (4 write)</span>
+                                                                        </div>
+                                                                        {c.configured ? (
+                                                                            <span
+                                                                                ref={isAg ? set("mcpUpdateBtn") : undefined}
+                                                                                style={{
+                                                                                    padding: "5px 14px",
+                                                                                    background: isAg && ai.updateClicked ? "#0078d4" : "#2a2a2a",
+                                                                                    color: "#fff",
+                                                                                    borderRadius: 5,
+                                                                                    fontSize: 11,
+                                                                                    cursor: isAg ? "pointer" : undefined,
+                                                                                }}
+                                                                            >
+                                                                                Update
+                                                                            </span>
+                                                                        ) : (
+                                                                            <span style={{ padding: "5px 14px", background: "#222", color: "#555", borderRadius: 5, fontSize: 11 }}>Setup</span>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {ai.updateClicked && (
+                                                        <div style={{ position: "absolute", top: 70, right: 24, display: "flex", alignItems: "center", gap: 8, padding: "10px 16px", background: "#252526", border: "1px solid #454545", borderRadius: 6, fontSize: 12, color: "#eee", boxShadow: "0 8px 24px rgba(0,0,0,.5)" }}>
+                                                            <span style={{ color: "#7cd68f" }}>✓</span> antigravity configured — restart the client to load tools
+                                                        </div>
+                                                    )}
                                                 </div>
                                             )}
                                         </div>

@@ -71,6 +71,28 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["60", "Hover Visualize"],
     ["61", "Chart rendered"],
     ["62", "Close the chart tab"],
+    ["63", "Open AI Settings"],
+    ["64", "Switch to Cloud (API key)"],
+    ["65", "Switch to Local (Ollama)"],
+    ["66", "Open AI SQL Assistant"],
+    ["67", "Open AI Chat"],
+    ["68", "Pick a connection"],
+    ["69", "Demo · mysql selected"],
+    ["70", "Pick a database"],
+    ["71", "classicmodels selected"],
+    ["72", "Ask a question"],
+    ["73", "Send the message"],
+    ["74", "AI is thinking…"],
+    ["75", "Run the generated SQL"],
+    ["76", "Open in Console"],
+    ["77", "Run it in the console"],
+    ["78", "Close the console tab"],
+    ["79", "Open MCP Tools"],
+    ["80", "Browse the tool catalog"],
+    ["81", "Open MCP Client Setup"],
+    ["82", "Expand per-database access"],
+    ["83", "Grant Read on classicmodels"],
+    ["84", "Update the MCP client"],
 ] as const;
 
 export interface StepDetail {
@@ -324,6 +346,28 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     60: "visualizeBarBtn",
     61: "visualizeBarBtn",
     62: "closeVizTabBtn",
+    63: "aiSettingsNavItem",
+    64: "aiProviderCloudBtn",
+    65: "aiProviderLocalBtn",
+    66: "aiSqlAssistantNavItem",
+    67: "aiChatNavItem",
+    68: "aiChatConnBtn",
+    69: "aiChatConnDemoOption",
+    70: "aiChatDbBtn",
+    71: "aiChatDbClassicOption",
+    72: "aiChatInput",
+    73: "aiChatSendBtn",
+    74: "aiChatRunBtn",
+    75: "aiChatRunBtn",
+    76: "aiChatOpenConsoleBtn",
+    77: "aiConsoleRunBtn",
+    78: "aiConsoleCloseTabBtn",
+    79: "mcpToolsNavItem",
+    80: "mcpClientSetupLinkBtn",
+    81: "mcpClientSetupLinkBtn",
+    82: "mcpPerDbAccessLink",
+    83: "mcpReadBtn",
+    84: "mcpUpdateBtn",
 };
 
 export interface TypedField {
@@ -482,6 +526,130 @@ export const TOOLS: readonly ToolGroup[] = [
     { name: "MCP", count: "2", icon: "⚯", tint: "#ff9bb0", items: ["MCP Tools", "Setup MCP for AI Clients"] },
 ] as const;
 
+/** The databases listed under "Per-database access" in MCP Setup (step 82's
+ *  expand target) — every schema on the Demo connection, classicmodels first
+ *  since that's the one steps 83-84 grant Read on. */
+export const MCP_DATABASES: readonly string[] = [
+    "classicmodels",
+    "ecommerce",
+    "information_schema",
+    "mydb",
+    "mysql",
+    "nazmul",
+    "performance_schema",
+    "sys",
+] as const;
+
+export interface McpClient {
+    name: string;
+    icon: string;
+    tint: string;
+    path: string;
+    configured: boolean;
+}
+
+/** AI-client cards on the MCP Setup tab (step 82-84's "AI Clients" grid).
+ *  Only "Antigravity" is ever actually interacted with in the reference
+ *  flow — the rest render as inert cards for visual completeness. */
+export const MCP_CLIENTS: readonly McpClient[] = [
+    { name: "Cursor", icon: "▲", tint: "#e8e8e8", path: "~/.cursor/mcp.json", configured: true },
+    { name: "Claude Desktop", icon: "✳", tint: "#e8734d", path: "~/Library/Application Support/Claude/claude_desktop_config.json", configured: true },
+    { name: "Claude Code", icon: "◆", tint: "#c79bff", path: "~/.claude.json", configured: true },
+    { name: "Antigravity", icon: "✦", tint: "#7cc4f5", path: "~/.gemini/config/mcp_config.json", configured: true },
+    { name: "VS Code", icon: "⬡", tint: "#4daafc", path: "~/Library/Application Support/Code/User/mcp.json", configured: true },
+    { name: "Windsurf", icon: "≈", tint: "#7cd68f", path: "~/.codeium/windsurf/mcp_config.json", configured: false },
+    { name: "Continue.dev", icon: "▶", tint: "#a8cf8f", path: "~/.continue/config.json", configured: false },
+    { name: "Cline", icon: "⚡", tint: "#f5cf6a", path: "~/Library/Application Support/Code/User/globalStorage/saoudrizwan…", configured: false },
+    { name: "Roo Code", icon: "⛰", tint: "#ffab6b", path: "~/Library/Application Support/Code/User/globalStorage/rooveterinary…", configured: false },
+    { name: "Kiro", icon: "◈", tint: "#ff9bb0", path: "~/.kiro/settings/mcp.json", configured: true },
+] as const;
+
+export interface McpTool {
+    name: string;
+    badge: string;
+    desc: string;
+}
+
+/** The 48 tools listed on the MCP Tools tab (steps 79-80), grouped in the
+ *  same order as the reference catalog — 20 Schema/Connections/Help, 20
+ *  Read/Write/Stats, 8 Reports/Visualization/Design. */
+export const MCP_TOOLS: readonly McpTool[] = [
+    { name: "quickdb_help", badge: "Help", desc: "Self-documenting: list every tool by category, or pass { tool } for one tool's usage recipe." },
+    { name: "quickdb_list_connections", badge: "Connections", desc: "List all saved database connections with their IDs, names, types, and databases." },
+    { name: "quickdb_health_check", badge: "Connections", desc: "Confirm a connection is reachable. Returns { connected, error? } without running a query." },
+    { name: "quickdb_list_tables", badge: "Schema", desc: "List all tables and views in a database. connectionId is optional if only one connection exists." },
+    { name: "quickdb_describe_table", badge: "Schema", desc: "Detailed schema for a table: columns, types, primary keys, and foreign keys." },
+    { name: "quickdb_get_schema", badge: "Schema", desc: "The complete database schema: all tables, columns, types, and foreign keys." },
+    { name: "quickdb_list_databases", badge: "Schema", desc: "List the databases/schemas/keyspaces/catalogs available on a connection." },
+    { name: "quickdb_get_foreign_keys", badge: "Schema", desc: "Foreign-key relationships declared on a table (column → referenced table.column)." },
+    { name: "quickdb_table_relationships", badge: "Schema", desc: "Both directions of a table's foreign-key graph: outgoing (this → others) AND incoming (others → this)." },
+    { name: "quickdb_find_in_database", badge: "Schema", desc: "Find tables/columns whose name contains a term — \"Find in Database\", engine-agnostic." },
+    { name: "quickdb_database_objects", badge: "Schema", desc: "List the database's views, stored procedures, functions, and triggers." },
+    { name: "quickdb_get_object_definition", badge: "Schema", desc: "DDL / source text for one view, procedure, function, or trigger." },
+    { name: "quickdb_list_views", badge: "Schema", desc: "List the views in a database (names)." },
+    { name: "quickdb_list_procedures", badge: "Schema", desc: "List stored procedures and functions in a database (names)." },
+    { name: "quickdb_list_triggers", badge: "Schema", desc: "List triggers in a database (names)." },
+    { name: "quickdb_execute_query", badge: "Read", desc: "Execute a read-only SQL query (SELECT, SHOW, DESCRIBE, EXPLAIN, WITH...SELECT)." },
+    { name: "quickdb_explain_query", badge: "Read", desc: "Dialect-aware EXPLAIN — return a query plan without running the query for real." },
+    { name: "quickdb_profile_query", badge: "Read", desc: "EXPLAIN (optionally ANALYZE) a read-only query and return the plan tree + planning/execution timings." },
+    { name: "quickdb_get_rows", badge: "Read", desc: "Get rows with optional filtering, sorting, column selection, and pagination — no SQL needed." },
+    { name: "quickdb_count_rows", badge: "Read", desc: "Count rows in a table with an optional filter. No SQL needed." },
+    { name: "quickdb_search_value", badge: "Read", desc: "Search a text value across table columns (case-insensitive). No SQL needed." },
+    { name: "quickdb_sample_rows", badge: "Read", desc: "Return a uniform random sample of rows — cheaper signal than get_rows for exploration." },
+    { name: "quickdb_distinct_values", badge: "Read", desc: "Distinct values of a column, ordered by frequency. Great for spotting enums/anomalies." },
+    { name: "quickdb_execute_write", badge: "Write", desc: "Execute a write SQL query (INSERT, UPDATE, DELETE, ALTER, CREATE, DROP). Modifies the database." },
+    { name: "quickdb_insert_row", badge: "Write", desc: "Insert a new row from column:value pairs. No SQL needed. Returns the inserted row." },
+    { name: "quickdb_update_rows", badge: "Write", desc: "Update rows matching a filter. Both filter and data are required. No SQL needed." },
+    { name: "quickdb_delete_rows", badge: "Write", desc: "Delete rows matching a filter. Filter is required to prevent full-table deletes." },
+    { name: "quickdb_database_summary", badge: "Stats", desc: "One-shot overview of a database: object counts, total rows/size, and the largest tables." },
+    { name: "quickdb_table_stats", badge: "Stats", desc: "Orientation tool: row count, column count, primary keys, foreign-key count, and more." },
+    { name: "quickdb_database_health", badge: "Stats", desc: "Per-table row counts and on-disk size, plus totals (MySQL/PostgreSQL/SQL Server)." },
+    { name: "quickdb_index_analysis", badge: "Stats", desc: "List indexes across a database and flag redundant/duplicate ones." },
+    { name: "quickdb_data_profile", badge: "Stats", desc: "Per-column null %, distinct count, and min/max for a table — data-quality profiling." },
+    { name: "quickdb_data_validation", badge: "Stats", desc: "Validate a table's column data — null / type / range anomaly checks." },
+    { name: "quickdb_duplicate_finder", badge: "Stats", desc: "Find duplicate rows in a table by a chosen set of columns." },
+    { name: "quickdb_server_status", badge: "Stats", desc: "Live server status: version, uptime, active connections / process list." },
+    { name: "quickdb_lock_monitor", badge: "Stats", desc: "Current locks and blocking queries on the server (MySQL/PostgreSQL/SQL Server)." },
+    { name: "quickdb_slow_queries", badge: "Stats", desc: "Slow / long-running queries on the server, where the engine exposes them." },
+    { name: "quickdb_list_users", badge: "Stats", desc: "List database users / roles and a grant summary where available." },
+    { name: "quickdb_generate_report", badge: "Reports", desc: "Generate a full database report (overview/schema/health/indexes/relationships/sample data) as HTML, PDF, Excel, Word, Markdown, CSV, or XML." },
+    { name: "quickdb_generate_dashboard", badge: "Reports", desc: "Build a visual dashboard from widget queries — KPI cards + charts + tables — as a self-contained HTML or PDF file." },
+    { name: "quickdb_export_query_result", badge: "Reports", desc: "Run a read-only query and export its full result set to a CSV / JSON / Excel / HTML / Markdown file." },
+    { name: "quickdb_schema_docs", badge: "Reports", desc: "Generate Markdown documentation for a database schema (tables, columns, keys, optional row counts)." },
+    { name: "quickdb_generate_migration", badge: "Reports", desc: "Generate migration DDL (CREATE TABLE ...) for the current schema as text — does not apply anything." },
+    { name: "quickdb_visualize_query", badge: "Visualization", desc: "Run a query and render an Ant Design chart from the result set." },
+    { name: "quickdb_visualize_data", badge: "Visualization", desc: "Render an Ant Design Plots/Graphs chart from a caller-supplied data array (no SQL)." },
+    { name: "quickdb_chart_types", badge: "Visualization", desc: "Discovery tool: the base chart types with required/optional fields and example specs." },
+    { name: "quickdb_chart_gallery", badge: "Visualization", desc: "Search the full Ant Design Charts gallery by title or category." },
+    { name: "quickdb_design_erd", badge: "Design", desc: "Propose a schema design — opens QuickDB's visual ERD designer pre-loaded with the model." },
+] as const;
+
+/** Question typed into AI Chat at step 72, sent at step 73. */
+export const AI_CHAT_QUESTION =
+    "How many products did the Atelier Graphique customer order, and what are the product names?";
+
+/** SQL the assistant replies with at step 74, run at 75 and again (via
+ *  "Open in Console") at 77. */
+export const AI_CHAT_SQL = `SELECT p.productName, SUM(od.quantityOrdered) AS totalOrdered
+FROM customers c
+JOIN orders o ON c.customerNumber = o.customerNumber
+JOIN orderdetails od ON o.orderNumber = od.orderNumber
+JOIN products p ON od.productCode = p.productCode
+WHERE c.customerName = 'Atelier Graphique'
+GROUP BY p.productName;`;
+
+/** Result rows for AI_CHAT_SQL, shown inline in chat (step 75) and again in
+ *  the Query Console tab opened from "Open in Console" (step 77). */
+export const AI_CHAT_RESULT_ROWS: readonly (readonly [string, number])[] = [
+    ["1965 Aston Martin DB5", 26],
+    ["1999 Indy 500 Monte Carlo SS", 46],
+    ["1948 Porsche Type 356 Roadster", 34],
+    ["1966 Shelby Cobra 427 S/C", 50],
+    ["1996 Moto Guzzi 1100i", 39],
+    ["1936 Harley Davidson El Knucklehead", 32],
+    ["1938 Cadillac V-16 Presidential Limousine", 43],
+] as const;
+
 export const TABLES: readonly (readonly [string, string])[] = [
     ["customers", "122"],
     ["employees", "23"],
@@ -549,8 +717,12 @@ export const TOASTS: Record<number, string> = {
  *  Grew from 20 to 61 when the Query Console beat (steps 21-61) was added
  *  on top of the original Data View story (steps 1-20), then to 62 for the
  *  closing beat — hovering and clicking the Visualization tab's own ✕ to
- *  land back on the Query Console tab. */
-export const STEP_COUNT = 62;
+ *  land back on the Query Console tab, then to 84 for the AI & MCP beat
+ *  (steps 63-84): AI Settings' provider toggle, AI SQL Assistant, an AI
+ *  Chat round-trip (connection/database pick → ask → run → open in a new
+ *  Query Console tab → run there too → close it), and the MCP Tools
+ *  catalog → MCP Client Setup → per-database Read access → Update flow. */
+export const STEP_COUNT = 84;
 
 /**
  * Most steps are the same width, but a handful run a real character-by-
@@ -582,6 +754,9 @@ export const STEP_WEIGHTS: Record<number, number> = {
     10: 8,
     47: 3,
     56: 3,
+    // 72: AI Chat's question types out character-by-character (see
+    // aiChatQuestion reveal in QuickDBStory.tsx) — same reasoning as 47/56.
+    72: 4,
 };
 
 /** The original fixed track height, and how many equal-width steps it was
