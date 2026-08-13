@@ -3,11 +3,22 @@ import ZoomOnScroll from "@src/components/ZoomOnScroll";
 import DocChapterNav from "@src/components/doc/DocChapterNav";
 import FeatureWalkthroughs from "@src/components/doc/FeatureWalkthroughs";
 import MarkdownDoc from "@src/components/doc/MarkdownDoc";
-import QuickDBLanding from "@src/components/quickdb/QuickDBLanding";
 import type { Metadata } from "next";
+import dynamicImport from "next/dynamic";
 import Link from "next/link";
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+
+const QuickDBLanding = dynamicImport(
+    () => import("@src/components/quickdb/QuickDBLanding"),
+    {
+        loading: () => (
+            <div className="flex h-screen w-full items-center justify-center bg-[#08080b] text-sm text-faint">
+                Loading interactive QuickDB story...
+            </div>
+        ),
+    }
+);
 
 export const metadata: Metadata = {
     title: "QuickDB - Universal Database Client, Desktop App & AI MCP Server",
@@ -144,13 +155,26 @@ export default function QuickDBPage() {
                                 <span className="relative z-10">Portfolio</span>
                             </Link>
                         </div>
+
+                        {/* Bouncing Scroll Cue for Mobile */}
+                        <div className="reveal mt-8 flex flex-col items-center gap-2 text-center sm:mt-10">
+                            <a
+                                href="#supported-databases"
+                                className="inline-flex items-center gap-2 rounded-full border border-line bg-surface/60 px-4 py-2 text-xs font-medium text-muted backdrop-blur-md transition-colors hover:border-accent hover:text-fg"
+                            >
+                                <span>Scroll down to view walkthroughs &amp; docs</span>
+                                <svg className="h-4 w-4 animate-bounce text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                                </svg>
+                            </a>
+                        </div>
                     </div>
                 </header>
 
                 {/* Intro media */}
                 <div className="container relative z-20 mx-auto -mt-8 mb-4 px-6 sm:-mt-16">
                     <ZoomOnScroll
-                        src="https://nazzmulhaque.vercel.app/gifs/quickdb/mcp-server-intro.gif"
+                        src="/gifs/quickdb/mcp-server-intro.gif"
                         alt="MCP Server Intro"
                     />
                 </div>
@@ -226,7 +250,7 @@ export default function QuickDBPage() {
                                         <p className="text-sm leading-relaxed text-muted sm:text-lg">{s.body}</p>
                                     </div>
                                     <div className="reveal-scale overflow-hidden rounded-2xl border border-line shadow-[0_24px_60px_-30px_var(--glow)]">
-                                        <img src={s.gif} alt={s.title} className="block w-full" />
+                                        <img src={s.gif} alt={s.title} className="block w-full" loading="lazy" decoding="async" />
                                     </div>
                                 </div>
                             ))}

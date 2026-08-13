@@ -6407,37 +6407,140 @@ const QuickDBStory: FC = () => {
                             Browse and query 80+ engines without leaving the
                             window you already have open.
                         </div>
-                        <div
-                            className="qd-bob"
-                            style={{
-                                display: "flex",
-                                flexDirection: "column",
-                                alignItems: "center",
-                                gap: 7,
-                            }}
-                        >
-                            <div
-                                style={{
-                                    font: `400 10.5px ${MONO}`,
-                                    letterSpacing: ".14em",
-                                    color: C.dark,
-                                }}
-                            >
-                                SCROLL
-                            </div>
-                            <div
-                                style={{
-                                    width: 1,
-                                    height: 26,
-                                    background:
-                                        "linear-gradient(180deg,#6f6f6f,transparent)",
-                                }}
-                            />
-                        </div>
                     </div>
                 </div>
 
+                {/* ── Viewport Floating Scroll Cue (100% Scale, fixed at bottom center of viewport) ── */}
+                <div
+                    style={{
+                        position: "absolute",
+                        bottom: 88,
+                        left: "50%",
+                        transform: s === 1 ? "translate(-50%, 0)" : "translate(-50%, 24px)",
+                        zIndex: 90,
+                        opacity: s === 1 ? 1 : 0,
+                        pointerEvents: s === 1 ? "auto" : "none",
+                        transition: "opacity 0.45s cubic-bezier(0.16, 1, 0.3, 1), transform 0.45s cubic-bezier(0.16, 1, 0.3, 1)",
+                    }}
+                >
+                    <div
+                        className="qd-scroll-badge qd-pulse-glow"
+                        onClick={() => jumpToStep(2)}
+                        role="button"
+                        tabIndex={0}
+                        onKeyDown={(evt) => {
+                            if (evt.key === "Enter" || evt.key === " ") {
+                                jumpToStep(2);
+                            }
+                        }}
+                        style={{
+                            display: "flex",
+                            alignItems: "center",
+                            gap: 16,
+                            padding: "14px 28px",
+                            borderRadius: 999,
+                            background: "linear-gradient(135deg, rgba(14, 20, 35, 0.95) 0%, rgba(9, 12, 22, 0.96) 100%)",
+                            backdropFilter: "blur(20px)",
+                            WebkitBackdropFilter: "blur(20px)",
+                            border: "1.5px solid rgba(0, 180, 255, 0.65)",
+                            boxShadow: "0 14px 50px rgba(0, 120, 212, 0.5), 0 0 30px rgba(0, 180, 255, 0.35)",
+                            cursor: "pointer",
+                        }}
+                    >
+                        {/* Animated Mouse Icon */}
+                        <div
+                            style={{
+                                width: 22,
+                                height: 36,
+                                borderRadius: 12,
+                                border: "2px solid #00c3ff",
+                                position: "relative",
+                                display: "flex",
+                                justifyContent: "center",
+                                paddingTop: 6,
+                                flexShrink: 0,
+                                boxShadow: "0 0 12px rgba(0, 195, 255, 0.4)",
+                            }}
+                        >
+                            <div
+                                className="qd-wheel-anim"
+                                style={{
+                                    width: 4,
+                                    height: 9,
+                                    borderRadius: 3,
+                                    background: "linear-gradient(180deg, #00f0ff, #0088ff)",
+                                    boxShadow: "0 0 8px #00f0ff",
+                                }}
+                            />
+                        </div>
 
+                        <div style={{ display: "flex", flexDirection: "column", textAlign: "left" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
+                                <span
+                                    style={{
+                                        font: `700 14px ${MONO}`,
+                                        letterSpacing: ".08em",
+                                        color: "#ffffff",
+                                        textShadow: "0 0 12px rgba(0, 195, 255, 0.5)",
+                                    }}
+                                >
+                                    SCROLL DOWN TO EXPLORE
+                                </span>
+                                <span
+                                    style={{
+                                        fontSize: 9.5,
+                                        fontWeight: 700,
+                                        fontFamily: MONO,
+                                        background: "rgba(0, 240, 255, 0.15)",
+                                        border: "1px solid rgba(0, 240, 255, 0.4)",
+                                        color: "#00f0ff",
+                                        padding: "2px 8px",
+                                        borderRadius: 10,
+                                        textTransform: "uppercase",
+                                        letterSpacing: ".06em",
+                                    }}
+                                >
+                                    INTERACTIVE STORY
+                                </span>
+                            </div>
+                            <span style={{ fontSize: 12, color: "#a0aec0", fontWeight: 500 }}>
+                                Scroll down or click here to watch live VS Code walkthrough
+                            </span>
+                        </div>
+
+                        {/* Glowing Bouncing Action Button Circle */}
+                        <div
+                            className="qd-arrow-double"
+                            style={{
+                                width: 36,
+                                height: 36,
+                                borderRadius: "50%",
+                                background: "linear-gradient(135deg, #0078d4, #00c3ff)",
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                                marginLeft: 4,
+                                flexShrink: 0,
+                                boxShadow: "0 0 16px rgba(0, 195, 255, 0.6)",
+                                color: "#ffffff",
+                            }}
+                        >
+                            <svg
+                                width="18"
+                                height="18"
+                                viewBox="0 0 24 24"
+                                fill="none"
+                                stroke="currentColor"
+                                strokeWidth="3"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                            >
+                                <line x1="12" y1="5" x2="12" y2="19" />
+                                <polyline points="19 12 12 19 5 12" />
+                            </svg>
+                        </div>
+                    </div>
+                </div>
 
                 {/* ── Quick Feature Navigator Bottom Bar Client Component ── */}
                 <QuickDBBottomNav

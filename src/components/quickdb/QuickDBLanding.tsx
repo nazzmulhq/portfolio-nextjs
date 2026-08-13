@@ -9,6 +9,7 @@ import {
 } from "./useQuickDBMarketplace";
 
 const QuickDBStory = dynamic(() => import("./QuickDBStory"), {
+    ssr: false,
     loading: () => (
         <div
             style={{
