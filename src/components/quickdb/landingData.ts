@@ -805,6 +805,8 @@ export const STEP_WEIGHTS: Record<number, number> = {
     92: 4,
     // 100: the same question a third time, into Claude Code's chat input.
     100: 4,
+    // 103: post-approval trace execution & result display in Claude Code (error → retry → results table → answer).
+    103: 10,
 };
 
 /** The original fixed track height, and how many equal-width steps it was

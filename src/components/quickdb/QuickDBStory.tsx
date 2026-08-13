@@ -178,7 +178,8 @@ type RefKey =
     | "claudeCodeMcpOption"
     | "claudeCodeInput"
     | "claudeCodeSendBtn"
-    | "claudeCodeYesBtn";
+    | "claudeCodeYesBtn"
+    | "claudeCodeChatLog";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -1078,6 +1079,9 @@ const QuickDBStory: FC = () => {
             mark(el("extIcon"), (s >= 2 && s <= 6) || (s >= 96 && e.vsc.view === "extensions"));
             mark(el("qdbIcon"), s >= 7 && s < 96);
             mark(el("claudeCodeIcon"), s >= 96 && e.vsc.view === "claudeCode");
+
+            const chatLog = el("claudeCodeChatLog");
+            if (chatLog) chatLog.scrollTop = chatLog.scrollHeight;
 
             const msg = TOASTS[s];
             const t = el("toast");
@@ -5366,15 +5370,6 @@ const QuickDBStory: FC = () => {
                                                                     <div style={{ color: "#ccc" }}>{AI_CHAT_QUESTION}</div>
                                                                 </div>
 
-                                                                {vsc.workingPhase === 1 && vsc.tracePhase === 0 && (
-                                                                    <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
-                                                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666" }} /> Thinking… · 37 tokens
-                                                                    </div>
-                                                                )}
-                                                                {vsc.workingPhase === 2 && vsc.tracePhase === 0 && !vsc.permissionOpen && (
-                                                                    <div style={{ color: "#d97757", display: "flex", alignItems: "center", gap: 8 }}>✱ Working…</div>
-                                                                )}
-
                                                                 {(vsc.permissionOpen || vsc.tracePhase >= 1) && (
                                                                     <>
                                                                         <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 8 }}>
@@ -5390,9 +5385,9 @@ const QuickDBStory: FC = () => {
                                                                                 <span style={{ fontFamily: MONO, color: "#999" }}>SELECT p.productName, od.quantityOrdered…</span>
                                                                             </div>
                                                                             {vsc.tracePhase >= 1 && (
-                                                                                <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#1c1414", border: "1px solid #3a2020", borderRadius: 6, fontFamily: MONO, fontSize: 11.5 }}>
+                                                                                <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#161616", border: "1px solid #333", borderRadius: 6, fontFamily: MONO, fontSize: 11.5 }}>
                                                                                     <div style={{ color: "#888" }}>OUT</div>
-                                                                                    <div style={{ color: "#e05252" }}>✗ **Error** (quickdb_execute_query)</div>
+                                                                                    <div style={{ color: "#e05252" }}>✗ **Error** [quickdb_execute_query]</div>
                                                                                     <div style={{ marginTop: 4, color: "#c99" }}>No database selected</div>
                                                                                 </div>
                                                                             )}
@@ -5409,9 +5404,11 @@ const QuickDBStory: FC = () => {
                                                                             <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#7cd68f" }} />
                                                                             <b style={{ color: "#eee" }}>Quickdb</b> <span style={{ color: "#777" }}>[quickdb_list_databases]</span>
                                                                         </div>
-                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#141c14", border: "1px solid #203a20", borderRadius: 6, fontFamily: MONO, fontSize: 11.5, color: "#9c9" }}>
+                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#161616", border: "1px solid #333", borderRadius: 6, fontFamily: MONO, fontSize: 11.5, color: "#9c9" }}>
                                                                             <div style={{ color: "#888" }}>OUT</div>
-                                                                            {"{"} &quot;connectionName&quot;: &quot;Demo&quot;, &quot;connectionId&quot;: &quot;383303c1-2cd4-42dd-a4b3-e53dfae48231&quot; {"}"}
+                                                                            <div style={{ marginTop: 4 }}>
+                                                                                &#123; &quot;connectionName&quot;: &quot;Demo&quot;, &quot;connectionId&quot;: &quot;383303c1-2cd4-42dd-a4b3-e53dfae48231&quot; &#125;
+                                                                            </div>
                                                                         </div>
                                                                     </div>
                                                                 )}
@@ -5423,9 +5420,11 @@ const QuickDBStory: FC = () => {
                                                                             <b style={{ color: "#eee" }}>Quickdb</b> <span style={{ color: "#777" }}>[quickdb_execute_query]</span>{" "}
                                                                             <span style={{ fontFamily: MONO, color: "#999" }}>SELECT p.productName, od.quantityOrdered…</span>
                                                                         </div>
-                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: 10, background: "#141c14", border: "1px solid #203a20", borderRadius: 6, fontSize: 11.5, color: "#ccc" }}>
-                                                                            <div style={{ color: "#7cd68f", marginBottom: 4 }}>Query Results (7 of 7 rows, 5ms)</div>
-                                                                            <div style={{ display: "grid", gridTemplateColumns: "20px 1fr 110px 90px", gap: 6, color: "#888", fontSize: 10.5 }}>
+                                                                        <div style={{ marginTop: 6, marginLeft: 14, padding: "8px 12px", background: "#161616", border: "1px solid #333", borderRadius: 6, fontSize: 11.5, color: "#ccc" }}>
+                                                                            <div style={{ color: "#aaa", fontSize: 11, marginBottom: 6 }}>
+                                                                                <span style={{ color: "#888" }}>OUT</span> &nbsp;<b style={{ color: "#eee" }}>Query Results</b> <span style={{ color: "#888" }}>(7 of 7 rows, 5ms)</span>
+                                                                            </div>
+                                                                            <div style={{ display: "grid", gridTemplateColumns: "24px 1fr 110px 90px", gap: 6, color: "#777", fontSize: 10.5, borderTop: "1px solid #282828", paddingTop: 4 }}>
                                                                                 <span>#</span><span>productName</span><span>quantityOrdered</span><span>orderNumber</span>
                                                                             </div>
                                                                         </div>
@@ -5433,15 +5432,22 @@ const QuickDBStory: FC = () => {
                                                                 )}
 
                                                                 {vsc.tracePhase >= 4 && (
-                                                                    <div style={{ lineHeight: 1.7 }}>
-                                                                        <div>
-                                                                            Atelier graphique ordered <b style={{ color: "#fff" }}>7 distinct products</b>, across 3 orders (10123, 10298, 10345):
+                                                                    <div style={{ display: "flex", gap: 8, marginTop: 4 }}>
+                                                                        <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#666", marginTop: 8, flexShrink: 0 }} />
+                                                                        <div style={{ lineHeight: 1.7, color: "#ccc" }}>
+                                                                            <div>
+                                                                                Atelier graphique ordered <b style={{ color: "#fff" }}>7 distinct products</b>, across 3 orders (10123, 10298, 10345):
+                                                                            </div>
+                                                                            <ol style={{ margin: "6px 0 0", paddingLeft: 20, color: "#eee" }}>
+                                                                                <li>1965 Aston Martin DB5</li>
+                                                                                <li>1999 Indy 500 Monte Carlo SS</li>
+                                                                                <li>1948 Porsche Type 356 Roadster</li>
+                                                                                <li>1966 Shelby Cobra 427 S/C</li>
+                                                                                <li>1998 Moto Guzzi 1100i</li>
+                                                                                <li>1938 Harley Davidson El Knucklehead</li>
+                                                                                <li>1938 Cadillac V-16 Presidential Limousine</li>
+                                                                            </ol>
                                                                         </div>
-                                                                        <ol style={{ margin: "8px 0 0", paddingLeft: 20 }}>
-                                                                            {AI_CHAT_RESULT_ROWS.map(([name]) => (
-                                                                                <li key={name}>{name}</li>
-                                                                            ))}
-                                                                        </ol>
                                                                     </div>
                                                                 )}
                                                             </div>
@@ -5496,11 +5502,14 @@ const QuickDBStory: FC = () => {
                                                         </div>
                                                     )}
 
-                                                    <div style={{ padding: "10px 20px", borderTop: "1px solid #262626" }}>
+                                                    <div style={{ padding: "10px 20px", borderTop: "1px solid #222" }}>
                                                         {vsc.sent && (
-                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", background: "#2a2010", border: "1px solid #4a3a18", borderRadius: 6, marginBottom: 6, fontSize: 11.5 }}>
-                                                                <span style={{ color: "#e2b13c" }}>You&apos;ve used 93% of your weekly limit · resets in 3d</span>
-                                                                <span style={{ color: "#7cc4f5", textDecoration: "underline" }}>View usage</span>
+                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "6px 12px", background: "#2e2117", border: "1px solid #4a3320", borderRadius: 6, marginBottom: 8, fontSize: 11 }}>
+                                                                <span style={{ color: "#d97757" }}>You&apos;ve used 93% of your weekly limit · resets in 3d</span>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                                    <span style={{ color: "#aaa", fontSize: 11, cursor: "pointer" }}>View usage</span>
+                                                                    <span style={{ color: "#777", fontSize: 11, cursor: "pointer" }}>✕</span>
+                                                                </div>
                                                             </div>
                                                         )}
                                                         {vsc.mcpPaletteOpen && (
@@ -5518,28 +5527,50 @@ const QuickDBStory: FC = () => {
                                                             </div>
                                                         )}
                                                         <div
-                                                            ref={set("claudeCodeInput")}
-                                                            style={{ border: "1px solid #333", borderRadius: 8, padding: "8px 12px", minHeight: 20, fontSize: 12.5, color: vsc.questionChars && !vsc.sent ? "#eee" : "#666", whiteSpace: "pre-wrap" }}
+                                                            style={{
+                                                                background: "#1c1c1c",
+                                                                border: "1px solid #3a3a3a",
+                                                                borderRadius: 10,
+                                                                padding: "10px 14px",
+                                                                display: "flex",
+                                                                flexDirection: "column",
+                                                                gap: 10,
+                                                            }}
                                                         >
-                                                            {vsc.sent ? "Queue another message…" : vsc.questionChars ? CLAUDE_CODE_PROMPT.slice(0, vsc.questionChars) : ""}
-                                                        </div>
-                                                        <div style={{ display: "flex", justifyContent: "flex-end", marginTop: 6 }}>
-                                                            <span
-                                                                ref={set("claudeCodeSendBtn")}
-                                                                style={{
-                                                                    width: 26,
-                                                                    height: 26,
-                                                                    borderRadius: 6,
-                                                                    background: vsc.sent ? "#d64545" : vsc.questionChars ? "#d9603f" : "#333",
-                                                                    color: "#fff",
-                                                                    display: "grid",
-                                                                    placeItems: "center",
-                                                                    cursor: "pointer",
-                                                                    fontSize: vsc.sent ? 10 : 14,
-                                                                }}
+                                                            <div
+                                                                ref={set("claudeCodeInput")}
+                                                                style={{ minHeight: 20, fontSize: 12.5, color: vsc.sent ? "#777" : vsc.questionChars ? "#eee" : "#666", whiteSpace: "pre-wrap" }}
                                                             >
-                                                                {vsc.sent ? "■" : "↑"}
-                                                            </span>
+                                                                {vsc.sent ? "Esc to focus or unfocus Claude" : vsc.questionChars ? CLAUDE_CODE_PROMPT.slice(0, vsc.questionChars) : "Esc to focus or unfocus Claude"}
+                                                            </div>
+                                                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", fontSize: 11.5, color: "#888" }}>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                                                                    <span style={{ fontSize: 14, cursor: "pointer" }}>+</span>
+                                                                    <span style={{ padding: "1px 5px", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 4, fontSize: 10.5 }}>⌘</span>
+                                                                </div>
+                                                                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                                                    <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "#252525", borderRadius: 12, fontSize: 11, color: "#aaa" }}>
+                                                                        <span style={{ width: 5, height: 5, borderRadius: "50%", background: "#aaa" }} /> Manual
+                                                                    </span>
+                                                                    <span
+                                                                        ref={set("claudeCodeSendBtn")}
+                                                                        style={{
+                                                                            width: 24,
+                                                                            height: 24,
+                                                                            borderRadius: 6,
+                                                                            background: "#d97757",
+                                                                            color: "#fff",
+                                                                            display: "grid",
+                                                                            placeItems: "center",
+                                                                            cursor: "pointer",
+                                                                            fontSize: 13,
+                                                                            fontWeight: 600,
+                                                                        }}
+                                                                    >
+                                                                        ↑
+                                                                    </span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
                                                 </div>
