@@ -795,27 +795,21 @@ export const STEP_COUNT = 103;
  * track length on top rather than carving it out of everyone else's.
  */
 export const STEP_WEIGHTS: Record<number, number> = {
-    10: 8,
+    10: 7,
     47: 3,
     56: 3,
-    // 72: AI Chat's question types out character-by-character (see
-    // aiChatQuestion reveal in QuickDBStory.tsx) — same reasoning as 47/56.
     72: 4,
-    // 92: the same question, typed again into the editor's own Agent panel.
     92: 4,
-    // 100: the same question a third time, into Claude Code's chat input.
     100: 4,
-    // 103: post-approval trace execution & result display in Claude Code (error → retry → results table → answer).
-    103: 10,
+    103: 8,
 };
 
 /** The original fixed track height, and how many equal-width steps it was
  *  divided into before any step needed to be wider than the rest. Kept as
  *  literals decoupled from the live STEP_COUNT above — extending the story
  *  with more (weight-1) steps shouldn't retroactively shrink the width of
- *  ones already tuned.
- *  Increased from 1400 to 3500 to require more physical scrolling, slowing down the pace. */
-const ORIGINAL_TRACK_VH = 3500;
+ *  ones already tuned. */
+const ORIGINAL_TRACK_VH = 2800;
 const ORIGINAL_STEP_COUNT = 20;
 /** One "normal" (weight-1) step's share of that track, in vh — fixed
  *  regardless of STEP_WEIGHTS, since this is the pixel width every
