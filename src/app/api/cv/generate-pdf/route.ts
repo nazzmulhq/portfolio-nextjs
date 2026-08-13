@@ -304,7 +304,7 @@ export async function GET(request: NextRequest) {
         const rowIdx = Math.floor(idx / 2);
 
         const px = mainX + colIdx * (colW + 8);
-        let py = my + rowIdx * 56;
+        const py = my + rowIdx * 56;
 
         // Card bg
         doc.roundedRect(px, py, colW, 52, 4)

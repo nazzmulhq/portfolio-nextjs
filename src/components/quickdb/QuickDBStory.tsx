@@ -896,8 +896,8 @@ const QuickDBStory: FC = () => {
             }
             // Step 14 displays the filtered payments tab cleanly — hold pointer still (no hover over table).
             if (s === 14) {
-                if (e.seen["fkRow"]) {
-                    e.aim = e.seen["fkRow"];
+                if (e.seen.fkRow) {
+                    e.aim = e.seen.fkRow;
                     return;
                 }
             }

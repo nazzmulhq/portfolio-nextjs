@@ -97,11 +97,11 @@ export async function GET(req: Request) {
                 const relativeUrl = new URL(stateRecord.callbackUri, baseUrlOf(req));
                 relativeUrl.searchParams.set("code", authCode);
                 return NextResponse.redirect(relativeUrl.toString());
-            } else {
+            } 
                 const absoluteUrl = new URL(stateRecord.callbackUri);
                 absoluteUrl.searchParams.set("code", authCode);
                 return NextResponse.redirect(absoluteUrl.toString());
-            }
+            
         }
 
         return new NextResponse(`

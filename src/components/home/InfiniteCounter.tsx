@@ -18,9 +18,9 @@ export default function InfiniteCounter({
             setCount((prev) => {
                 if (direction === "up") {
                     return prev >= 99 ? 0 : prev + 1;
-                } else {
+                } 
                     return prev <= 0 ? 99 : prev - 1;
-                }
+                
             });
         }, speed);
 
