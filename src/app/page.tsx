@@ -4,6 +4,7 @@ import Experience from "@src/components/home/Experience";
 import Home from "@src/components/home/Home";
 import HomeMotion from "@src/components/home/HomeMotion";
 import { NavBar, NavBarMobile } from "@src/components/home/NavBar";
+import RoutePrerender from "@src/components/home/RoutePrerender";
 import Skills from "@src/components/home/Skills";
 import Works from "@src/components/home/Works";
 import ThemeToggle from "@src/components/ThemeToggle";
@@ -144,6 +145,9 @@ export default function Page() {
 
     return (
         <div className="relative text-fg">
+            {/* Background Route Prerender for /quickdb */}
+            <RoutePrerender />
+
             {/* JSON-LD Structured Data */}
             <script
                 type="application/ld+json"

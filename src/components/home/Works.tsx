@@ -25,6 +25,7 @@ const Works: FC<IWorks> = () => {
                     const linkProps = hasLink
                         ? {
                               href: work.link!,
+                              prefetch: !external ? true : undefined,
                               rel: external ? "noopener noreferrer" : undefined,
                               target: external ? "_blank" : undefined,
                           }
