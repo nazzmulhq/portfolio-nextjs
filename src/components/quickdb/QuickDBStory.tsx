@@ -165,7 +165,14 @@ type RefKey =
     | "mcpPerDbAccessLink"
     | "mcpReadBtn"
     | "mcpUpdateBtn"
-    | "toolsScrollWrap";
+    | "toolsScrollWrap"
+    | "settingsGearIcon"
+    | "openUserSettingsMenuItem"
+    | "customizationsNavItem"
+    | "settingsModalCloseBtn"
+    | "agentChatInput"
+    | "mcpAutocompleteQuickdbOption"
+    | "agentSendBtn";
 
 const clamp01 = (t: number) => Math.min(1, Math.max(0, t));
 const easeInOutCubic = (t: number) =>
@@ -479,6 +486,78 @@ const aiOpenTabs = (ai: AiMcpState): readonly AiTab[] => {
     return ["settings"];
 };
 
+/**
+ * Steps 85-95: the epilogue proving the Update at step 84 actually wired
+ * quickdb into the real editor — its own gear-icon Settings (General →
+ * Customizations, where the 48 registered tools are listed), then its own
+ * docked Agent panel driven through an @mcp:quickdb mention to a real
+ * answer. Overlays the MCP Setup page rather than replacing it (every
+ * reference screenshot still shows "MCP Setup" as the active tab
+ * underneath), so this is a second, independent combined-state object
+ * layered on top of AiMcpState rather than folded into it.
+ */
+interface IdeState {
+    /** The gear icon's dropdown (Editor Settings / Open User Settings / …) is open (step 86, until 87's click). */
+    settingsDropdownOpen: boolean;
+    /** The Settings modal is open (step 87's click, until step 89 closes it). */
+    modalOpen: boolean;
+    /** Which modal section is showing — General is the modal's own default; Customizations is step 88's click. */
+    settingsTab: "general" | "customizations";
+    /** The editor's docked Agent panel is visible — revealed together with step 89's modal-close click. */
+    agentPanelOpen: boolean;
+    /** The "@mcp:" mention autocomplete (chrome-devtools-mcp / quickdb) is open (step 90, through 91 until picked). */
+    mcpAutocompleteOpen: boolean;
+    /** "quickdb" was picked from the mention autocomplete (step 91's click). */
+    mcpPicked: boolean;
+    /** Characters of AI_CHAT_QUESTION revealed so far in the Agent input (step 92's type-in). */
+    questionChars: number;
+    /** The message was sent to the Agent (step 93's click). */
+    sent: boolean;
+    /** 0 = idle, 1 = simple "Working" line, 2 = expanded trace (exploring rows + generated SQL) — step 94. */
+    workingPhase: 0 | 1 | 2;
+    /** The full natural-language answer is showing (step 95). */
+    resultReady: boolean;
+}
+
+const IDE_INITIAL: IdeState = {
+    settingsDropdownOpen: false,
+    modalOpen: false,
+    settingsTab: "general",
+    agentPanelOpen: false,
+    mcpAutocompleteOpen: false,
+    mcpPicked: false,
+    questionChars: 0,
+    sent: false,
+    workingPhase: 0,
+    resultReady: false,
+};
+
+const computeIdeState = (s: number, frac: number): IdeState => {
+    if (s < 85) return IDE_INITIAL;
+    const past = (step: number) => clickLanded(s, frac, step);
+    const modalOpen = past(87) && !past(89);
+    const agentPanelOpen = past(89);
+    const mcpPicked = past(91);
+    const sent = past(93);
+    return {
+        settingsDropdownOpen: !past(87) && (s === 86 || s === 87),
+        modalOpen,
+        settingsTab: past(88) ? "customizations" : "general",
+        agentPanelOpen,
+        mcpAutocompleteOpen: agentPanelOpen && !mcpPicked && (s === 90 || s === 91),
+        mcpPicked,
+        questionChars:
+            s > 92
+                ? AI_CHAT_QUESTION.length
+                : s === 92
+                  ? Math.round(clamp01((frac - 0.15) / 0.8) * AI_CHAT_QUESTION.length)
+                  : 0,
+        sent,
+        workingPhase: !sent ? 0 : s === 94 ? (frac < 0.5 ? 1 : 2) : s > 94 ? 2 : 0,
+        resultReady: past(95),
+    };
+};
+
 const QuickDBStory: FC = () => {
     const refs = useRef({} as Record<RefKey, HTMLElement | SVGElement | null>);
     const set = (k: RefKey) => (el: HTMLElement | SVGElement | null) => {
@@ -524,6 +603,8 @@ const QuickDBStory: FC = () => {
     // Steps 63-84 (AI & MCP) — see AiMcpState's own comment for why this is
     // one combined object instead of ~20 individual useState/engine-ref pairs.
     const [ai, setAi] = useState<AiMcpState>(AI_MCP_INITIAL);
+    // Steps 85-95 (editor Settings + Agent panel epilogue) — see IdeState's own comment.
+    const [ide, setIde] = useState<IdeState>(IDE_INITIAL);
 
     const jumpToStep = (stepNum: number) => {
         const track = refs.current.track;
@@ -608,6 +689,7 @@ const QuickDBStory: FC = () => {
         secondEditTable: SECOND_EDIT_TABLE_AFTER,
         secondEditOrderCol: SECOND_EDIT_ORDERCOL_AFTER,
         ai: AI_MCP_INITIAL as AiMcpState,
+        ide: IDE_INITIAL as IdeState,
         findDone: false,
         typeP: { extSearch: 0, findText: 0 } as Record<string, number>,
         typeD: { extSearch: 0, findText: 0 } as Record<string, number>,
@@ -987,6 +1069,21 @@ const QuickDBStory: FC = () => {
             if (aiChanged) {
                 e.ai = nextAi;
                 setAi(nextAi);
+            }
+
+            // Steps 85-95 (editor Settings + Agent panel epilogue) — same
+            // shallow-diff-every-tick treatment as AiMcpState above.
+            const nextIde = computeIdeState(s, e.frac);
+            let ideChanged = false;
+            for (const k in nextIde) {
+                if (nextIde[k as keyof IdeState] !== e.ide[k as keyof IdeState]) {
+                    ideChanged = true;
+                    break;
+                }
+            }
+            if (ideChanged) {
+                e.ide = nextIde;
+                setIde(nextIde);
             }
 
             const n =
@@ -1599,6 +1696,85 @@ const QuickDBStory: FC = () => {
                                     />
                                 ))}
                             </div>
+
+                            {/* Steps 85-89: the editor's own gear-icon Settings —
+                                proves the step-84 Update actually wired quickdb
+                                into the real editor, not just the QuickDB webview.
+                                marginLeft: auto so it sits at the window bar's far
+                                right edge; the icons before it only fill the space
+                                immediately after the centered search box (see that
+                                box's own margin: 0 auto). */}
+                            {s >= 63 && (
+                                <div style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 14, position: "relative" }}>
+                                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke={C.faint} strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
+                                        <circle cx="11" cy="11" r="8" />
+                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                    </svg>
+                                    <span style={{ fontSize: 14, opacity: 0.85 }}>🔥</span>
+                                    <div
+                                        ref={set("settingsGearIcon")}
+                                        title="Editor-Specific Settings"
+                                        style={{
+                                            display: "grid",
+                                            placeItems: "center",
+                                            width: 20,
+                                            height: 20,
+                                            borderRadius: 4,
+                                            cursor: "pointer",
+                                            background: s === 85 || ide.settingsDropdownOpen ? C.raised : "transparent",
+                                            color: s === 85 || ide.settingsDropdownOpen ? C.text : C.faint,
+                                            fontSize: 13,
+                                        }}
+                                    >
+                                        ⚙
+                                    </div>
+                                    <div style={{ width: 20, height: 20, borderRadius: "50%", background: "linear-gradient(135deg,#7cc4f5,#c79bff)", flex: "none" }} />
+
+                                    {ide.settingsDropdownOpen && (
+                                        <div
+                                            style={{
+                                                position: "absolute",
+                                                top: 28,
+                                                right: 40,
+                                                width: 260,
+                                                background: "#252526",
+                                                border: "1px solid #454545",
+                                                borderRadius: 6,
+                                                boxShadow: "0 12px 34px rgba(0,0,0,.6)",
+                                                fontSize: 12.5,
+                                                color: C.text,
+                                                zIndex: 30,
+                                                overflow: "hidden",
+                                            }}
+                                        >
+                                            <div style={{ padding: "8px 14px", cursor: "pointer" }}>Editor Settings</div>
+                                            <div
+                                                ref={set("openUserSettingsMenuItem")}
+                                                style={{
+                                                    padding: "8px 14px",
+                                                    cursor: "pointer",
+                                                    display: "flex",
+                                                    justifyContent: "space-between",
+                                                    background: s === 87 ? "#0078d4" : "transparent",
+                                                    color: "#fff",
+                                                }}
+                                            >
+                                                <span>Open Editor User Settings</span>
+                                                <span style={{ opacity: 0.7 }}>⌘,</span>
+                                            </div>
+                                            <div style={{ borderTop: "1px solid #3a3a3a" }} />
+                                            <div style={{ padding: "8px 14px", cursor: "pointer" }}>Extensions</div>
+                                            <div style={{ padding: "8px 14px", cursor: "pointer", display: "flex", justifyContent: "space-between" }}>
+                                                <span>Open Keyboard Shortcuts</span>
+                                                <span style={{ opacity: 0.7 }}>⇧⌘S</span>
+                                            </div>
+                                            <div style={{ padding: "8px 14px", cursor: "pointer" }}>Configure Snippets</div>
+                                            <div style={{ borderTop: "1px solid #3a3a3a" }} />
+                                            <div style={{ padding: "8px 14px", cursor: "pointer" }}>Tasks</div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
@@ -2837,6 +3013,48 @@ const QuickDBStory: FC = () => {
                                                     );
                                                 })}
 
+                                            {/* Steps 63-66 (AI Settings / AI SQL Assistant only): the
+                                                reference recording still shows "employees", "customers"
+                                                and the original Query Console tab sitting inactive in the
+                                                background — left open rather than closed when AI Settings
+                                                took over. They vanish once AI Chat opens and resets the
+                                                bar to just itself (aiOpenTabs), matching the reference. */}
+                                            {(activeAiTab === "settings" || activeAiTab === "sqlAssistant") && (
+                                                <>
+                                                    {["employees", "customers"].map(name => (
+                                                        <div
+                                                            key={name}
+                                                            style={{
+                                                                padding: "0 14px",
+                                                                background: "#181818",
+                                                                borderRight: "1px solid #2d2d2d",
+                                                                display: "flex",
+                                                                alignItems: "center",
+                                                                gap: 8,
+                                                                color: "#888",
+                                                                fontSize: 12,
+                                                            }}
+                                                        >
+                                                            <span>📄</span> {name} <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                        </div>
+                                                    ))}
+                                                    <div
+                                                        style={{
+                                                            padding: "0 14px",
+                                                            background: "#181818",
+                                                            borderRight: "1px solid #2d2d2d",
+                                                            display: "flex",
+                                                            alignItems: "center",
+                                                            gap: 8,
+                                                            color: "#888",
+                                                            fontSize: 12,
+                                                        }}
+                                                    >
+                                                        <span>📄</span> Query Console: Demo &gt; classicmodels <span style={{ opacity: 0.6, fontSize: 10 }}>✕</span>
+                                                    </div>
+                                                </>
+                                            )}
+
                                             <div
                                                 style={{
                                                     marginLeft: "auto",
@@ -3998,7 +4216,7 @@ const QuickDBStory: FC = () => {
                                                         </div>
                                                     </div>
 
-                                                    <div style={{ maxWidth: 620 }}>
+                                                    <div style={{ maxWidth: 620, margin: "0 auto" }}>
                                                         <div style={{ fontSize: 11, fontWeight: 700, color: "#999", marginBottom: 8 }}>Provider</div>
                                                         <div style={{ display: "flex", border: "1px solid #3a3a3a", borderRadius: 6, overflow: "hidden", marginBottom: 12 }}>
                                                             {(["editor", "cloud", "local"] as const).map(p => (
@@ -4042,7 +4260,10 @@ const QuickDBStory: FC = () => {
                                                                     ))}
                                                                 </div>
                                                                 <div style={{ display: "flex", gap: 8, marginBottom: 8 }}>
-                                                                    <div style={{ flex: 1, padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666" }}>API key (sk-ant-…)</div>
+                                                                    <div style={{ flex: 1, padding: "7px 10px", background: "#141414", border: "1px solid #3a3a3a", borderRadius: 5, color: "#666", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                                        <span>API key (sk-ant-…)</span>
+                                                                        <span style={{ opacity: 0.6, fontSize: 11 }}>⃠</span>
+                                                                    </div>
                                                                     <span style={{ padding: "7px 14px", background: "#2a2a2a", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Save key</span>
                                                                 </div>
                                                                 <div style={{ color: "#70baff", fontSize: 11, marginBottom: 14 }}>Get a key at console.anthropic.com →</div>
@@ -4454,6 +4675,7 @@ const QuickDBStory: FC = () => {
                                                 with: expand per-database access, grant Read on
                                                 classicmodels, Update). */}
                                             {activeAiTab === "mcpSetup" && (
+                                              <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
                                                 <div style={{ flex: 1, minHeight: 0, overflow: "auto", background: "#181818", padding: "20px 24px", position: "relative" }}>
                                                     <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
                                                         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -4591,6 +4813,159 @@ const QuickDBStory: FC = () => {
                                                         </div>
                                                     )}
                                                 </div>
+
+                                                {/* Steps 89-95: the editor's own docked Agent panel — proof
+                                                    the Update actually wired quickdb in. Revealed together
+                                                    with the Settings modal closing (step 89); header text
+                                                    tracks the conversation's own state the same way a real
+                                                    agent panel would (idle "Agent" → the mentioned server's
+                                                    name once picked → a generated title once it starts
+                                                    actually working). */}
+                                                {ide.agentPanelOpen && (
+                                                    <div style={{ width: 320, flex: "none", background: "#1c1c1c", borderLeft: "1px solid #2d2d2d", display: "flex", flexDirection: "column" }}>
+                                                        <div style={{ height: 38, flex: "none", display: "flex", alignItems: "center", padding: "0 12px", borderBottom: "1px solid #2d2d2d", fontSize: 12.5, fontWeight: 700, color: "#fff" }}>
+                                                            {ide.workingPhase >= 2 || ide.resultReady ? "Atelier Graphique Order Analysis" : ide.mcpPicked ? "quickdb" : "Agent"}
+                                                            <span style={{ marginLeft: "auto", display: "flex", gap: 10, color: "#888", fontWeight: 400, fontSize: 13 }}>
+                                                                <span>+</span><span>↻</span><span>···</span><span>✕</span>
+                                                            </span>
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 14, display: "flex", flexDirection: "column", gap: 12, fontSize: 12 }}>
+                                                            {!ide.sent ? (
+                                                                <div style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 8, color: "#777", textAlign: "center" }}>
+                                                                    <span style={{ fontSize: 20 }}>✦</span>
+                                                                    <div>Ask anything, @ to mention, / for actions</div>
+                                                                </div>
+                                                            ) : (
+                                                                <>
+                                                                    <div style={{ color: "#ccc", lineHeight: 1.6 }}>
+                                                                        <span style={{ color: "#70baff" }}>@mcp:quickdb:</span> {AI_CHAT_QUESTION}
+                                                                    </div>
+
+                                                                    {!ide.resultReady && (
+                                                                        <div style={{ color: "#888", display: "flex", alignItems: "center", gap: 6 }}>
+                                                                            <span>⚙</span> Working
+                                                                        </div>
+                                                                    )}
+
+                                                                    {ide.workingPhase >= 2 && !ide.resultReady && (
+                                                                        <div style={{ border: "1px solid #2f2f2f", borderRadius: 6, background: "#181818", padding: 10 }}>
+                                                                            <div style={{ color: "#ccc", marginBottom: 6, display: "flex", alignItems: "center", gap: 6 }}>
+                                                                                <span>📁</span> Exploring 1 file, 2 folders <span style={{ marginLeft: "auto", color: "#666" }}>⌄</span>
+                                                                            </div>
+                                                                            {AI_CHAT_RESULT_ROWS.slice(4, 7).map(([name], i) => (
+                                                                                <div key={name} style={{ display: "flex", gap: 8, color: "#999", padding: "2px 0" }}>
+                                                                                    <span style={{ color: "#666" }}>{i + 5}</span>
+                                                                                    <span>{name}</span>
+                                                                                </div>
+                                                                            ))}
+                                                                            <div style={{ color: "#ccc", marginTop: 8, marginBottom: 4, fontWeight: 700 }}>Generated SQL:</div>
+                                                                            <pre style={{ margin: 0, fontFamily: MONO, fontSize: 10.5, color: "#7ee787", whiteSpace: "pre-wrap", lineHeight: 1.5 }}>{AI_CHAT_SQL}</pre>
+                                                                            <div style={{ color: "#888", marginTop: 8 }}>Working..</div>
+                                                                        </div>
+                                                                    )}
+
+                                                                    {ide.resultReady && (
+                                                                        <div style={{ color: "#ccc" }}>
+                                                                            <div style={{ color: "#70baff", display: "flex", alignItems: "center", gap: 4, marginBottom: 10 }}>
+                                                                                Worked for 33s <span>›</span>
+                                                                            </div>
+                                                                            <div style={{ lineHeight: 1.6, marginBottom: 10 }}>
+                                                                                The customer <b style={{ color: "#fff" }}>Atelier Graphique</b> ordered <b style={{ color: "#fff" }}>7 different products</b> (totaling 270 items).
+                                                                            </div>
+                                                                            <div style={{ marginBottom: 8 }}>Here are the names of the products they ordered along with the quantities:</div>
+                                                                            <ol style={{ margin: 0, paddingLeft: 18, lineHeight: 1.8 }}>
+                                                                                {[...AI_CHAT_RESULT_ROWS].sort((a, b) => b[1] - a[1]).map(([name, n]) => (
+                                                                                    <li key={name}>
+                                                                                        <b style={{ color: "#fff" }}>{name}</b> ({n} items)
+                                                                                    </li>
+                                                                                ))}
+                                                                            </ol>
+                                                                            <div style={{ marginTop: 10, display: "flex", gap: 12, color: "#666" }}>
+                                                                                <span>⧉</span><span>👍</span><span>👎</span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
+                                                            )}
+                                                        </div>
+
+                                                        <div style={{ flex: "none", padding: 10, borderTop: "1px solid #2d2d2d" }}>
+                                                            {ide.mcpPicked && !ide.sent && (
+                                                                <div style={{ marginBottom: 6 }}>
+                                                                    <span style={{ padding: "2px 8px", borderRadius: 4, background: "#252530", border: "1px solid #3c3c4a", color: "#70baff", fontSize: 10.5 }}>quickdb</span>
+                                                                </div>
+                                                            )}
+                                                            <div
+                                                                ref={set("agentChatInput")}
+                                                                style={{
+                                                                    minHeight: 40,
+                                                                    padding: "8px 10px",
+                                                                    background: "#141414",
+                                                                    border: "1px solid #3a3a3a",
+                                                                    borderRadius: 6,
+                                                                    fontSize: 11.5,
+                                                                    color: ide.sent ? "#555" : "#ccc",
+                                                                    position: "relative",
+                                                                }}
+                                                            >
+                                                                {!ide.sent && ide.mcpAutocompleteOpen && (
+                                                                    <div style={{ position: "absolute", bottom: "100%", left: 0, marginBottom: 6, width: 240, background: "#252526", border: "1px solid #454545", borderRadius: 6, boxShadow: "0 8px 24px rgba(0,0,0,.5)", overflow: "hidden", zIndex: 10 }}>
+                                                                        <div style={{ padding: "8px 12px", color: "#ccc", display: "flex", alignItems: "center", gap: 8 }}>
+                                                                            <span>🔧</span> chrome-devtools-mcp
+                                                                        </div>
+                                                                        <div
+                                                                            ref={set("mcpAutocompleteQuickdbOption")}
+                                                                            style={{ padding: "8px 12px", background: "rgba(0,120,212,0.25)", color: "#fff", display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+                                                                        >
+                                                                            <span>🔧</span> quickdb
+                                                                        </div>
+                                                                    </div>
+                                                                )}
+                                                                {ide.sent ? (
+                                                                    "Ask anything, @ to mention, / for actions"
+                                                                ) : ide.mcpPicked ? (
+                                                                    <>
+                                                                        <span style={{ color: "#70baff" }}>@mcp:quickdb:</span>{" "}
+                                                                        {ide.questionChars ? AI_CHAT_QUESTION.slice(0, ide.questionChars) : ""}
+                                                                    </>
+                                                                ) : s >= 90 ? (
+                                                                    <span style={{ color: "#70baff" }}>@mcp:</span>
+                                                                ) : (
+                                                                    <span style={{ color: "#666" }}>Ask anything, @ to mention, / for actions</span>
+                                                                )}
+                                                            </div>
+                                                            <div style={{ display: "flex", alignItems: "center", gap: 8, marginTop: 8, fontSize: 11, color: "#888" }}>
+                                                                <span>+</span>
+                                                                <span>Gemini 3.1 Pro High ⌄</span>
+                                                                <span style={{ marginLeft: "auto" }}>🎤</span>
+                                                                <span
+                                                                    ref={set("agentSendBtn")}
+                                                                    style={{
+                                                                        width: 22,
+                                                                        height: 22,
+                                                                        borderRadius: "50%",
+                                                                        display: "grid",
+                                                                        placeItems: "center",
+                                                                        background:
+                                                                            !ide.sent && ide.mcpPicked
+                                                                                ? s === 93
+                                                                                    ? "#0078d4"
+                                                                                    : "#2a2a2a"
+                                                                                : ide.sent && !ide.resultReady
+                                                                                  ? "#d64545"
+                                                                                  : "#2a2a2a",
+                                                                        color: "#fff",
+                                                                        cursor: "pointer",
+                                                                    }}
+                                                                >
+                                                                    {ide.sent && !ide.resultReady ? "■" : "➤"}
+                                                                </span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                              </div>
                                             )}
                                         </div>
                                     </div>
@@ -5056,6 +5431,199 @@ const QuickDBStory: FC = () => {
                                 <span>🔔</span>
                             </span>
                         </div>
+
+                        {/* Steps 87-89: the editor's own Settings modal — General
+                            tab is the modal's own default (matches the reference:
+                            it never shows anything else before 88's click), then
+                            Customizations lists the two installed MCP servers,
+                            quickdb expanded to its full 48 registered tools —
+                            the actual payoff of step 84's Update. zIndex below the
+                            cursor's 999 (see its own comment) so the pointer still
+                            renders on top while "clicking" this modal's own close
+                            button. */}
+                        {ide.modalOpen && (
+                            <div
+                                style={{
+                                    position: "absolute",
+                                    inset: 0,
+                                    background: "rgba(0,0,0,0.55)",
+                                    zIndex: 500,
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    justifyContent: "center",
+                                }}
+                            >
+                                <div
+                                    style={{
+                                        marginTop: 130,
+                                        width: 1400,
+                                        height: 830,
+                                        background: "#1c1c1c",
+                                        border: "1px solid #3a3a3a",
+                                        borderRadius: 8,
+                                        boxShadow: "0 24px 60px rgba(0,0,0,.7)",
+                                        display: "flex",
+                                        flexDirection: "column",
+                                        overflow: "hidden",
+                                        fontSize: 12.5,
+                                        color: C.text,
+                                    }}
+                                >
+                                    <div style={{ height: 36, flex: "none", display: "flex", alignItems: "center", padding: "0 14px", position: "relative", borderBottom: "1px solid #2f2f2f" }}>
+                                        <div style={{ display: "flex", gap: 8 }}>
+                                            <div
+                                                ref={set("settingsModalCloseBtn")}
+                                                style={{ width: 12, height: 12, borderRadius: "50%", background: "#ff5f57", cursor: "pointer" }}
+                                            />
+                                            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#febc2e" }} />
+                                            <div style={{ width: 12, height: 12, borderRadius: "50%", background: "#28c840" }} />
+                                        </div>
+                                        <span style={{ position: "absolute", left: "50%", transform: "translateX(-50%)", color: C.textDim, fontWeight: 600 }}>
+                                            Settings - {ide.settingsTab === "customizations" ? "Customizations" : "General"}
+                                        </span>
+                                    </div>
+
+                                    <div style={{ flex: 1, minHeight: 0, display: "flex" }}>
+                                        <div style={{ width: 200, flex: "none", borderRight: "1px solid #2f2f2f", padding: "14px 0", overflow: "auto", fontSize: 12.5 }}>
+                                            {["Settings", "Account", "General", "Appearance", "Models", "Customizations", "Browser", "Tab", "Editor"].map(item => {
+                                                const isCustomizations = item === "Customizations";
+                                                const active = isCustomizations ? ide.settingsTab === "customizations" : item === "General" && ide.settingsTab === "general";
+                                                return (
+                                                    <div
+                                                        key={item}
+                                                        ref={isCustomizations ? set("customizationsNavItem") : undefined}
+                                                        style={{
+                                                            padding: "6px 18px",
+                                                            cursor: "pointer",
+                                                            color: active ? "#fff" : C.textDim,
+                                                            fontWeight: active ? 700 : 400,
+                                                            background: active ? "rgba(255,255,255,0.06)" : "transparent",
+                                                        }}
+                                                    >
+                                                        {item}
+                                                    </div>
+                                                );
+                                            })}
+                                            <div style={{ marginTop: 14, padding: "0 18px", color: C.faint, fontSize: 11, fontWeight: 700 }}>Workspaces</div>
+                                            {["interview", "me", "marketplace_merchant", "codelens-runtime-inspe…", "project-analysis", "marketplace_storefront", "agents-vicarious-cattle", "agents-controversial-ca…", "portfolio-nextjs", "ecommerce", "quickdb"].map(w => (
+                                                <div key={w} style={{ padding: "6px 18px", color: C.faint, fontSize: 12 }}>{w}</div>
+                                            ))}
+                                            <div style={{ marginTop: 14, padding: "6px 18px", color: C.faint, fontSize: 12 }}>Shortcuts</div>
+                                            <div style={{ padding: "6px 18px", color: C.faint, fontSize: 12 }}>Provide Feedback</div>
+                                        </div>
+
+                                        <div style={{ flex: 1, minHeight: 0, overflow: "auto", padding: 24 }}>
+                                            {ide.settingsTab === "general" ? (
+                                                <>
+                                                    <div style={{ fontSize: 18, fontWeight: 700, color: "#fff" }}>General</div>
+                                                    <div style={{ color: C.faint, marginTop: 4, marginBottom: 24 }}>Configure agent execution, queued message delivery, and permissions.</div>
+
+                                                    <div style={{ fontWeight: 700, color: "#fff", marginBottom: 10 }}>Execution</div>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
+                                                        <div>
+                                                            <div style={{ color: "#fff" }}>Queued Messages</div>
+                                                            <div style={{ color: C.faint, fontSize: 11.5, marginTop: 2 }}>Configure when follow-up messages are sent.</div>
+                                                        </div>
+                                                        <div style={{ display: "flex", border: "1px solid #3a3a3a", borderRadius: 5, overflow: "hidden" }}>
+                                                            <span style={{ padding: "5px 12px", background: "#2a2a2a", color: "#fff" }}>Queue</span>
+                                                            <span style={{ padding: "5px 12px", color: C.faint }}>Send Immediately</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ fontWeight: 700, color: "#fff", marginBottom: 4 }}>Agent security mode</div>
+                                                    <div style={{ color: C.faint, fontSize: 11.5, marginBottom: 12 }}>Select one of the three options. Agent settings and permissions can be further customized below.</div>
+                                                    <div style={{ display: "flex", gap: 14, marginBottom: 24 }}>
+                                                        {[
+                                                            ["Full access", "Agents have full access to your machine and external resources.", true],
+                                                            ["Sandboxed", "Agents run in a secure sandbox that restricts access to external resources outside of your trusted folders.", false],
+                                                            ["Strict", "Terminal commands always require review and the agent cannot access files outside of its given workspaces.", false],
+                                                        ].map(([title, desc, on]) => (
+                                                            <div key={title as string} style={{ flex: 1, border: on ? "1px solid #0078d4" : "1px solid #3a3a3a", borderRadius: 6, padding: 14 }}>
+                                                                <div style={{ color: on ? "#70baff" : "#fff", fontWeight: 700, marginBottom: 6 }}>{title as string}</div>
+                                                                <div style={{ color: C.faint, fontSize: 11.5, lineHeight: 1.5 }}>{desc as string}</div>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+
+                                                    <div style={{ fontWeight: 700, color: "#fff", marginBottom: 10 }}>Terminal</div>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 16 }}>
+                                                        <div>
+                                                            <div style={{ color: "#fff" }}>Terminal Command Auto Execution</div>
+                                                            <div style={{ color: C.faint, fontSize: 11.5, marginTop: 2, maxWidth: 480 }}>Controls whether terminal commands require your approval before running.</div>
+                                                        </div>
+                                                        <span style={{ padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Request Review ⌄</span>
+                                                    </div>
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+                                                        <div>
+                                                            <div style={{ color: "#fff" }}>Enable Shell Integration</div>
+                                                            <div style={{ color: C.faint, fontSize: 11.5, marginTop: 2, maxWidth: 480 }}>When enabled, Agent will use IDE&apos;s shell integration to detect and report terminal command execution.</div>
+                                                        </div>
+                                                        <span style={{ width: 34, height: 18, borderRadius: 9, background: "#0078d4", position: "relative", display: "inline-block", flex: "none" }}>
+                                                            <span style={{ position: "absolute", right: 2, top: 2, width: 14, height: 14, borderRadius: "50%", background: "#fff" }} />
+                                                        </span>
+                                                    </div>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
+                                                        <span style={{ color: "#fff", fontWeight: 700 }}>troubleshooting</span>
+                                                        <span style={{ padding: "1px 8px", borderRadius: 8, background: "#2a2a2a", color: C.faint, fontSize: 10.5 }}>Global</span>
+                                                        <span style={{ padding: "1px 8px", borderRadius: 8, background: "rgba(199,155,255,0.15)", color: "#c79bff", fontSize: 10.5 }}>Plugin: chrome-devtools-plugin</span>
+                                                    </div>
+                                                    <div style={{ color: C.faint, fontSize: 11.5, lineHeight: 1.6, marginBottom: 24 }}>
+                                                        Uses Chrome DevTools MCP and documentation to troubleshoot connection and target issues. Trigger this skill when list_pages, new_page, or navigate_page fail, or when the server initialization…
+                                                    </div>
+
+                                                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+                                                        <span style={{ color: "#fff", fontWeight: 700 }}>Installed MCP Servers</span>
+                                                        <div style={{ display: "flex", gap: 8, fontSize: 11.5 }}>
+                                                            <span style={{ padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Add MCP +</span>
+                                                            <span style={{ padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Refresh ↻</span>
+                                                            <span style={{ padding: "5px 12px", border: "1px solid #3a3a3a", borderRadius: 5, color: "#ccc" }}>Open MCP Config</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ border: "1px solid #2f2f2f", borderRadius: 6, marginBottom: 12 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                                                            <span style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff", fontWeight: 700 }}>
+                                                                chrome-devtools-mcp <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4caf50" }} />
+                                                            </span>
+                                                            <span style={{ width: 30, height: 16, borderRadius: 8, background: "#0078d4", position: "relative", display: "inline-block" }}>
+                                                                <span style={{ position: "absolute", right: 2, top: 2, width: 12, height: 12, borderRadius: "50%", background: "#fff" }} />
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ padding: "0 14px 10px", color: C.faint, fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                                                            <span>›</span> 29 tools enabled
+                                                        </div>
+                                                    </div>
+
+                                                    <div style={{ border: "1px solid #2f2f2f", borderRadius: 6 }}>
+                                                        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px" }}>
+                                                            <span style={{ display: "flex", alignItems: "center", gap: 8, color: "#fff", fontWeight: 700 }}>
+                                                                quickdb <span style={{ width: 6, height: 6, borderRadius: "50%", background: "#4caf50" }} />
+                                                            </span>
+                                                            <span style={{ width: 30, height: 16, borderRadius: 8, background: "#0078d4", position: "relative", display: "inline-block" }}>
+                                                                <span style={{ position: "absolute", right: 2, top: 2, width: 12, height: 12, borderRadius: "50%", background: "#fff" }} />
+                                                            </span>
+                                                        </div>
+                                                        <div style={{ padding: "0 14px 6px", color: "#ccc", fontSize: 11.5, display: "flex", alignItems: "center", gap: 6 }}>
+                                                            <span>⌄</span> 48 tools enabled
+                                                        </div>
+                                                        <div style={{ padding: "0 14px 14px", display: "flex", flexWrap: "wrap", gap: 6, maxHeight: 340, overflow: "auto" }}>
+                                                            {MCP_TOOLS.map(t => (
+                                                                <span key={t.name} style={{ padding: "3px 9px", borderRadius: 4, background: "#252530", border: "1px solid #3c3c4a", color: "#ccc", fontSize: 11, fontFamily: MONO }}>
+                                                                    {t.name}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
 
                         {/* Arrow pointer. The path's tip sits at the SVG origin, so
                             left/top can be the aim point directly and the scale

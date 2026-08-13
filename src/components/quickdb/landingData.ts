@@ -93,6 +93,17 @@ export const STEPS: readonly (readonly [string, string])[] = [
     ["82", "Expand per-database access"],
     ["83", "Grant Read on classicmodels"],
     ["84", "Update the MCP client"],
+    ["85", "Open editor settings"],
+    ["86", "Editor Settings menu"],
+    ["87", "Open User Settings"],
+    ["88", "Installed MCP servers"],
+    ["89", "Close Settings"],
+    ["90", "Mention @mcp"],
+    ["91", "Pick the quickdb server"],
+    ["92", "Ask the Agent"],
+    ["93", "Send to the Agent"],
+    ["94", "Agent is working"],
+    ["95", "7 products, 270 items"],
 ] as const;
 
 export interface StepDetail {
@@ -368,6 +379,17 @@ export const TARGETS: Record<number, string | readonly [number, number]> = {
     82: "mcpPerDbAccessLink",
     83: "mcpReadBtn",
     84: "mcpUpdateBtn",
+    85: "settingsGearIcon",
+    86: "settingsGearIcon",
+    87: "openUserSettingsMenuItem",
+    88: "customizationsNavItem",
+    89: "settingsModalCloseBtn",
+    90: "agentChatInput",
+    91: "mcpAutocompleteQuickdbOption",
+    92: "agentChatInput",
+    93: "agentSendBtn",
+    94: "agentSendBtn",
+    95: "agentSendBtn",
 };
 
 export interface TypedField {
@@ -531,11 +553,8 @@ export const TOOLS: readonly ToolGroup[] = [
  *  since that's the one steps 83-84 grant Read on. */
 export const MCP_DATABASES: readonly string[] = [
     "classicmodels",
-    "ecommerce",
     "information_schema",
-    "mydb",
     "mysql",
-    "nazmul",
     "performance_schema",
     "sys",
 ] as const;
@@ -721,8 +740,12 @@ export const TOASTS: Record<number, string> = {
  *  (steps 63-84): AI Settings' provider toggle, AI SQL Assistant, an AI
  *  Chat round-trip (connection/database pick → ask → run → open in a new
  *  Query Console tab → run there too → close it), and the MCP Tools
- *  catalog → MCP Client Setup → per-database Read access → Update flow. */
-export const STEP_COUNT = 84;
+ *  catalog → MCP Client Setup → per-database Read access → Update flow,
+ *  then to 95 for the epilogue proving that Update actually wired quickdb
+ *  into the real editor: open the editor's own Settings → Customizations
+ *  (the 48 registered tools listed), close it, then drive the editor's own
+ *  Agent panel with an @mcp:quickdb mention through to a real answer. */
+export const STEP_COUNT = 95;
 
 /**
  * Most steps are the same width, but a handful run a real character-by-
@@ -757,6 +780,8 @@ export const STEP_WEIGHTS: Record<number, number> = {
     // 72: AI Chat's question types out character-by-character (see
     // aiChatQuestion reveal in QuickDBStory.tsx) — same reasoning as 47/56.
     72: 4,
+    // 92: the same question, typed again into the editor's own Agent panel.
+    92: 4,
 };
 
 /** The original fixed track height, and how many equal-width steps it was
