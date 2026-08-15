@@ -684,7 +684,7 @@ const CVBtn: FC<ICV> = ({ children }) => {
                                             Industry Domains
                                         </p>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "4px", marginBottom: "8px" }}>
-                                            {["ERP Systems", "E-Learning", "E-Commerce", "Website Builder", "Governance", "Healthcare", "SaaS"].map((domain, i) => (
+                                            {["Enterprise ERP", "Textile MRP & BOM", "E-Commerce (Zcommerz)", "E-Learning (LMS)", "Procurement & Inventory", "Agriculture & AI", "Banking & eTender"].map((domain, i) => (
                                                 <span
                                                     key={i}
                                                     style={{

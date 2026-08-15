@@ -7,8 +7,9 @@ import fs from "fs";
 export const dynamic = "force-dynamic";
 
 export async function GET(request: NextRequest) {
-    const { searchParams } = new URL(request.url);
-    const theme = searchParams.get("theme") === "light" ? "light" : "dark";
+    try {
+        const { searchParams } = new URL(request.url);
+        const theme = searchParams.get("theme") === "light" ? "light" : "dark";
 
     const isLight = theme === "light";
 
@@ -340,7 +341,7 @@ export async function GET(request: NextRequest) {
     // Open Source & Contributions
     drawMainHeader("Domain Expertise & Contributions");
     const contribs = [
-        "ERP Systems, E-Learning, E-Commerce, SaaS, Healthcare & Governance platforms.",
+        "Enterprise ERP (Textile, MRP, BOM), E-Commerce SaaS (Zcommerz), E-Learning (LMS), Agriculture AI & Banking platforms.",
         "QuickDB — VS Code extension for multi-database management (MySQL, PostgreSQL, MongoDB, Redis, SQLite) with Query Builder, AI query generation & MCP server.",
         "Published 3 npm packages — ESLint/Prettier setup, Quick UI Design scaffolding, Quick Dockerize CLI tool.",
     ];
@@ -356,10 +357,14 @@ export async function GET(request: NextRequest) {
     doc.end();
     const pdfBuffer = await pdfBufferPromise;
 
-    return new NextResponse(new Uint8Array(pdfBuffer), {
-        headers: {
-            "Content-Type": "application/pdf",
-            "Content-Disposition": `attachment; filename=Nazmul_Haque_CV_${theme}.pdf`,
-        },
-    });
+        return new NextResponse(new Uint8Array(pdfBuffer), {
+            headers: {
+                "Content-Type": "application/pdf",
+                "Content-Disposition": `attachment; filename=Nazmul_Haque_CV_${theme}.pdf`,
+            },
+        });
+    } catch (err: any) {
+        console.error("PDF generation error:", err);
+        return NextResponse.json({ error: err?.message || String(err), stack: err?.stack }, { status: 500 });
+    }
 }

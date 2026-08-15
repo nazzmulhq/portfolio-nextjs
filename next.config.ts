@@ -13,7 +13,7 @@ const nextConfig: NextConfig = {
 			bodySizeLimit: "10mb",
 		},
 	},
-    serverExternalPackages: ["typeorm", "pg", "argon2", "bcryptjs"],
+    serverExternalPackages: ["typeorm", "pg", "argon2", "bcryptjs", "pdfkit"],
     async rewrites() {
         return [
             {
