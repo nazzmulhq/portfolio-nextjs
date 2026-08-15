@@ -155,9 +155,15 @@ export default function Page() {
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
             />
 
-            {/* Atmosphere — ambient aurora glows + dot grid */}
-            <div aria-hidden className="aurora pointer-events-none fixed inset-0 z-0">
-                <div className="aurora-grid" />
+            {/* Atmosphere — ambient square blueprint grid + aurora glow across the full page */}
+            <div aria-hidden className="pointer-events-none fixed inset-0 z-0 overflow-hidden">
+                {/* Full Page Square Grid Pattern */}
+                <div className="absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_srgb,var(--line)_45%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--line)_45%,transparent)_1px,transparent_1px)] bg-[size:32px_32px] opacity-75" />
+                
+                {/* Ambient Aurora Radial Glows */}
+                <div className="absolute -top-[20%] left-1/2 -translate-x-1/2 w-[1000px] h-[600px] bg-gradient-to-b from-emerald-500/10 via-teal-500/5 to-transparent rounded-full blur-3xl" />
+                <div className="absolute top-[35%] -right-[15%] w-[800px] h-[600px] bg-gradient-to-b from-cyan-500/8 via-blue-500/5 to-transparent rounded-full blur-3xl" />
+                <div className="absolute bottom-[10%] -left-[15%] w-[800px] h-[600px] bg-gradient-to-b from-purple-500/8 via-indigo-500/5 to-transparent rounded-full blur-3xl" />
             </div>
 
             <div className="fixed right-5 top-4 z-50 sm:right-8 sm:top-5">
@@ -176,7 +182,7 @@ export default function Page() {
 
                     {/* ── Modern Closing CTA Footer Banner ── */}
                     <footer className="mx-auto w-full max-w-6xl px-5 pb-28 pt-16 sm:px-8 sm:pb-24 sm:pt-24">
-                        <div className="rounded-3xl bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] border border-line p-8 sm:p-12 backdrop-blur-xl shadow-2xl">
+                        <div className="rounded-3xl bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] border border-line p-8 sm:p-12 backdrop-blur-xl shadow-xl shadow-slate-900/5 dark:shadow-black/60">
                             <div className="flex items-center gap-3 mb-5">
                                 <span className="w-2.5 h-2.5 rounded-full bg-[var(--accent)] animate-pulse" />
                                 <span className="text-xs font-mono font-bold uppercase tracking-widest text-[var(--accent)]">

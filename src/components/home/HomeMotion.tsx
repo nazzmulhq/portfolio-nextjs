@@ -81,7 +81,6 @@ const HomeMotion = ({ children }: { children: ReactNode }) => {
                 clearTimeout(safety);
                 cancelAnimationFrame(raf);
                 document.removeEventListener("visibilitychange", onVisible);
-                ScrollTrigger.getAll().forEach((st) => st.kill());
             };
         },
         { scope: root },

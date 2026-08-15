@@ -29,13 +29,13 @@ const Experience: FC<IExperience> = () => {
             />
 
             {/* ── Full-Width Cascading Stacked Cards Deck ── */}
-            <div className="mt-10 sm:mt-14 space-y-16 sm:space-y-24 pb-32 relative">
+            <div className="mt-10 sm:mt-14 space-y-16 sm:space-y-24 pb-36 relative">
                 {rawRoles.map((role, index) => {
                     const isCurrent = /present/i.test(role.date);
                     const isSslRole2 = index === 1;
 
-                    // 110px offset allows the ENTIRE full header (company, full title, address, date) of each card to remain 100% visible
-                    const stickyTop = `calc(4.5rem + ${index * 110}px)`;
+                    // 128px incremental top offset guarantees 100% full header visibility (no text cutoffs)
+                    const stickyTop = `calc(4.5rem + ${index * 128}px)`;
 
                     return (
                         <article
@@ -45,49 +45,29 @@ const Experience: FC<IExperience> = () => {
                                 top: stickyTop,
                                 zIndex: index + 10,
                             }}
-                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-6 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-[0_-12px_35px_rgba(0,0,0,0.4)] transition-all duration-300 min-h-[420px] flex flex-col justify-between"
+                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-5 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-[0_-10px_35px_var(--shadow)] transition-all duration-300 min-h-[420px] flex flex-col justify-between"
                         >
                             <div>
-                                {/* Full Header Bar (100% visible when stacked) */}
-                                <div className="border-b border-line pb-4 mb-4">
-                                    <div className="flex flex-wrap items-start justify-between gap-3">
-                                        <div className="min-w-0">
-                                            {/* Company & Status Tags */}
-                                            <div className="flex flex-wrap items-center gap-2 mb-1">
-                                                <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent)]">
-                                                    {role.company}
+                                {/* Header Tab Container (100% visible in the stacked deck) */}
+                                <div className="min-h-[110px] flex flex-col justify-between pb-3.5 border-b border-line mb-4">
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <div className="flex flex-wrap items-center gap-2">
+                                            <span className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--accent)]">
+                                                {role.company}
+                                            </span>
+                                            {isCurrent && (
+                                                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
+                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                                    Active Position
                                                 </span>
-                                                {isCurrent && (
-                                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-500/15 text-emerald-400 border border-emerald-500/30">
-                                                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                        Active Position
-                                                    </span>
-                                                )}
-                                                {isSslRole2 && (
-                                                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
-                                                        Initial Role
-                                                    </span>
-                                                )}
-                                            </div>
-
-                                            {/* Full Role Title (Zero clipping) */}
-                                            <h3 className="text-xl sm:text-2xl font-extrabold text-fg tracking-tight leading-tight">
-                                                {role.title}
-                                            </h3>
-
-                                            {/* Location Pin */}
-                                            {role.address && (
-                                                <p className="mt-1 text-xs text-muted flex items-center gap-1.5 font-mono">
-                                                    <svg className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
-                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
-                                                    </svg>
-                                                    <span>{role.address}</span>
-                                                </p>
+                                            )}
+                                            {isSslRole2 && (
+                                                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10.5px] font-bold bg-blue-500/15 text-blue-400 border border-blue-500/30">
+                                                    Initial Role
+                                                </span>
                                             )}
                                         </div>
 
-                                        {/* Date Pill & Index */}
                                         <div className="flex items-center gap-2">
                                             <span className="text-xs font-mono font-bold px-3 py-1 rounded-xl bg-[var(--surface-2)] text-fg/90 border border-line shadow-xs whitespace-nowrap">
                                                 {role.date}
@@ -96,6 +76,21 @@ const Experience: FC<IExperience> = () => {
                                                 0{index + 1} / 0{rawRoles.length}
                                             </span>
                                         </div>
+                                    </div>
+
+                                    <div className="mt-1.5">
+                                        <h3 className="text-xl sm:text-2xl font-extrabold text-fg tracking-tight leading-snug">
+                                            {role.title}
+                                        </h3>
+                                        {role.address && (
+                                            <p className="text-xs text-muted flex items-center gap-1.5 font-mono mt-0.5">
+                                                <svg className="w-3.5 h-3.5 text-[var(--accent)] shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                </svg>
+                                                <span>{role.address}</span>
+                                            </p>
+                                        )}
                                     </div>
                                 </div>
 
