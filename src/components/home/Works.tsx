@@ -1,3 +1,5 @@
+"use client";
+
 import Link from "next/link";
 import { FC } from "react";
 import info from "./data";
@@ -9,114 +11,108 @@ const Works: FC<IWorks> = () => {
     const { works } = info;
 
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-14 sm:px-8 sm:py-28" id="works">
+        <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24" id="works">
             <SectionHeading
                 index="04"
-                label="Selected work"
-                note={`${works.length} projects`}
-                title="Things I've shipped"
+                label="Featured Products &amp; Tools"
+                note={`${works.length} showcased engineering projects`}
+                title="Selected Works &amp; Products"
             />
 
-            <div className="mt-10 sm:mt-16">
+            <div className="mt-10 sm:mt-14 grid grid-cols-1 md:grid-cols-2 gap-8">
                 {works.map((work, i) => {
                     const hasLink = Boolean(work.link);
                     const external = hasLink && !work.link!.startsWith("/");
-                    const npmPackage = external && work.link!.includes("npmjs.com");
-                    const linkProps = hasLink
-                        ? {
-                              href: work.link!,
-                              prefetch: !external ? true : undefined,
-                              rel: external ? "noopener noreferrer" : undefined,
-                              target: external ? "_blank" : undefined,
-                          }
-                        : null;
-
-                    const media = (
-                        <div className="work-image-wrap aspect-[16/10]">
-                            {work.imageOrVideo ? (
-                                <img alt={work.title} data-parallax src={work.imageOrVideo} />
-                            ) : (
-                                <div className="flex h-full w-full flex-col items-center justify-center gap-3 border border-line bg-surface px-6 text-center text-muted">
-                                    <svg aria-hidden className="h-8 w-8 opacity-60" fill="none" stroke="currentColor" strokeWidth={1.5} viewBox="0 0 24 24">
-                                        <path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                    <span className="text-base font-semibold text-fg sm:text-lg">{work.title}</span>
-                                    <span className="label">Internal &amp; confidential</span>
-                                </div>
-                            )}
-                        </div>
-                    );
+                    const linkHref = work.link || "#";
 
                     return (
-                        <article className="work-entry group" data-work-row key={work.title}>
-                            {/* Media sticks while its own copy scrolls past, then
-                                the next project's shot pushes it up — the stacking
-                                comes from CSS `position: sticky`, so it costs no
-                                pin and no JS. */}
-                            <div className="work-shot" data-parallax-wrap data-work-media>
-                                {linkProps ? (
-                                    <Link className="work-card block" tabIndex={-1} {...linkProps}>
-                                        <span aria-hidden className="work-sweep" data-work-sweep />
-                                        <span aria-hidden className="work-brackets">
-                                            <span />
-                                            <span />
-                                        </span>
-                                        {media}
-                                    </Link>
-                                ) : (
-                                    <div className="work-card block">
-                                        <span aria-hidden className="work-brackets">
-                                            <span />
-                                            <span />
-                                        </span>
-                                        {media}
-                                    </div>
-                                )}
-                            </div>
+                        <article
+                            key={work.title}
+                            className="group rounded-3xl bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] border border-line hover:border-[var(--line-strong)] backdrop-blur-xl shadow-xl overflow-hidden flex flex-col justify-between transition-all duration-300 hover:-translate-y-1.5 hover:shadow-2xl"
+                        >
+                            <div>
+                                {/* Media Preview Container */}
+                                <div className="relative aspect-[16/10] w-full overflow-hidden bg-[var(--surface-2)] border-b border-line">
+                                    {work.imageOrVideo ? (
+                                        <img
+                                            alt={work.title}
+                                            src={work.imageOrVideo}
+                                            className="w-full h-full object-cover transition-transform duration-700 ease-out group-hover:scale-105"
+                                        />
+                                    ) : (
+                                        <div className="flex h-full w-full flex-col items-center justify-center gap-2 bg-[var(--surface-2)] text-muted p-6 text-center">
+                                            <svg className="w-8 h-8 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                            <span className="text-sm font-semibold text-fg">{work.title}</span>
+                                        </div>
+                                    )}
 
-                            <div className="work-copy" data-work-copy>
-                                <div className="flex items-center gap-4">
-                                    <span className="digit text-4xl leading-none text-accent opacity-25 transition-opacity duration-500 group-hover:opacity-70 sm:text-6xl">
-                                        {String(i + 1).padStart(2, "0")}
-                                    </span>
-                                    <span className="h-px flex-1 bg-[var(--line)]" />
-                                    <span className="label whitespace-nowrap">
-                                        {!hasLink ? "internal system" : npmPackage ? "npm package" : external ? "live project" : "case study"}
-                                    </span>
+                                    {/* Floating Index Pill */}
+                                    <div className="absolute top-3.5 left-3.5 px-3 py-1 rounded-xl bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-md border border-line text-xs font-mono font-bold text-fg shadow-sm">
+                                        0{i + 1}
+                                    </div>
+
+                                    {/* Floating Type Tag */}
+                                    <div className="absolute top-3.5 right-3.5 px-3 py-1 rounded-xl bg-[color-mix(in_srgb,var(--surface)_92%,transparent)] backdrop-blur-md border border-line text-xs font-bold text-[var(--accent)] shadow-sm">
+                                        {external ? "Live SaaS / Tool" : "Case Study &amp; Docs"}
+                                    </div>
                                 </div>
 
-                                <h3 className="display mt-5 text-2xl leading-tight text-fg transition-colors duration-300 group-hover:text-accent sm:mt-6 sm:text-4xl">
-                                    {linkProps ? (
-                                        <Link className="link-wipe" {...linkProps}>
-                                            {work.title}
-                                        </Link>
-                                    ) : (
-                                        work.title
-                                    )}
-                                </h3>
+                                {/* Content Body */}
+                                <div className="p-6 sm:p-8">
+                                    <h3 className="text-xl sm:text-2xl font-bold text-fg group-hover:text-[var(--accent)] transition-colors duration-200">
+                                        {hasLink ? (
+                                            <Link
+                                                href={linkHref}
+                                                target={external ? "_blank" : undefined}
+                                                rel={external ? "noopener noreferrer" : undefined}
+                                            >
+                                                {work.title}
+                                            </Link>
+                                        ) : (
+                                            work.title
+                                        )}
+                                    </h3>
 
-                                <p className="mt-4 max-w-lg text-[0.95rem] leading-relaxed text-muted sm:mt-5 sm:text-base">
-                                    {work.description[0]}
-                                </p>
+                                    <div className="mt-3.5 space-y-2">
+                                        {work.description.map((desc, j) => (
+                                            <p key={j} className="text-xs sm:text-sm text-muted leading-relaxed">
+                                                {desc}
+                                            </p>
+                                        ))}
+                                    </div>
 
-                                <ul className="mt-5 flex flex-wrap gap-2 sm:mt-7">
-                                    {work.technologies.map((tech) => (
-                                        <li className="tag" key={tech}>
-                                            {tech}
-                                        </li>
-                                    ))}
-                                </ul>
-
-                                {linkProps && (
-                                    <Link
-                                        className="label mt-6 inline-flex items-center gap-2 text-accent transition-transform duration-300 group-hover:translate-x-1 sm:mt-8"
-                                        {...linkProps}
-                                    >
-                                        {external ? "Visit project" : "Read the case study"}
-                                        <span aria-hidden>{external ? "↗" : "→"}</span>
-                                    </Link>
-                                )}
+                                    {/* Tech Tags */}
+                                    <div className="mt-6 flex flex-wrap gap-1.5 pt-4 border-t border-line">
+                                        {work.technologies.map((t) => (
+                                            <span
+                                                key={t}
+                                                className="text-xs font-medium px-2.5 py-1 rounded-lg bg-[var(--surface-2)] text-fg/90 border border-line"
+                                            >
+                                                {t}
+                                            </span>
+                                        ))}
+                                    </div>
+                                </div>
                             </div>
+
+                            {/* Action Link Footer */}
+                            {hasLink && (
+                                <div className="px-6 pb-6 sm:px-8 sm:pb-8 pt-0">
+                                    <Link
+                                        href={linkHref}
+                                        target={external ? "_blank" : undefined}
+                                        rel={external ? "noopener noreferrer" : undefined}
+                                        className="inline-flex items-center justify-between w-full px-4 py-2.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-xs sm:text-sm font-bold text-fg hover:text-[var(--accent)] border border-line hover:border-[var(--line-strong)] transition-all duration-200"
+                                    >
+                                        <span>{external ? "Visit Live Platform" : "Explore Case Study & Documentation"}</span>
+                                        <svg className="w-4 h-4 transition-transform duration-200 group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d={external ? "M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" : "M14 5l7 7m0 0l-7 7m7-7H3"} />
+                                        </svg>
+                                    </Link>
+                                </div>
+                            )}
                         </article>
                     );
                 })}

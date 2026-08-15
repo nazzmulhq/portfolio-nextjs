@@ -1,11 +1,13 @@
 "use client";
+
 import { FC, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 
 export interface INavBar {}
 
 const SECTIONS = ["Home", "Skills", "Experience", "Education", "Works"];
 
-/** Active section from live geometry — whichever panel holds the viewport. */
+/** Active section tracker based on viewport geometry */
 const useActiveSection = () => {
     const [active, setActive] = useState("home");
 
@@ -49,7 +51,7 @@ const scrollTo = (id: string) => {
     const el = document.getElementById(id);
     if (!el) return;
     window.scrollTo({
-        top: el.getBoundingClientRect().top + window.pageYOffset - 24,
+        top: el.getBoundingClientRect().top + window.pageYOffset - 32,
         behavior: "smooth",
     });
 };
@@ -71,16 +73,21 @@ export const NavBar: FC<INavBar> = () => {
     }, [active]);
 
     return (
-        <header className="fixed left-0 right-0 top-6 z-40 hidden justify-center md:flex pointer-events-none">
-            <div ref={navRef} className="nav-pill pointer-events-auto">
+        <header className="fixed left-0 right-0 top-5 z-40 hidden justify-center md:flex pointer-events-none">
+            <div
+                ref={navRef}
+                className="relative flex items-center gap-1 p-1.5 rounded-full bg-[color-mix(in_srgb,var(--surface)_85%,transparent)] border border-line backdrop-blur-xl shadow-lg pointer-events-auto"
+            >
+                {/* Active indicator pill */}
                 <span
-                    className="nav-indicator"
+                    className="absolute top-1.5 bottom-1.5 rounded-full bg-[var(--accent)] transition-all duration-300 ease-out pointer-events-none"
                     style={{
                         left: `${indicatorStyle.left}px`,
                         width: `${indicatorStyle.width}px`,
                         opacity: indicatorStyle.width > 0 ? 1 : 0,
                     }}
                 />
+
                 {SECTIONS.map((item) => {
                     const id = item.toLowerCase();
                     const isActive = active === id;
@@ -89,7 +96,9 @@ export const NavBar: FC<INavBar> = () => {
                             key={item}
                             data-id={id}
                             data-active={isActive}
-                            className="nav-pill-item"
+                            className={`relative z-10 px-4 py-1.5 text-xs font-semibold rounded-full transition-colors duration-200 cursor-pointer ${
+                                isActive ? "text-[var(--accent-contrast)] font-bold" : "text-muted hover:text-fg"
+                            }`}
                             onClick={() => scrollTo(id)}
                             type="button"
                         >
@@ -97,6 +106,17 @@ export const NavBar: FC<INavBar> = () => {
                         </button>
                     );
                 })}
+
+                {/* CV Link */}
+                <Link
+                    href="/cv"
+                    className="relative z-10 ml-1 px-3.5 py-1.5 text-xs font-bold rounded-full bg-[var(--surface-2)] text-[var(--accent)] hover:text-fg border border-line transition-colors flex items-center gap-1.5"
+                >
+                    <span>CV</span>
+                    <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                </Link>
             </div>
         </header>
     );
@@ -110,16 +130,17 @@ export const NavBarMobile: FC<INavBar> = () => {
             className="fixed left-1/2 z-40 w-[calc(100%-2rem)] max-w-md -translate-x-1/2 md:hidden"
             style={{ bottom: "max(1rem, calc(env(safe-area-inset-bottom) + 0.5rem))" }}
         >
-            <ul className="flex items-center justify-between rounded-full border border-line bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-2 py-2 backdrop-blur-xl shadow-lg">
+            <ul className="flex items-center justify-between rounded-full border border-line bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] px-2 py-1.5 backdrop-blur-xl shadow-lg">
                 {SECTIONS.map((item) => {
                     const id = item.toLowerCase();
+                    const isActive = active === id;
                     return (
                         <li className="flex-1" key={item}>
                             <button
                                 className={`w-full rounded-full px-1 py-1.5 font-mono text-[10px] uppercase tracking-wider transition-colors ${
-                                    active === id
+                                    isActive
                                         ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-bold shadow-md"
-                                        : "text-faint hover:text-fg"
+                                        : "text-muted hover:text-fg"
                                 }`}
                                 onClick={() => scrollTo(id)}
                                 type="button"
@@ -129,6 +150,14 @@ export const NavBarMobile: FC<INavBar> = () => {
                         </li>
                     );
                 })}
+                <li className="flex-none pl-1">
+                    <Link
+                        href="/cv"
+                        className="inline-block rounded-full bg-[var(--surface-2)] text-[var(--accent)] px-2.5 py-1 font-mono text-[10px] font-bold border border-line"
+                    >
+                        CV
+                    </Link>
+                </li>
             </ul>
         </nav>
     );
