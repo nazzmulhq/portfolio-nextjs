@@ -98,7 +98,7 @@ const info = {
                 "Implemented responsive UI components using Ant Design and TailwindCSS with Redis caching.",
                 "Designed and optimized PostgreSQL database schemas and high-performance queries for ERP modules.",
             ],
-            problemSolved: "Delivered banking & ERP operations solutions, refactoring schemas to eliminate deadlocks.",
+            problemSolved: "Delivered Enterprise ERP operations solutions, refactoring schemas to eliminate deadlocks.",
             technologies: [
                 "Next.js",
                 "NestJS",
@@ -118,12 +118,12 @@ const info = {
             address:
                 "Level 10 House 77, Nur Empori, Road 11 Banani Bridge, Dhaka 1213",
             description: [
-                "Led frontend engineering for Enterprise Solutions across Banking, eTender, Procurement, Transportation & Inventory Management.",
+                "Led frontend engineering for Enterprise Solutions across Procurement, Transportation & Inventory Management.",
                 "Built digital Agriculture platforms for Crop Planning, Seed Recommendations, Weather-based Advisory & Livestock AI.",
                 "Standardized reusable Material-UI design systems and established scalable Redux state management patterns.",
                 "Conducted requirement analysis and produced technical specifications for enterprise modules.",
             ],
-            problemSolved: "Built enterprise banking/eTender solutions and agriculture advisory platforms on a unified component library, halving development time.",
+            problemSolved: "Built enterprise operations and agriculture advisory platforms on a unified component library.",
             technologies: [
                 "React.js",
                 "NestJS",
@@ -203,16 +203,6 @@ const info = {
             link: "/quickdb",
         },
         {
-            // Internal enterprise system — no public URL or screenshot to link/show.
-            title: "Enterprise ERPs (Textile)",
-            technologies: ["React.js", "Redux", "TailwindCSS", "Ant Design", "REST APIs"],
-            description: [
-                "Currently spearheading full-stack ERP development for textile industry operations, including Production Planning, Manufacturing, and Inventory modules.",
-                "Building scalable frontends with React.js, Redux, TailwindCSS, and Ant Design.",
-                "Designing and implementing robust RESTful APIs.",
-            ],
-        },
-        {
             imageOrVideo: "/images/zcommerz.jpg",
             title: "Built Zcommerz (E-commerce SaaS)",
             technologies: ["Next.js", "Nest.js", "TypeScript", "TailwindCSS", "PostgreSQL"],
@@ -228,6 +218,16 @@ const info = {
             technologies: ["Next.js", "Nest.js"],
             description: ["Built a SaaS e-learning platform for SSL Wireless."],
             link: "https://lms.sslwireless.com/",
+        },
+        {
+            imageOrVideo: "/images/quick-cicd.png",
+            title: "CLI Tool — Quick Dockerize (quick-cicd)",
+            technologies: ["Node.js", "TypeScript", "Docker", "GitHub Actions", "Shell"],
+            description: [
+                "Automated CLI tool to containerize projects (Docker) and scaffold production CI/CD workflows for React, Next.js, NestJS, and Laravel.",
+                "Generates optimized Dockerfiles, docker-compose, and multi-stage deployment pipelines in seconds via npx quick-cicd.",
+            ],
+            link: "/quick-cicd",
         },
     ],
 };

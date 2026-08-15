@@ -300,7 +300,7 @@ export async function GET(request: NextRequest) {
     const colW = (mainWidth - 8) / 2;
     let projMaxY = my;
 
-    works.forEach((work, idx) => {
+    works.slice(0, 4).forEach((work, idx) => {
         const colIdx = idx % 2;
         const rowIdx = Math.floor(idx / 2);
 
@@ -341,7 +341,7 @@ export async function GET(request: NextRequest) {
     // Open Source & Contributions
     drawMainHeader("Domain Expertise & Contributions");
     const contribs = [
-        "Enterprise ERP (Textile, MRP, BOM), E-Commerce SaaS (Zcommerz), E-Learning (LMS), Agriculture AI & Banking platforms.",
+        "Enterprise ERP (Textile, MRP, BOM), E-Commerce SaaS (Zcommerz), E-Learning (LMS) & Agriculture AI platforms.",
         "QuickDB — VS Code extension for multi-database management (MySQL, PostgreSQL, MongoDB, Redis, SQLite) with Query Builder, AI query generation & MCP server.",
         "Published 3 npm packages — ESLint/Prettier setup, Quick UI Design scaffolding, Quick Dockerize CLI tool.",
     ];
