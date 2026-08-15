@@ -20,24 +20,21 @@ const Works: FC<IWorks> = () => {
             />
 
             {/* ── Full-Width Vertical Sticky Stacking Cards Deck ── */}
-            <div className="mt-10 sm:mt-14 space-y-16 sm:space-y-24 pb-36 relative">
+            <div className="mt-8 sm:mt-14 space-y-12 sm:space-y-24 pb-28 sm:pb-36 relative [--work-offset:56px] md:[--work-offset:85px]">
                 {works.map((work, i) => {
                     const hasLink = Boolean(work.link);
                     const external = hasLink && !work.link!.startsWith("/");
                     const linkHref = work.link || "#";
-
-                    // Incremental top offset so headers stack neatly
-                    const stickyTop = `calc(4.5rem + ${i * 85}px)`;
 
                     return (
                         <article
                             id={`work-card-${i}`}
                             key={work.title}
                             style={{
-                                top: stickyTop,
+                                top: `calc(4rem + ${i} * var(--work-offset))`,
                                 zIndex: i + 10,
                             }}
-                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-6 sm:p-8 lg:p-9 backdrop-blur-2xl shadow-[0_-10px_35px_var(--shadow)] transition-all duration-300 min-h-[440px] flex flex-col justify-between"
+                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-4 sm:p-7 lg:p-9 backdrop-blur-2xl shadow-[0_-10px_35px_var(--shadow)] transition-all duration-300 flex flex-col justify-between"
                         >
                             {/* Card Header (Visible in Stacked Deck) */}
                             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line pb-4 mb-6">

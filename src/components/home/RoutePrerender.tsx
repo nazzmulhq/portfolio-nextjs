@@ -8,8 +8,7 @@ import { useEffect } from "react";
  * Prerenders and prefetches the /quickdb route in the background when the user visits the home page.
  * Uses:
  * 1. Next.js router.prefetch() on browser idle
- * 2. Speculation Rules API for modern Chromium background prerendering
- * 3. <link rel="prefetch"> as document fallback
+ * 2. Speculation Rules API for modern Chromium background prerendering (safely injected in useEffect)
  */
 export default function RoutePrerender() {
     const router = useRouter();
@@ -25,35 +24,26 @@ export default function RoutePrerender() {
             } else {
                 setTimeout(prefetchTargets, 1200);
             }
+
+            // Safely inject Speculation Rules for Chromium if supported without triggering React script warnings
+            if (
+                typeof HTMLScriptElement !== "undefined" &&
+                HTMLScriptElement.supports &&
+                HTMLScriptElement.supports("speculationrules")
+            ) {
+                const existing = document.querySelector('script[type="speculationrules"]');
+                if (!existing) {
+                    const specScript = document.createElement("script");
+                    specScript.type = "speculationrules";
+                    specScript.textContent = JSON.stringify({
+                        prerender: [{ source: "list", urls: ["/quickdb"], eagerness: "moderate" }],
+                        prefetch: [{ source: "list", urls: ["/quickdb"], eagerness: "eager" }],
+                    });
+                    document.head.appendChild(specScript);
+                }
+            }
         }
     }, [router]);
 
-    const speculationRules = JSON.stringify({
-        prerender: [
-            {
-                source: "list",
-                urls: ["/quickdb"],
-                eagerness: "moderate",
-            },
-        ],
-        prefetch: [
-            {
-                source: "list",
-                urls: ["/quickdb"],
-                eagerness: "eager",
-            },
-        ],
-    });
-
-    return (
-        <>
-            {/* W3C Speculation Rules for Chromium background prerendering */}
-            <script
-                dangerouslySetInnerHTML={{ __html: speculationRules }}
-                type="speculationrules"
-            />
-            {/* Standard link prefetch fallback */}
-            <link as="document" href="/quickdb" rel="prefetch" />
-        </>
-    );
+    return null;
 }

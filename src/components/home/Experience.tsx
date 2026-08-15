@@ -29,23 +29,20 @@ const Experience: FC<IExperience> = () => {
             />
 
             {/* ── Full-Width Cascading Stacked Cards Deck ── */}
-            <div className="mt-10 sm:mt-14 space-y-16 sm:space-y-24 pb-36 relative">
+            <div className="mt-8 sm:mt-14 space-y-12 sm:space-y-24 pb-28 sm:pb-36 relative [--sticky-offset:64px] md:[--sticky-offset:124px]">
                 {rawRoles.map((role, index) => {
                     const isCurrent = /present/i.test(role.date);
                     const isSslRole2 = index === 1;
-
-                    // 128px incremental top offset guarantees 100% full header visibility (no text cutoffs)
-                    const stickyTop = `calc(4.5rem + ${index * 128}px)`;
 
                     return (
                         <article
                             id={`exp-card-${index}`}
                             key={role.title + role.date}
                             style={{
-                                top: stickyTop,
+                                top: `calc(4rem + ${index} * var(--sticky-offset))`,
                                 zIndex: index + 10,
                             }}
-                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-5 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-[0_-10px_35px_var(--shadow)] transition-all duration-300 min-h-[420px] flex flex-col justify-between"
+                            className="sticky rounded-3xl bg-[color-mix(in_srgb,var(--surface)_98%,transparent)] border border-line hover:border-[var(--line-strong)] p-4 sm:p-7 lg:p-8 backdrop-blur-2xl shadow-[0_-10px_35px_var(--shadow)] transition-all duration-300 flex flex-col justify-between"
                         >
                             <div>
                                 {/* Header Tab Container (100% visible in the stacked deck) */}
