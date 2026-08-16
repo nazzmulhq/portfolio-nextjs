@@ -1,17 +1,14 @@
 "use client";
 
-import { FC } from "react";
-import info from "./data";
+import { FC, useRef, useState } from "react";
 import SectionHeading from "./SectionHeading";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 export interface IEducation {}
-
-interface EduMilestone {
-    title: string;
-    degree: string;
-    for_pdf_degree: string;
-    date: string;
-}
 
 const MILESTONE_CONFIGS = [
     {
@@ -24,9 +21,11 @@ const MILESTONE_CONFIGS = [
         theme: "cyan",
         badgeBg: "bg-gradient-to-tr from-cyan-500 to-teal-400",
         badgeBorder: "border-cyan-400",
-        glow: "shadow-[0_0_25px_rgba(6,182,212,0.4)]",
+        glow: "shadow-[0_0_25px_rgba(6,182,212,0.45)]",
+        glowHover: "group-hover:shadow-[0_0_35px_rgba(6,182,212,0.7)]",
         textAccent: "text-cyan-400",
         isTop: true,
+        highlight: true,
     },
     {
         number: "02",
@@ -38,9 +37,11 @@ const MILESTONE_CONFIGS = [
         theme: "blue",
         badgeBg: "bg-gradient-to-tr from-blue-600 to-cyan-500",
         badgeBorder: "border-blue-400",
-        glow: "shadow-[0_0_25px_rgba(59,130,246,0.4)]",
+        glow: "shadow-[0_0_25px_rgba(59,130,246,0.45)]",
+        glowHover: "group-hover:shadow-[0_0_35px_rgba(59,130,246,0.7)]",
         textAccent: "text-blue-400",
         isTop: false,
+        highlight: false,
     },
     {
         number: "03",
@@ -52,15 +53,157 @@ const MILESTONE_CONFIGS = [
         theme: "purple",
         badgeBg: "bg-gradient-to-tr from-purple-600 to-indigo-500",
         badgeBorder: "border-purple-400",
-        glow: "shadow-[0_0_25px_rgba(168,85,247,0.4)]",
+        glow: "shadow-[0_0_25px_rgba(168,85,247,0.45)]",
+        glowHover: "group-hover:shadow-[0_0_35px_rgba(168,85,247,0.7)]",
         textAccent: "text-purple-400",
         isTop: true,
+        highlight: false,
     },
 ];
 
 const Education: FC<IEducation> = () => {
+    const containerRef = useRef<HTMLElement>(null);
+    const [hoveredIndex, setHoveredIndex] = useState<number | null>(null);
+
+    useGSAP(
+        () => {
+            const container = containerRef.current;
+            if (!container) return;
+
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                gsap.set(
+                    "[data-edu-stage], [data-edu-rail-fill], [data-edu-node], [data-edu-card], [data-edu-connector], [data-edu-mobile-card]",
+                    {
+                        autoAlpha: 1,
+                        scale: 1,
+                        x: 0,
+                        y: 0,
+                        clearProps: "all",
+                    }
+                );
+                return;
+            }
+
+            const stage = container.querySelector<HTMLElement>("[data-edu-stage]");
+            const railFill = container.querySelector<HTMLElement>("[data-edu-rail-fill]");
+            const beam = container.querySelector<HTMLElement>("[data-edu-beam]");
+
+            /* ── DESKTOP SCROLL-SCRUB PROGRESSION ── */
+            // As the user scrolls through the section, the rail progressively fills
+            // and each milestone pops into view in real time
+            const scrubTl = gsap.timeline({
+                scrollTrigger: {
+                    trigger: stage,
+                    start: "top 80%",
+                    end: "bottom 70%",
+                    scrub: 1.2,
+                },
+                defaults: { ease: "power2.out" },
+            });
+
+            // 1. Stage container reveal & subtle zoom in
+            if (stage) {
+                scrubTl.fromTo(
+                    stage,
+                    { autoAlpha: 0.2, y: 40, scale: 0.97 },
+                    { autoAlpha: 1, y: 0, scale: 1, duration: 0.8 },
+                    0
+                );
+            }
+
+            // 2. Continuous rail fill drawing from left to right on scroll
+            if (railFill) {
+                scrubTl.fromTo(
+                    railFill,
+                    { scaleX: 0, transformOrigin: "left center" },
+                    { scaleX: 1, duration: 3, ease: "none" },
+                    0.2
+                );
+            }
+
+            // 3. Staggered milestone reveals synchronized with scroll track
+            const nodeTimes = [0.4, 1.4, 2.4];
+            MILESTONE_CONFIGS.forEach((m, idx) => {
+                const node = container.querySelector<HTMLElement>(`[data-edu-node="${idx}"]`);
+                const connector = container.querySelector<HTMLElement>(`[data-edu-connector="${idx}"]`);
+                const card = container.querySelector<HTMLElement>(`[data-edu-card="${idx}"]`);
+                const t = nodeTimes[idx];
+
+                if (node) {
+                    scrubTl.fromTo(
+                        node,
+                        { scale: 0, autoAlpha: 0, rotation: -30 },
+                        { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.6, ease: "back.out(1.7)" },
+                        t
+                    );
+                }
+
+                if (connector) {
+                    const origin = m.isTop ? "bottom center" : "top center";
+                    scrubTl.fromTo(
+                        connector,
+                        { scaleY: 0, transformOrigin: origin },
+                        { scaleY: 1, duration: 0.4 },
+                        t + 0.15
+                    );
+                }
+
+                if (card) {
+                    const yOffset = m.isTop ? -30 : 30;
+                    scrubTl.fromTo(
+                        card,
+                        { autoAlpha: 0, y: yOffset, scale: 0.92 },
+                        { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" },
+                        t + 0.25
+                    );
+                }
+            });
+
+            /* ── MOBILE SCROLL REVEALS ── */
+            const mobileCards = container.querySelectorAll<HTMLElement>("[data-edu-mobile-card]");
+            mobileCards.forEach((cardEl, idx) => {
+                gsap.fromTo(
+                    cardEl,
+                    { autoAlpha: 0, x: -30, scale: 0.96 },
+                    {
+                        autoAlpha: 1,
+                        x: 0,
+                        scale: 1,
+                        duration: 0.7,
+                        ease: "power2.out",
+                        scrollTrigger: {
+                            trigger: cardEl,
+                            start: "top 88%",
+                            toggleActions: "play none none reverse",
+                        },
+                    }
+                );
+            });
+
+            /* ── CONTINUOUS SHIMMER BEAM ── */
+            if (beam) {
+                gsap.fromTo(
+                    beam,
+                    { left: "-15%" },
+                    {
+                        left: "115%",
+                        duration: 2.8,
+                        repeat: -1,
+                        ease: "power1.inOut",
+                        delay: 0.5,
+                    }
+                );
+            }
+        },
+        { scope: containerRef }
+    );
+
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24" id="education">
+        <section
+            ref={containerRef}
+            className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24"
+            id="education"
+        >
             <SectionHeading
                 index="03"
                 label="Academic Foundation"
@@ -69,31 +212,66 @@ const Education: FC<IEducation> = () => {
             />
 
             {/* ── Square Grid Blueprint Stage Container ── */}
-            <div className="mt-10 sm:mt-14 relative rounded-3xl border border-line bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] p-6 sm:p-10 lg:p-12 backdrop-blur-2xl shadow-xl shadow-slate-900/5 dark:shadow-black/60 overflow-hidden">
-                {/* Square Grid Pattern Overlay (`squr bg add`) */}
+            <div
+                data-edu-stage
+                className="mt-10 sm:mt-14 relative rounded-3xl border border-line bg-[color-mix(in_srgb,var(--surface)_90%,transparent)] p-6 sm:p-10 lg:p-12 backdrop-blur-2xl shadow-xl shadow-slate-900/5 dark:shadow-black/60 overflow-hidden"
+            >
+                {/* Square Grid Pattern Overlay */}
                 <div className="absolute inset-0 bg-[linear-gradient(to_right,color-mix(in_srgb,var(--line)_35%,transparent)_1px,transparent_1px),linear-gradient(to_bottom,color-mix(in_srgb,var(--line)_35%,transparent)_1px,transparent_1px)] bg-[size:28px_28px] pointer-events-none opacity-80" />
 
                 {/* Subtle Ambient Radial Glow */}
-                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 rounded-full blur-3xl pointer-events-none" />
+                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[350px] bg-gradient-to-r from-cyan-500/10 via-blue-500/10 to-purple-500/10 rounded-full blur-3xl pointer-events-none animate-pulse duration-1000" />
 
-                {/* ── Desktop View: Alternating Horizontal Timeline (Matching Reference) ── */}
+                {/* ── Desktop View: Alternating Horizontal Timeline ── */}
                 <div className="hidden lg:block relative z-10 py-10">
-                    {/* Continuous Center Horizontal Rail */}
-                    <div className="absolute top-1/2 left-4 right-4 h-0.5 bg-gradient-to-r from-[var(--line-strong)] via-[var(--accent)] to-[var(--line-strong)] -translate-y-1/2 z-0 opacity-80" />
+                    {/* Background Rail Track */}
+                    <div className="absolute top-1/2 left-6 right-6 h-1 bg-line/50 -translate-y-1/2 z-0 rounded-full overflow-hidden" />
+
+                    {/* Active Rail Fill (Progressively draws on scroll) */}
+                    <div
+                        data-edu-rail-fill
+                        className="absolute top-1/2 left-6 right-6 h-1 bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 -translate-y-1/2 z-0 rounded-full shadow-[0_0_12px_rgba(6,182,212,0.6)] overflow-hidden"
+                    >
+                        {/* Shimmer / Energy Pulse Beam */}
+                        <div
+                            data-edu-beam
+                            className="absolute top-0 bottom-0 w-28 bg-gradient-to-r from-transparent via-white to-transparent opacity-75 blur-[1px]"
+                        />
+                    </div>
 
                     <div className="grid grid-cols-3 gap-8 relative z-10">
-                        {MILESTONE_CONFIGS.map((m) => {
+                        {MILESTONE_CONFIGS.map((m, idx) => {
+                            const isHovered = hoveredIndex === idx;
+
                             return (
-                                <div key={m.number} className="flex flex-col items-center">
+                                <div
+                                    key={m.number}
+                                    className="flex flex-col items-center group cursor-pointer"
+                                    onMouseEnter={() => setHoveredIndex(idx)}
+                                    onMouseLeave={() => setHoveredIndex(null)}
+                                >
                                     {/* ── Top Milestone Slot (if isTop is true) ── */}
                                     <div className="h-[210px] w-full flex flex-col justify-end">
                                         {m.isTop && (
-                                            <div className="p-5 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_92%,transparent)] border border-line shadow-md shadow-slate-900/5 dark:shadow-black/40 backdrop-blur-md transition-all duration-300 hover:-translate-y-1 hover:border-[var(--line-strong)] group">
+                                            <div
+                                                data-edu-card={idx}
+                                                className={`p-5 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_92%,transparent)] border transition-all duration-300 backdrop-blur-md shadow-md shadow-slate-900/5 dark:shadow-black/40 ${
+                                                    isHovered
+                                                        ? "-translate-y-2 border-[var(--accent)] shadow-lg shadow-[var(--accent)]/10 ring-1 ring-[var(--accent)]/30"
+                                                        : "border-line hover:border-[var(--line-strong)]"
+                                                }`}
+                                            >
                                                 <div className="flex items-center justify-between gap-2 mb-1.5">
-                                                    <span className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}>
+                                                    <span
+                                                        className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}
+                                                    >
                                                         {m.tag}
                                                     </span>
-                                                    <span className="text-2xl font-extrabold font-mono text-fg/80 group-hover:text-[var(--accent)] transition-colors">
+                                                    <span
+                                                        className={`text-2xl font-extrabold font-mono transition-colors ${
+                                                            isHovered ? "text-[var(--accent)]" : "text-fg/80"
+                                                        }`}
+                                                    >
                                                         {m.number}
                                                     </span>
                                                 </div>
@@ -118,13 +296,30 @@ const Education: FC<IEducation> = () => {
                                     <div className="relative my-4 flex flex-col items-center z-20">
                                         {/* Vertical Connector Line (Top) */}
                                         {m.isTop && (
-                                            <div className="w-0.5 h-6 bg-gradient-to-b from-[var(--line-strong)] to-[var(--accent)]" />
+                                            <div
+                                                data-edu-connector={idx}
+                                                className={`w-0.5 h-6 bg-gradient-to-b transition-all duration-300 ${
+                                                    isHovered
+                                                        ? "from-[var(--accent)] to-[var(--accent)] w-1 shadow-[0_0_8px_var(--accent)]"
+                                                        : "from-[var(--line-strong)] to-[var(--accent)]"
+                                                }`}
+                                            />
                                         )}
 
                                         {/* Center Circular Gradient Node with Number */}
                                         <div
-                                            className={`w-12 h-12 rounded-full ${m.badgeBg} ${m.glow} border-2 ${m.badgeBorder} flex items-center justify-center shadow-md transition-transform duration-300 hover:scale-110 cursor-pointer`}
+                                            data-edu-node={idx}
+                                            className={`relative w-12 h-12 rounded-full ${m.badgeBg} ${m.glow} border-2 ${
+                                                m.badgeBorder
+                                            } flex items-center justify-center shadow-md transition-all duration-300 ${
+                                                isHovered ? "scale-125 " + m.glowHover : "hover:scale-110"
+                                            }`}
                                         >
+                                            {/* Pulse Ring for Active / Latest Degree */}
+                                            {m.highlight && (
+                                                <span className="absolute -inset-1.5 rounded-full bg-cyan-400/25 animate-ping pointer-events-none" />
+                                            )}
+
                                             <span className="text-base font-extrabold font-mono text-white tracking-wider">
                                                 {m.number}
                                             </span>
@@ -132,14 +327,28 @@ const Education: FC<IEducation> = () => {
 
                                         {/* Vertical Connector Line (Bottom) */}
                                         {!m.isTop && (
-                                            <div className="w-0.5 h-6 bg-gradient-to-b from-[var(--accent)] to-[var(--line-strong)]" />
+                                            <div
+                                                data-edu-connector={idx}
+                                                className={`w-0.5 h-6 bg-gradient-to-b transition-all duration-300 ${
+                                                    isHovered
+                                                        ? "from-[var(--accent)] to-[var(--accent)] w-1 shadow-[0_0_8px_var(--accent)]"
+                                                        : "from-[var(--accent)] to-[var(--line-strong)]"
+                                                }`}
+                                            />
                                         )}
                                     </div>
 
                                     {/* ── Bottom Milestone Slot (if isTop is false) ── */}
                                     <div className="h-[210px] w-full flex flex-col justify-start">
                                         {!m.isTop && (
-                                            <div className="p-5 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_92%,transparent)] border border-line shadow-md shadow-slate-900/5 dark:shadow-black/40 backdrop-blur-md transition-all duration-300 hover:translate-y-1 hover:border-[var(--line-strong)] group">
+                                            <div
+                                                data-edu-card={idx}
+                                                className={`p-5 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_92%,transparent)] border transition-all duration-300 backdrop-blur-md shadow-md shadow-slate-900/5 dark:shadow-black/40 ${
+                                                    isHovered
+                                                        ? "translate-y-2 border-[var(--accent)] shadow-lg shadow-[var(--accent)]/10 ring-1 ring-[var(--accent)]/30"
+                                                        : "border-line hover:border-[var(--line-strong)]"
+                                                }`}
+                                            >
                                                 <div className="flex items-center justify-between text-[11px] font-mono text-faint pb-2.5 mb-2 border-b border-line">
                                                     <span className="font-bold text-fg/90">{m.year}</span>
                                                     <span>Dhaka, Bangladesh</span>
@@ -150,10 +359,16 @@ const Education: FC<IEducation> = () => {
                                                 </p>
 
                                                 <div className="flex items-center justify-between gap-2 mt-2">
-                                                    <span className="text-2xl font-extrabold font-mono text-fg/80 group-hover:text-[var(--accent)] transition-colors">
+                                                    <span
+                                                        className={`text-2xl font-extrabold font-mono transition-colors ${
+                                                            isHovered ? "text-[var(--accent)]" : "text-fg/80"
+                                                        }`}
+                                                    >
                                                         {m.number}
                                                     </span>
-                                                    <span className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}>
+                                                    <span
+                                                        className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}
+                                                    >
                                                         {m.tag}
                                                     </span>
                                                 </div>
@@ -175,19 +390,25 @@ const Education: FC<IEducation> = () => {
                     {MILESTONE_CONFIGS.map((m) => (
                         <article
                             key={m.number}
-                            className="p-6 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_90%,transparent)] border border-line backdrop-blur-md shadow-md shadow-slate-900/5 dark:shadow-black/40"
+                            data-edu-mobile-card
+                            className="p-6 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_90%,transparent)] border border-line backdrop-blur-md shadow-md shadow-slate-900/5 dark:shadow-black/40 transition-all duration-300 hover:border-[var(--line-strong)]"
                         >
                             <div className="flex items-start gap-4">
                                 <div
-                                    className={`w-11 h-11 rounded-full ${m.badgeBg} ${m.glow} border-2 ${m.badgeBorder} flex items-center justify-center shrink-0 shadow-md`}
+                                    className={`relative w-11 h-11 rounded-full ${m.badgeBg} ${m.glow} border-2 ${m.badgeBorder} flex items-center justify-center shrink-0 shadow-md`}
                                 >
+                                    {m.highlight && (
+                                        <span className="absolute -inset-1 rounded-full bg-cyan-400/25 animate-ping pointer-events-none" />
+                                    )}
                                     <span className="text-sm font-extrabold font-mono text-white">
                                         {m.number}
                                     </span>
                                 </div>
                                 <div className="min-w-0 flex-1">
                                     <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-                                        <span className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}>
+                                        <span
+                                            className={`text-xs font-mono font-bold uppercase tracking-wider ${m.textAccent}`}
+                                        >
                                             Phase {m.number} · {m.tag}
                                         </span>
                                         <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-[var(--surface)] text-fg/90 border border-line">
@@ -217,3 +438,5 @@ const Education: FC<IEducation> = () => {
 };
 
 export default Education;
+
+

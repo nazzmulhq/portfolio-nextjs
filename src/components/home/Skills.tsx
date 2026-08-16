@@ -1,9 +1,14 @@
 "use client";
 
-import { FC } from "react";
+import { FC, useRef } from "react";
 import info from "./data";
 import SectionHeading from "./SectionHeading";
 import { iconFor } from "./techIcons";
+import gsap from "gsap";
+import { useGSAP } from "@gsap/react";
+import { ScrollTrigger } from "gsap/ScrollTrigger";
+
+gsap.registerPlugin(useGSAP, ScrollTrigger);
 
 export interface ISkills {}
 
@@ -12,6 +17,7 @@ const TechPill: FC<{ name: string }> = ({ name }) => {
 
     return (
         <div
+            data-skill-pill
             className="group/pill inline-flex items-center gap-2 px-3 py-1.5 rounded-xl bg-[var(--surface-2)] hover:bg-[var(--surface-3)] border border-line hover:border-[var(--line-strong)] transition-all duration-200 hover:-translate-y-0.5 shadow-sm cursor-default"
             style={{
                 ["--brand" as any]: icon?.hex ?? "var(--accent)",
@@ -70,11 +76,64 @@ const DOMAIN_CONFIG: Record<string, { icon: string; badge: string; color: string
 };
 
 const Skills: FC<ISkills> = () => {
+    const containerRef = useRef<HTMLElement>(null);
     const { skillGroups } = info;
     const totalSkills = skillGroups.reduce((acc, g) => acc + g.items.length, 0);
 
+    useGSAP(
+        () => {
+            const container = containerRef.current;
+            if (!container) return;
+
+            if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+                gsap.set("[data-skill-card], [data-skill-pill]", {
+                    autoAlpha: 1,
+                    scale: 1,
+                    y: 0,
+                    clearProps: "all",
+                });
+                return;
+            }
+
+            const cards = container.querySelectorAll<HTMLElement>("[data-skill-card]");
+
+            const tl = gsap.timeline({
+                scrollTrigger: {
+                    trigger: container,
+                    start: "top 78%",
+                    once: true,
+                },
+                defaults: { ease: "power3.out" },
+            });
+
+            tl.fromTo(
+                cards,
+                { autoAlpha: 0, y: 35, scale: 0.96 },
+                { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, stagger: 0.12 },
+                0
+            );
+
+            cards.forEach((card, idx) => {
+                const pills = card.querySelectorAll<HTMLElement>("[data-skill-pill]");
+                if (pills.length > 0) {
+                    tl.fromTo(
+                        pills,
+                        { autoAlpha: 0, scale: 0.8 },
+                        { autoAlpha: 1, scale: 1, duration: 0.4, stagger: 0.02, ease: "back.out(1.5)" },
+                        0.2 + idx * 0.1
+                    );
+                }
+            });
+        },
+        { scope: containerRef }
+    );
+
     return (
-        <section className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24" id="skills">
+        <section
+            ref={containerRef}
+            className="mx-auto w-full max-w-6xl px-5 py-16 sm:px-8 sm:py-24"
+            id="skills"
+        >
             <SectionHeading
                 index="01"
                 label="Technical Capabilities"
@@ -94,6 +153,7 @@ const Skills: FC<ISkills> = () => {
                     return (
                         <div
                             key={group.label}
+                            data-skill-card
                             className="group rounded-3xl bg-[color-mix(in_srgb,var(--surface)_88%,transparent)] border border-line hover:border-[var(--line-strong)] p-6 backdrop-blur-xl shadow-xl transition-all duration-300 hover:-translate-y-1 hover:shadow-2xl flex flex-col justify-between"
                         >
                             <div>
@@ -101,7 +161,12 @@ const Skills: FC<ISkills> = () => {
                                 <div className="flex items-center justify-between pb-4 mb-4 border-b border-line">
                                     <div className="flex items-center gap-3">
                                         <div className="flex items-center justify-center w-9 h-9 rounded-xl bg-[var(--surface-2)] text-[var(--accent)] border border-line shadow-sm">
-                                            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <svg
+                                                className="w-4 h-4"
+                                                fill="none"
+                                                stroke="currentColor"
+                                                viewBox="0 0 24 24"
+                                            >
                                                 <path
                                                     strokeLinecap="round"
                                                     strokeLinejoin="round"
@@ -140,3 +205,4 @@ const Skills: FC<ISkills> = () => {
 };
 
 export default Skills;
+
