@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
-        const theme = searchParams.get("theme") === "light" ? "light" : "dark";
+        const theme = searchParams.get("theme") === "dark" ? "dark" : "light";
 
     const isLight = theme === "light";
 

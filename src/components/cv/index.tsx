@@ -65,7 +65,7 @@ const themeConfig = {
 };
 
 const CVViewer: FC<ICVProps> = () => {
-    const [theme, setTheme] = useState<"dark" | "light">("dark");
+    const [theme, setTheme] = useState<"dark" | "light">("light");
     const [zoom, setZoom] = useState<number>(1);
     const [isPrint, setIsPrint] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
