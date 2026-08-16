@@ -67,7 +67,6 @@ const themeConfig = {
 const CVViewer: FC<ICVProps> = () => {
     const [theme, setTheme] = useState<"dark" | "light">("dark");
     const [zoom, setZoom] = useState<number>(1);
-    const [isGenerating, setIsGenerating] = useState(false);
     const [isPrint, setIsPrint] = useState(false);
     const contentRef = useRef<HTMLDivElement>(null);
     const containerRef = useRef<HTMLDivElement>(null);
@@ -171,28 +170,6 @@ const CVViewer: FC<ICVProps> = () => {
         },
     });
 
-    const handleDownloadPDF = async () => {
-        try {
-            setIsGenerating(true);
-            const res = await fetch(`/api/cv/generate-pdf?theme=${theme}`);
-            if (!res.ok) throw new Error("API PDF generation failed");
-            const blob = await res.blob();
-            const url = window.URL.createObjectURL(blob);
-            const a = document.createElement("a");
-            a.href = url;
-            a.download = `Nazmul_Haque_CV_${theme}.pdf`;
-            document.body.appendChild(a);
-            a.click();
-            window.URL.revokeObjectURL(url);
-            document.body.removeChild(a);
-        } catch {
-            // Fallback to browser print dialog
-            reactToPrintFn();
-        } finally {
-            setIsGenerating(false);
-        }
-    };
-
     const handlePrint = () => {
         reactToPrintFn();
     };
@@ -282,32 +259,19 @@ const CVViewer: FC<ICVProps> = () => {
                             </button>
                         </div>
 
-                        {/* Print Button */}
+                        {/* Print / Save Button */}
                         <button
                             onClick={handlePrint}
-                            disabled={isPrint || isGenerating}
-                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-fg/90 text-xs font-semibold rounded-lg border border-line transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer"
-                            title="Print CV"
-                        >
-                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
-                            </svg>
-                            <span className="hidden sm:inline">Print</span>
-                        </button>
-
-                        {/* Export PDF Button */}
-                        <button
-                            onClick={handleDownloadPDF}
-                            disabled={isGenerating}
+                            disabled={isPrint}
                             className="group relative inline-flex items-center justify-center gap-2 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-bold rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] border border-emerald-400/40 transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer overflow-hidden"
-                            title="Download Vector PDF"
+                            title="Print / Save CV"
                         >
                             <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1200ms] ease-in-out bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none"></div>
                             <svg className="w-3.5 h-3.5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
                             </svg>
                             <span className="relative z-10 tracking-wide">
-                                {isGenerating ? "Downloading..." : "Download PDF"}
+                                {isPrint ? "Preparing..." : "Print / Save"}
                             </span>
                         </button>
                     </div>
