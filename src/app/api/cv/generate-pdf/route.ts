@@ -223,39 +223,67 @@ export async function GET(request: NextRequest) {
             .text(l.level, 14, sy, { width: sidebarWidth - 28, align: "right" });
         sy += 11;
     });
+    sy += 4;
+
+    // Core Competencies in Sidebar
+    drawSidebarHeader("Core Competencies");
+    const competencies = [
+        "Microservices",
+        "System Design",
+        "Multi-Tenancy",
+        "Redis Caching",
+        "Deadlock Prevention",
+        "CI/CD Pipelines",
+        "Docker & K8s",
+        "REST & GraphQL",
+        "PostgreSQL",
+        "Clean Architecture",
+    ];
+    let compX = 14;
+    competencies.forEach((comp) => {
+        doc.font("Helvetica").fontSize(6.5);
+        const tw = doc.widthOfString(comp) + 6;
+        if (compX + tw > 14 + tagMaxW) {
+            compX = 14;
+            sy += 13;
+        }
+        doc.roundedRect(compX, sy, tw, 10, 2).fill(colors.tagBg);
+        doc.fillColor(colors.tagText).text(comp, compX, sy + 1.5, { width: tw, align: "center" });
+        compX += tw + 3;
+    });
 
     // ================= MAIN CONTENT =================
     let my = 25;
 
     const drawMainHeader = (title: string) => {
         doc.font("Helvetica-Bold")
-            .fontSize(10)
+            .fontSize(9.5)
             .fillColor(colors.sectionTitle)
             .text(title.toUpperCase(), mainX, my);
-        my += 13;
+        my += 12;
         doc.rect(mainX, my, mainWidth, 1).fill(colors.sectionTitle);
-        my += 8;
+        my += 7;
     };
 
     // Summary
     drawMainHeader("Professional Summary");
     const summaryText =
-        `Results-driven Senior Software Specialist with 4+ years of hands-on experience building enterprise-grade web applications. ` +
-        `Specialized in full-stack development with Next.js, NestJS, and TypeScript ecosystems. Proven track record architecting ` +
-        `scalable ERP systems, establishing CI/CD pipelines, and leading frontend architecture standards across cross-functional teams.`;
+        `Results-driven Senior Software Specialist with 5+ years of hands-on experience building enterprise-grade web applications. ` +
+        `Specialized in full-stack architecture with Next.js, NestJS, and TypeScript ecosystems. Proven track record architecting ` +
+        `scalable ERP systems, high-concurrency microservices, automated CI/CD pipelines, and multi-tenant SaaS platforms.`;
 
     doc.font("Helvetica")
-        .fontSize(8)
+        .fontSize(7.5)
         .fillColor(colors.textSecondary)
         .text(summaryText, mainX, my, { width: mainWidth, align: "justify", lineGap: 2 });
-    my += doc.heightOfString(summaryText, { width: mainWidth, lineGap: 2 }) + 10;
+    my += doc.heightOfString(summaryText, { width: mainWidth, lineGap: 2 }) + 8;
 
     // Experience
     drawMainHeader("Experience");
     experience.forEach((exp) => {
         // Title & Date
         doc.font("Helvetica-Bold")
-            .fontSize(9)
+            .fontSize(8.5)
             .fillColor(colors.textPrimary)
             .text(exp.title, mainX, my);
 
@@ -267,33 +295,33 @@ export async function GET(request: NextRequest) {
 
         // Company
         doc.font("Helvetica-Oblique")
-            .fontSize(8)
+            .fontSize(7.5)
             .fillColor(colors.textAccent)
             .text(`${exp.company}${exp.address ? ` — ${exp.address}` : ""}`, mainX, my);
-        my += 10;
+        my += 9;
 
         // Bullets
         exp.description.slice(0, 3).forEach((bullet) => {
             doc.font("Helvetica")
-                .fontSize(7.5)
+                .fontSize(7)
                 .fillColor(colors.textSecondary)
-                .text(`•  ${bullet}`, mainX + 5, my, { width: mainWidth - 5, lineGap: 1.5 });
-            my += doc.heightOfString(`•  ${bullet}`, { width: mainWidth - 5, lineGap: 1.5 }) + 1;
+                .text(`•  ${bullet}`, mainX + 4, my, { width: mainWidth - 4, lineGap: 1.2 });
+            my += doc.heightOfString(`•  ${bullet}`, { width: mainWidth - 4, lineGap: 1.2 }) + 1;
         });
 
         // Tech tags
-        let expTagX = mainX + 5;
+        let expTagX = mainX + 4;
         exp.technologies.slice(0, 7).forEach((tech) => {
-            doc.font("Helvetica").fontSize(6.5);
+            doc.font("Helvetica").fontSize(6);
             const tw = doc.widthOfString(tech) + 6;
             if (expTagX + tw > mainX + mainWidth) return;
-            doc.roundedRect(expTagX, my + 2, tw, 9, 2).fill(colors.techTagBg);
-            doc.fillColor(colors.techTagText).text(tech, expTagX, my + 3, { width: tw, align: "center" });
+            doc.roundedRect(expTagX, my + 1.5, tw, 8.5, 2).fill(colors.techTagBg);
+            doc.fillColor(colors.techTagText).text(tech, expTagX, my + 2, { width: tw, align: "center" });
             expTagX += tw + 3;
         });
-        my += 15;
+        my += 13;
     });
-    my += 2;
+    my += 1;
 
     // Key Projects
     drawMainHeader("Key Projects");
@@ -305,53 +333,53 @@ export async function GET(request: NextRequest) {
         const rowIdx = Math.floor(idx / 2);
 
         const px = mainX + colIdx * (colW + 8);
-        const py = my + rowIdx * 56;
+        const py = my + rowIdx * 52;
 
         // Card bg
-        doc.roundedRect(px, py, colW, 52, 4)
+        doc.roundedRect(px, py, colW, 48, 4)
             .fillAndStroke(colors.cardBg, colors.cardBorder);
 
         // Title
         doc.font("Helvetica-Bold")
-            .fontSize(8)
+            .fontSize(7.5)
             .fillColor(colors.textPrimary)
             .text(work.title, px + 5, py + 4, { width: colW - 10 });
 
         // Description
         doc.font("Helvetica")
-            .fontSize(7)
+            .fontSize(6.5)
             .fillColor(colors.textSecondary)
-            .text(work.description[0], px + 5, py + 14, { width: colW - 10, height: 20, lineGap: 1 });
+            .text(work.description[0], px + 5, py + 13, { width: colW - 10, height: 18, lineGap: 1 });
 
         // Tech tags
         let ptx = px + 5;
         work.technologies.slice(0, 4).forEach((t) => {
-            doc.font("Helvetica").fontSize(6);
+            doc.font("Helvetica").fontSize(5.5);
             const tw = doc.widthOfString(t) + 4;
             if (ptx + tw > px + colW - 5) return;
-            doc.roundedRect(ptx, py + 36, tw, 8, 2).fill(colors.techTagBg);
-            doc.fillColor(colors.techTagText).text(t, ptx, py + 37, { width: tw, align: "center" });
+            doc.roundedRect(ptx, py + 33, tw, 7.5, 2).fill(colors.techTagBg);
+            doc.fillColor(colors.techTagText).text(t, ptx, py + 34, { width: tw, align: "center" });
             ptx += tw + 2;
         });
 
-        if (py + 56 > projMaxY) projMaxY = py + 56;
+        if (py + 52 > projMaxY) projMaxY = py + 52;
     });
-    my = projMaxY + 8;
+    my = projMaxY + 6;
 
-    // Open Source & Contributions
-    drawMainHeader("Domain Expertise & Contributions");
+    // Domain Expertise & Engineering Impact
+    drawMainHeader("Domain Expertise & Engineering Impact");
     const contribs = [
-        "Enterprise ERP (Textile, MRP, BOM), E-Commerce SaaS (Zcommerz), E-Learning (LMS) & Agriculture AI platforms.",
-        "QuickDB — VS Code extension for multi-database management (MySQL, PostgreSQL, MongoDB, Redis, SQLite) with Query Builder, AI query generation & MCP server.",
-        "Published 3 npm packages — ESLint/Prettier setup, Quick UI Design scaffolding, Quick Dockerize CLI tool.",
+        "Enterprise ERP Systems: e-Tender & Bidding, Procurement Requisitions, Central Inventory & Warehouse, Fleet Transportation, Production Planning & Stage Manufacturing.",
+        "SaaS & AI Platforms: Multi-tenant E-Commerce Storefronts (Zcommerz), E-Learning (LMS), Cattle Biometric AI Verification & Agri-Tech Farming Systems.",
+        "Developer Tools & Open Source: QuickDB VS Code extension (5 DB engines, AI query generation, MCP server) & 3 published developer npm packages.",
     ];
 
     contribs.forEach((c) => {
         doc.font("Helvetica")
-            .fontSize(7.5)
+            .fontSize(7)
             .fillColor(colors.textSecondary)
-            .text(`•  ${c}`, mainX + 5, my, { width: mainWidth - 5, lineGap: 1.5 });
-        my += doc.heightOfString(`•  ${c}`, { width: mainWidth - 5, lineGap: 1.5 }) + 2;
+            .text(`•  ${c}`, mainX + 4, my, { width: mainWidth - 4, lineGap: 1.2 });
+        my += doc.heightOfString(`•  ${c}`, { width: mainWidth - 4, lineGap: 1.2 }) + 1.5;
     });
 
     doc.end();

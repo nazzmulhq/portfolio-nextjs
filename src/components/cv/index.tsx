@@ -112,10 +112,10 @@ const CVViewer: FC<ICVProps> = () => {
     useEffect(() => {
         const updateScale = () => {
             if (containerRef.current) {
-                const containerWidth = containerRef.current.clientWidth - 32;
+                const containerWidth = containerRef.current.clientWidth - 24;
                 const a4WidthPx = 794; // approx 210mm in px at 96dpi
                 if (containerWidth < a4WidthPx) {
-                    setZoom(Math.max(0.42, containerWidth / a4WidthPx));
+                    setZoom(Math.max(0.35, containerWidth / a4WidthPx));
                 } else {
                     setZoom(1);
                 }
@@ -171,7 +171,29 @@ const CVViewer: FC<ICVProps> = () => {
         },
     });
 
-    const handleDownloadPDF = () => {
+    const handleDownloadPDF = async () => {
+        try {
+            setIsGenerating(true);
+            const res = await fetch(`/api/cv/generate-pdf?theme=${theme}`);
+            if (!res.ok) throw new Error("API PDF generation failed");
+            const blob = await res.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = `Nazmul_Haque_CV_${theme}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch {
+            // Fallback to browser print dialog
+            reactToPrintFn();
+        } finally {
+            setIsGenerating(false);
+        }
+    };
+
+    const handlePrint = () => {
         reactToPrintFn();
     };
 
@@ -260,19 +282,32 @@ const CVViewer: FC<ICVProps> = () => {
                             </button>
                         </div>
 
-                        {/* Export PDF / Print Button */}
+                        {/* Print Button */}
+                        <button
+                            onClick={handlePrint}
+                            disabled={isPrint || isGenerating}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-fg/90 text-xs font-semibold rounded-lg border border-line transition-all duration-200 hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer"
+                            title="Print CV"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+                            </svg>
+                            <span className="hidden sm:inline">Print</span>
+                        </button>
+
+                        {/* Export PDF Button */}
                         <button
                             onClick={handleDownloadPDF}
-                            disabled={isPrint}
+                            disabled={isGenerating}
                             className="group relative inline-flex items-center justify-center gap-2 px-4 py-1.5 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-400 text-white text-xs font-bold rounded-lg shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.5)] border border-emerald-400/40 transition-all duration-300 hover:-translate-y-0.5 disabled:opacity-50 cursor-pointer overflow-hidden"
-                            title="Download / Save exact PDF"
+                            title="Download Vector PDF"
                         >
                             <div className="absolute inset-0 -translate-x-[150%] group-hover:translate-x-[150%] transition-transform duration-[1200ms] ease-in-out bg-gradient-to-r from-transparent via-white/30 to-transparent skew-x-12 pointer-events-none"></div>
                             <svg className="w-3.5 h-3.5 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             <span className="relative z-10 tracking-wide">
-                                {isPrint ? "Preparing..." : "Download / Save PDF"}
+                                {isGenerating ? "Downloading..." : "Download PDF"}
                             </span>
                         </button>
                     </div>
@@ -281,20 +316,29 @@ const CVViewer: FC<ICVProps> = () => {
 
             {/* ════════════ LIVE A4 DOCUMENT CANVAS ════════════ */}
             <main
-                className="w-full flex justify-center items-start overflow-visible transition-all duration-300"
-                style={{ minHeight: `${297 * zoom}mm` }}
+                className="w-full flex justify-center items-start overflow-hidden transition-all duration-300 px-2 sm:px-4"
             >
                 <div
                     style={{
-                        transform: `scale(${zoom})`,
-                        transformOrigin: "top center",
-                        transition: "transform 0.2s ease-out",
+                        width: `${210 * zoom}mm`,
+                        height: `${297 * zoom}mm`,
+                        position: "relative",
+                        overflow: "visible",
                     }}
                 >
-                    <section
-                        id="cv-print-sheet"
-                        ref={contentRef}
-                        className="cv-sheet-container"
+                    <div
+                        style={{
+                            width: "210mm",
+                            height: "297mm",
+                            transform: `scale(${zoom})`,
+                            transformOrigin: "top left",
+                            transition: "transform 0.2s ease-out",
+                        }}
+                    >
+                        <section
+                            id="cv-print-sheet"
+                            ref={contentRef}
+                            className="cv-sheet-container"
                         style={{
                             width: "210mm",
                             height: "297mm",
@@ -584,10 +628,10 @@ const CVViewer: FC<ICVProps> = () => {
                             <div
                                 style={{
                                     flex: 1,
-                                    padding: "16px 16px",
+                                    padding: "13px 15px",
                                     display: "flex",
                                     flexDirection: "column",
-                                    gap: "9px",
+                                    gap: "7px",
                                 }}
                             >
                                 {/* Professional Summary */}
@@ -616,7 +660,7 @@ const CVViewer: FC<ICVProps> = () => {
                                     <SectionTitle colors={colors} icon="M21 13.255A23.931 23.931 0 0112 15c-3.183 0-6.22-.62-9-1.745M16 6V4a2 2 0 00-2-2h-4a2 2 0 00-2 2v2m4 6h.01M5 20h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z">
                                         Experience
                                     </SectionTitle>
-                                    <div style={{ display: "flex", flexDirection: "column", gap: "7.5px", marginTop: "4px" }}>
+                                    <div style={{ display: "flex", flexDirection: "column", gap: "5.5px", marginTop: "3.5px" }}>
                                         {experience.map((exp, i) => (
                                             <div key={i}>
                                                 <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline" }}>
@@ -760,10 +804,20 @@ const CVViewer: FC<ICVProps> = () => {
                                     </SectionTitle>
                                     <div style={{ marginTop: "4px" }}>
                                         <p style={{ fontSize: "8.5px", color: colors.textColorSecondary, margin: "0 0 3px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.05em" }}>
-                                            Industry Domains
+                                            Enterprise ERP Systems &amp; Industry Domains
                                         </p>
                                         <div style={{ display: "flex", flexWrap: "wrap", gap: "3px", marginBottom: "5px" }}>
-                                            {["Enterprise ERP", "Textile MRP & BOM", "E-Commerce (Zcommerz)", "E-Learning (LMS)", "Procurement & Inventory", "Agriculture & AI"].map((domain, i) => (
+                                            {[
+                                                "Enterprise ERP",
+                                                "e-Tender & Procurement",
+                                                "Inventory & Warehouse",
+                                                "Fleet Transportation",
+                                                "Production Planning",
+                                                "Manufacturing",
+                                                "E-Commerce SaaS",
+                                                "E-Learning (LMS)",
+                                                "Agri-Tech & AI",
+                                            ].map((domain, i) => (
                                                 <span
                                                     key={i}
                                                     style={{
@@ -797,9 +851,10 @@ const CVViewer: FC<ICVProps> = () => {
                         </div>
                     </section>
                 </div>
-            </main>
-        </div>
-    );
+            </div>
+        </main>
+    </div>
+);
 };
 
 /* ── Reusable sub-components ── */
