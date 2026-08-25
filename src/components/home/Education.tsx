@@ -29,11 +29,11 @@ const MILESTONE_CONFIGS = [
     },
     {
         number: "02",
-        year: "2013 — 2015",
-        tag: "HSC (Science)",
-        title: "Higher Secondary Certificate (HSC) - Science",
-        institution: "Govt. Science College, Tejgaon, Dhaka",
-        details: "Higher Secondary Foundation with Majors in Physics, Chemistry & Higher Mathematics",
+        year: "2012 — 2016",
+        tag: "Diploma",
+        title: "Diploma in Computer Engineering",
+        institution: "Meherpur College of Eng. & Tech.",
+        details: "4-Year Diploma in Computer Engineering",
         theme: "blue",
         badgeBg: "bg-gradient-to-tr from-blue-600 to-cyan-500",
         badgeBorder: "border-blue-400",
@@ -45,11 +45,11 @@ const MILESTONE_CONFIGS = [
     },
     {
         number: "03",
-        year: "2011 — 2013",
-        tag: "SSC (Science)",
-        title: "Secondary School Certificate (SSC) - Science",
-        institution: "Civil Aviation High School, Tejgaon, Dhaka",
-        details: "Secondary School Certificate with Concentration in General Science & Mathematics",
+        year: "2010 — 2012",
+        tag: "SSC",
+        title: "Secondary School Certificate (SSC)",
+        institution: "Kobi Nazrul Shikkha Manzil",
+        details: "Secondary School Certificate with Concentration in General Science",
         theme: "purple",
         badgeBg: "bg-gradient-to-tr from-purple-600 to-indigo-500",
         badgeBorder: "border-purple-400",
@@ -88,96 +88,126 @@ const Education: FC<IEducation> = () => {
             const railFill = container.querySelector<HTMLElement>("[data-edu-rail-fill]");
             const beam = container.querySelector<HTMLElement>("[data-edu-beam]");
 
-            /* ── DESKTOP SCROLL-SCRUB PROGRESSION ── */
-            // As the user scrolls through the section, the rail progressively fills
-            // and each milestone pops into view in real time
-            const scrubTl = gsap.timeline({
-                scrollTrigger: {
-                    trigger: stage,
-                    start: "top 80%",
-                    end: "bottom 70%",
-                    scrub: 1.2,
-                },
-                defaults: { ease: "power2.out" },
-            });
+            let mm = gsap.matchMedia();
 
-            // 1. Stage container reveal & subtle zoom in
-            if (stage) {
-                scrubTl.fromTo(
-                    stage,
-                    { autoAlpha: 0.2, y: 40, scale: 0.97 },
-                    { autoAlpha: 1, y: 0, scale: 1, duration: 0.8 },
-                    0
-                );
-            }
-
-            // 2. Continuous rail fill drawing from left to right on scroll
-            if (railFill) {
-                scrubTl.fromTo(
-                    railFill,
-                    { scaleX: 0, transformOrigin: "left center" },
-                    { scaleX: 1, duration: 3, ease: "none" },
-                    0.2
-                );
-            }
-
-            // 3. Staggered milestone reveals synchronized with scroll track
-            const nodeTimes = [0.4, 1.4, 2.4];
-            MILESTONE_CONFIGS.forEach((m, idx) => {
-                const node = container.querySelector<HTMLElement>(`[data-edu-node="${idx}"]`);
-                const connector = container.querySelector<HTMLElement>(`[data-edu-connector="${idx}"]`);
-                const card = container.querySelector<HTMLElement>(`[data-edu-card="${idx}"]`);
-                const t = nodeTimes[idx];
-
-                if (node) {
-                    scrubTl.fromTo(
-                        node,
-                        { scale: 0, autoAlpha: 0, rotation: -30 },
-                        { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.6, ease: "back.out(1.7)" },
-                        t
+            mm.add("(min-width: 1024px)", () => {
+                /* ── DESKTOP SCROLL-SCRUB PROGRESSION WITH PINNING ── */
+                
+                // 1. Stage container reveal & subtle zoom in
+                if (stage) {
+                    gsap.fromTo(
+                        stage,
+                        { autoAlpha: 0.2, y: 40, scale: 0.97 },
+                        { 
+                            autoAlpha: 1, y: 0, scale: 1, duration: 0.8,
+                            scrollTrigger: {
+                                trigger: stage,
+                                start: "top 85%",
+                                toggleActions: "play none none reverse",
+                            }
+                        }
                     );
                 }
 
-                if (connector) {
-                    const origin = m.isTop ? "bottom center" : "top center";
+                // As the user scrolls to near the top, the entire section pins and the rail progressively fills
+                const scrubTl = gsap.timeline({
+                    scrollTrigger: {
+                        trigger: container,
+                        start: "center center", // Pin when the section is centered on screen so it's fully visible
+                        end: "+=1500", // Distance to scroll while pinned to play the animation
+                        scrub: 1.2,
+                        pin: true,
+                        anticipatePin: 1,
+                    },
+                    defaults: { ease: "power2.out" },
+                });
+
+                // 2. Continuous rail fill drawing from left to right on scroll
+                if (railFill) {
                     scrubTl.fromTo(
-                        connector,
-                        { scaleY: 0, transformOrigin: origin },
-                        { scaleY: 1, duration: 0.4 },
-                        t + 0.15
+                        railFill,
+                        { scaleX: 0, transformOrigin: "left center" },
+                        { scaleX: 1, duration: 3, ease: "none" },
+                        0
                     );
                 }
 
-                if (card) {
-                    const yOffset = m.isTop ? -30 : 30;
-                    scrubTl.fromTo(
-                        card,
-                        { autoAlpha: 0, y: yOffset, scale: 0.92 },
-                        { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" },
-                        t + 0.25
-                    );
-                }
-            });
+                // 3. Staggered milestone reveals synchronized with scroll track
+                const nodeTimes = [0.2, 1.2, 2.2];
+                MILESTONE_CONFIGS.forEach((m, idx) => {
+                    const node = container.querySelector<HTMLElement>(`[data-edu-node="${idx}"]`);
+                    const connector = container.querySelector<HTMLElement>(`[data-edu-connector="${idx}"]`);
+                    const card = container.querySelector<HTMLElement>(`[data-edu-card="${idx}"]`);
+                    const t = nodeTimes[idx];
 
-            /* ── MOBILE SCROLL REVEALS ── */
-            const mobileCards = container.querySelectorAll<HTMLElement>("[data-edu-mobile-card]");
-            mobileCards.forEach((cardEl, idx) => {
-                gsap.fromTo(
-                    cardEl,
-                    { autoAlpha: 0, x: -30, scale: 0.96 },
-                    {
-                        autoAlpha: 1,
-                        x: 0,
-                        scale: 1,
-                        duration: 0.7,
-                        ease: "power2.out",
-                        scrollTrigger: {
-                            trigger: cardEl,
-                            start: "top 88%",
-                            toggleActions: "play none none reverse",
-                        },
+                    if (node) {
+                        scrubTl.fromTo(
+                            node,
+                            { scale: 0, autoAlpha: 0, rotation: -30 },
+                            { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.6, ease: "back.out(1.7)" },
+                            t
+                        );
                     }
-                );
+
+                    if (connector) {
+                        const origin = m.isTop ? "bottom center" : "top center";
+                        scrubTl.fromTo(
+                            connector,
+                            { scaleY: 0, transformOrigin: origin },
+                            { scaleY: 1, duration: 0.4 },
+                            t + 0.15
+                        );
+                    }
+
+                    if (card) {
+                        const yOffset = m.isTop ? -30 : 30;
+                        scrubTl.fromTo(
+                            card,
+                            { autoAlpha: 0, y: yOffset, scale: 0.92 },
+                            { autoAlpha: 1, y: 0, scale: 1, duration: 0.7, ease: "power2.out" },
+                            t + 0.25
+                        );
+                    }
+                });
+            });
+
+            mm.add("(max-width: 1023px)", () => {
+                // 1. Stage container reveal
+                if (stage) {
+                    gsap.fromTo(
+                        stage,
+                        { autoAlpha: 0.2, y: 40, scale: 0.97 },
+                        { 
+                            autoAlpha: 1, y: 0, scale: 1, duration: 0.8,
+                            scrollTrigger: {
+                                trigger: stage,
+                                start: "top 85%",
+                                toggleActions: "play none none reverse",
+                            }
+                        }
+                    );
+                }
+
+                /* ── MOBILE SCROLL REVEALS ── */
+                const mobileCards = container.querySelectorAll<HTMLElement>("[data-edu-mobile-card]");
+                mobileCards.forEach((cardEl, idx) => {
+                    gsap.fromTo(
+                        cardEl,
+                        { autoAlpha: 0, x: -30, scale: 0.96 },
+                        {
+                            autoAlpha: 1,
+                            x: 0,
+                            scale: 1,
+                            duration: 0.7,
+                            ease: "power2.out",
+                            scrollTrigger: {
+                                trigger: cardEl,
+                                start: "top 88%",
+                                toggleActions: "play none none reverse",
+                            },
+                        }
+                    );
+                });
             });
 
             /* ── CONTINUOUS SHIMMER BEAM ── */
