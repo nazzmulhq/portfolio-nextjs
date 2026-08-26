@@ -9,7 +9,7 @@ export interface IHome {}
 
 const HIGHLIGHT_STATS = [
     { label: "Experience", value: "4+ Years", desc: "Enterprise & SaaS" },
-    { label: "Core Stack", value: "Next.js · NestJS", desc: "TypeScript Fullstack" },
+    { label: "Core Stack", value: "Next.js · FastAPI · Django", desc: "NestJS · TypeScript & Python" },
     { label: "Open Source", value: "QuickDB · 3 NPM", desc: "DevTools & Extensions" },
     { label: "Location", value: "Dhaka, Bangladesh", desc: "23.8103° N, 90.4125° E", isLive: true },
 ];
@@ -75,23 +75,26 @@ const Home: FC<IHome> = () => {
                             <strong className="text-fg font-semibold">Developer Tooling</strong> (QuickDB VS Code Extension &amp; CLI Packages) built on Next.js, NestJS &amp; TypeScript.
                         </p>
 
-                        {/* Quick Stats Grid */}
-                        <div className="mt-6 sm:mt-8 grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 max-w-xl">
+                        {/* Quick Stats Grid (2 rows for better readability & responsive view) */}
+                        <div className="mt-6 sm:mt-8 grid grid-cols-1 min-[360px]:grid-cols-2 gap-3 sm:gap-3.5 max-w-xl">
                             {HIGHLIGHT_STATS.map((stat) => (
                                 <div
                                     key={stat.label}
-                                    className="p-3 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_80%,transparent)] border border-line hover:border-[var(--line-strong)] backdrop-blur-md shadow-sm transition-all duration-200 hover:-translate-y-0.5"
+                                    className="p-3.5 sm:p-4 rounded-2xl bg-[color-mix(in_srgb,var(--surface-2)_80%,transparent)] border border-line hover:border-emerald-500/40 hover:bg-[color-mix(in_srgb,var(--surface-2)_95%,transparent)] backdrop-blur-md shadow-sm transition-all duration-200 hover:-translate-y-0.5 group"
                                 >
-                                    <div className="flex items-center justify-between text-[10px] uppercase tracking-wider text-muted font-mono">
+                                    <div className="flex items-center justify-between text-[11px] uppercase tracking-wider text-muted font-mono font-medium">
                                         <span>{stat.label}</span>
-                                        {stat.isLive && (
-                                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                        )}
+                                        {stat.isLive ? (
+                                            <span className="relative flex h-2 w-2">
+                                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                                            </span>
+                                        ) : null}
                                     </div>
-                                    <span className="text-xs sm:text-sm font-bold text-fg block mt-1 truncate">
+                                    <span className="text-sm sm:text-base font-bold text-fg block mt-1.5 tracking-tight group-hover:text-emerald-400 transition-colors">
                                         {stat.value}
                                     </span>
-                                    <span className="text-[9.5px] text-faint block mt-0.5 truncate">
+                                    <span className="text-xs text-muted/80 block mt-0.5">
                                         {stat.desc}
                                     </span>
                                 </div>
