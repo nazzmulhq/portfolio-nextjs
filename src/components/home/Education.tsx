@@ -88,7 +88,7 @@ const Education: FC<IEducation> = () => {
             const railFill = container.querySelector<HTMLElement>("[data-edu-rail-fill]");
             const beam = container.querySelector<HTMLElement>("[data-edu-beam]");
 
-            let mm = gsap.matchMedia();
+            const mm = gsap.matchMedia();
 
             mm.add("(min-width: 1024px)", () => {
                 /* ── DESKTOP SCROLL-SCRUB PROGRESSION WITH PINNING ── */
