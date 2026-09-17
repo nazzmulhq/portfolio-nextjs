@@ -23,6 +23,9 @@ export default function QuickDbActivityDashboard({
     const [selectedMetadataEvent, setSelectedMetadataEvent] = useState<ParsedActivityEvent | null>(null);
     const [pageSize, setPageSize] = useState(25);
     const [currentPage, setCurrentPage] = useState(1);
+    const [deletingId, setDeletingId] = useState<string | null>(null);
+    const [showClearModal, setShowClearModal] = useState<boolean>(false);
+    const [isClearing, setIsClearing] = useState<boolean>(false);
 
     const refreshData = async () => {
         setIsLoading(true);
@@ -39,6 +42,56 @@ export default function QuickDbActivityDashboard({
             console.error("Failed to refresh activity data:", err);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleDeleteEvent = async (eventId: string) => {
+        if (!eventId || deletingId) return;
+        setDeletingId(eventId);
+        try {
+            const res = await fetch(`/api/v1/activity/events?event_id=${encodeURIComponent(eventId)}`, {
+                method: "DELETE"
+            });
+            const data = await res.json();
+            if (data.success) {
+                setEvents((prev) => prev.filter((e) => e.event_id !== eventId));
+                if (selectedMetadataEvent?.event_id === eventId) {
+                    setSelectedMetadataEvent(null);
+                }
+                await refreshData();
+            } else {
+                alert(data.message || "Failed to delete event row");
+            }
+        } catch (err) {
+            console.error("Failed to delete event row:", err);
+            alert("Network error while deleting event row");
+        } finally {
+            setDeletingId(null);
+        }
+    };
+
+    const handleClearAllEvents = async () => {
+        setIsClearing(true);
+        try {
+            const res = await fetch("/api/v1/activity/events?all=true", {
+                method: "DELETE"
+            });
+            const data = await res.json();
+            if (data.success) {
+                setEvents([]);
+                setShowClearModal(false);
+                if (selectedMetadataEvent) {
+                    setSelectedMetadataEvent(null);
+                }
+                await refreshData();
+            } else {
+                alert(data.message || "Failed to clear CSV");
+            }
+        } catch (err) {
+            console.error("Failed to clear CSV:", err);
+            alert("Network error while clearing CSV");
+        } finally {
+            setIsClearing(false);
         }
     };
 
@@ -217,12 +270,24 @@ export default function QuickDbActivityDashboard({
 
                         <button
                             onClick={handleExportCsv}
-                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-medium bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-2)] transition-all cursor-pointer font-semibold shadow-sm"
+                            disabled={events.length === 0}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-medium bg-[var(--accent)] text-[var(--accent-contrast)] hover:bg-[var(--accent-2)] transition-all cursor-pointer font-semibold shadow-sm disabled:opacity-40 disabled:cursor-not-allowed"
                         >
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                             </svg>
                             Export CSV
+                        </button>
+
+                        <button
+                            onClick={() => setShowClearModal(true)}
+                            disabled={events.length === 0 || isClearing}
+                            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-lg text-xs font-mono font-medium bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/30 transition-all cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
+                        >
+                            <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                            Clear CSV
                         </button>
                     </div>
                 </div>
@@ -490,7 +555,7 @@ export default function QuickDbActivityDashboard({
                                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Item / Target</th>
                                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device & OS</th>
                                     <th className="py-3 px-4 font-semibold uppercase tracking-wider">IP / Location</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Details</th>
+                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
@@ -534,16 +599,31 @@ export default function QuickDbActivityDashboard({
                                                 )}
                                             </td>
                                             <td className="py-3 px-4 whitespace-nowrap text-right">
-                                                {evt.metadata ? (
+                                                <div className="flex items-center justify-end gap-1.5">
+                                                    {evt.metadata ? (
+                                                        <button
+                                                            onClick={() => setSelectedMetadataEvent(evt)}
+                                                            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                        >
+                                                            JSON
+                                                        </button>
+                                                    ) : null}
                                                     <button
-                                                        onClick={() => setSelectedMetadataEvent(evt)}
-                                                        className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                        onClick={() => handleDeleteEvent(evt.event_id)}
+                                                        disabled={deletingId === evt.event_id}
+                                                        title="Delete this row from CSV"
+                                                        className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
                                                     >
-                                                        View JSON
+                                                        {deletingId === evt.event_id ? (
+                                                            <span className="w-2.5 h-2.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                                                        ) : (
+                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                            </svg>
+                                                        )}
+                                                        <span>Delete</span>
                                                     </button>
-                                                ) : (
-                                                    <span className="text-[var(--faint)]">—</span>
-                                                )}
+                                                </div>
                                             </td>
                                         </tr>
                                     ))
@@ -609,12 +689,76 @@ export default function QuickDbActivityDashboard({
                                 {JSON.stringify(selectedMetadataEvent.metadata, null, 2)}
                             </pre>
                         </div>
-                        <div className="flex justify-end pt-2">
+                        <div className="flex items-center justify-between pt-2">
+                            <button
+                                onClick={() => handleDeleteEvent(selectedMetadataEvent.event_id)}
+                                disabled={deletingId === selectedMetadataEvent.event_id}
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                                {deletingId === selectedMetadataEvent.event_id ? "Deleting..." : "Delete Row"}
+                            </button>
                             <button
                                 onClick={() => setSelectedMetadataEvent(null)}
                                 className="px-4 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
                             >
                                 Close
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Clear All Events Confirmation Modal */}
+            {showClearModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+                    <div className="w-full max-w-md rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] shadow-2xl p-6 space-y-4">
+                        <div className="flex items-center gap-3 text-rose-400">
+                            <div className="p-2.5 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                            </div>
+                            <div>
+                                <h3 className="text-base font-bold text-[var(--fg)]">Clear CSV Activity Log</h3>
+                                <p className="text-xs text-[var(--muted)] font-mono">Irreversible Action</p>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-[var(--muted)] leading-relaxed">
+                            Are you sure you want to permanently delete all{" "}
+                            <strong className="text-[var(--fg)] font-mono">{events.length}</strong> activity event row
+                            {events.length === 1 ? "" : "s"} from the CSV log?
+                        </p>
+
+                        <div className="flex items-center justify-end gap-3 pt-3 border-t border-[var(--line)]">
+                            <button
+                                onClick={() => setShowClearModal(false)}
+                                disabled={isClearing}
+                                className="px-4 py-2 rounded-lg text-xs font-mono text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] border border-transparent transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleClearAllEvents}
+                                disabled={isClearing}
+                                className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-mono font-medium bg-rose-500 hover:bg-rose-600 text-white shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                            >
+                                {isClearing ? (
+                                    <>
+                                        <span className="w-3 h-3 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                                        Clearing CSV...
+                                    </>
+                                ) : (
+                                    <>
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete All Rows
+                                    </>
+                                )}
                             </button>
                         </div>
                     </div>

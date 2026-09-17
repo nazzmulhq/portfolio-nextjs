@@ -239,6 +239,111 @@ class ActivityCsvService {
         });
     }
 
+    /**
+     * Delete a single activity event row by event_id.
+     */
+    public async deleteEvent(eventId: string): Promise<boolean> {
+        const count = await this.deleteEvents([eventId]);
+        return count > 0;
+    }
+
+    /**
+     * Delete multiple activity event rows by event_id list.
+     */
+    public async deleteEvents(eventIds: string[]): Promise<number> {
+        const idSet = new Set(eventIds.filter(Boolean));
+        if (idSet.size === 0) return 0;
+
+        return new Promise<number>((resolve, reject) => {
+            this.writeLock = this.writeLock
+                .then(async () => {
+                    await this.ensureInitialized();
+                    const targetPath = this.resolveReadFilePath() || this.filePath;
+
+                    if (!fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
+                        resolve(0);
+                        return;
+                    }
+
+                    const content = await fs.promises.readFile(targetPath, "utf8");
+                    const lines = content.split(/\r?\n/);
+                    if (lines.length <= 1) {
+                        resolve(0);
+                        return;
+                    }
+
+                    const retainedLines: string[] = [lines[0]]; // Header
+                    let deletedCount = 0;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const line = lines[i].trim();
+                        if (!line) continue;
+
+                        const firstComma = line.indexOf(",");
+                        const id = (firstComma >= 0 ? line.substring(0, firstComma) : line)
+                            .replace(/^"|"$/g, "")
+                            .trim();
+
+                        if (idSet.has(id)) {
+                            deletedCount++;
+                            this.seenEventIds?.delete(id);
+                        } else {
+                            retainedLines.push(lines[i]);
+                        }
+                    }
+
+                    const newContent = retainedLines.join("\n") + (retainedLines.length > 0 ? "\n" : "");
+                    await fs.promises.writeFile(this.filePath, newContent, "utf8");
+
+                    // Also update localFallback if different and target was localFallback
+                    const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
+                    if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
+                        try {
+                            await fs.promises.writeFile(localFallback, newContent, "utf8");
+                        } catch {
+                            // ignore in read-only environment
+                        }
+                    }
+
+                    resolve(deletedCount);
+                })
+                .catch((err) => {
+                    console.error("Error deleting activity event(s):", err);
+                    reject(err);
+                });
+        });
+    }
+
+    /**
+     * Clear all activity event rows from the CSV file while preserving the CSV header.
+     */
+    public async clearAllEvents(): Promise<boolean> {
+        return new Promise<boolean>((resolve, reject) => {
+            this.writeLock = this.writeLock
+                .then(async () => {
+                    await this.ensureInitialized();
+                    this.seenEventIds = new Set<string>();
+
+                    await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
+
+                    const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
+                    if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
+                        try {
+                            await fs.promises.writeFile(localFallback, CSV_HEADER, "utf8");
+                        } catch {
+                            // ignore in read-only environment
+                        }
+                    }
+
+                    resolve(true);
+                })
+                .catch((err) => {
+                    console.error("Error clearing all activity events:", err);
+                    reject(err);
+                });
+        });
+    }
+
     public getCsvPath(): string {
         return this.resolveReadFilePath() || this.filePath;
     }
