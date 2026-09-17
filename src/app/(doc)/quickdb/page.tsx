@@ -148,6 +148,12 @@ export default function QuickDBPage() {
                                 </svg>
                                 <span className="relative z-10">Open VSX</span>
                             </Link>
+                            <Link href="/quickdb/activity" className="btn-ghost sheen border-accent/30 text-accent hover:border-accent">
+                                <svg className="relative z-10 h-5 w-5 text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                </svg>
+                                <span className="relative z-10">Activity Stream</span>
+                            </Link>
                             <Link href="/" className="btn-ghost sheen">
                                 <svg className="relative z-10 h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />

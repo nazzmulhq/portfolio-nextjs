@@ -23,6 +23,22 @@ const nextConfig: NextConfig = {
             {
                 source: '/quickdb/me',
                 destination: '/api/quickdb/me',
+            },
+            {
+                source: '/quickdb/activity/sync',
+                destination: '/api/v1/activity/sync',
+            },
+            {
+                source: '/quickdb/api/v1/activity/sync',
+                destination: '/api/v1/activity/sync',
+            },
+            {
+                source: '/quickdb/telemetry',
+                destination: '/quickdb/activity',
+            },
+            {
+                source: '/quickdb/analytics',
+                destination: '/quickdb/activity',
             }
         ];
     },
