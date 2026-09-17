@@ -1,11 +1,67 @@
 import { NextRequest, NextResponse } from "next/server";
-import { activityCsvService } from "../../../../../lib/api/activityCsvService";
+import { activityCsvService, computeActivitySummary } from "../../../../../lib/api/activityCsvService";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const range = url.searchParams.get("range")?.toLowerCase();
+        const date = url.searchParams.get("date");
+        const startDate = url.searchParams.get("start_date");
+        const endDate = url.searchParams.get("end_date");
+
         const data = await activityCsvService.getParsedEvents();
+        let events = data.events;
+
+        if (range || date || startDate || endDate) {
+            const now = new Date();
+            const nowTime = now.getTime();
+            const todayUtc = now.toISOString().split("T")[0];
+            const yesterdayUtc = new Date(nowTime - 24 * 60 * 60 * 1000).toISOString().split("T")[0];
+            const sevenDaysAgo = nowTime - 7 * 24 * 60 * 60 * 1000;
+            const thirtyDaysAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
+
+            events = events.filter((evt) => {
+                const rawDate = evt.occurred_at || evt.received_at;
+                if (!rawDate) return false;
+                const d = new Date(rawDate);
+                const evtTime = d.getTime();
+                const evtUtc = rawDate.split("T")[0];
+                const evtLocal = !isNaN(evtTime)
+                    ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                    : evtUtc;
+
+                if (range === "today" || range === "day") {
+                    const matchesToday = evtUtc === todayUtc || evtLocal === todayUtc || (evtTime >= (nowTime - 24 * 60 * 60 * 1000) && evtTime <= nowTime);
+                    if (!matchesToday) return false;
+                }
+                if (range === "yesterday") {
+                    const matchesYesterday = evtUtc === yesterdayUtc || evtLocal === yesterdayUtc;
+                    if (!matchesYesterday) return false;
+                }
+                if (range === "7d" || range === "week") {
+                    if (evtTime < sevenDaysAgo) return false;
+                }
+                if (range === "30d" || range === "month") {
+                    if (evtTime < thirtyDaysAgo) return false;
+                }
+                if (date) {
+                    if (evtUtc !== date && evtLocal !== date) return false;
+                }
+                if (startDate && evtUtc < startDate && evtLocal < startDate) return false;
+                if (endDate && evtUtc > endDate && evtLocal > endDate) return false;
+
+                return true;
+            });
+
+            return NextResponse.json({
+                success: true,
+                events,
+                summary: computeActivitySummary(events)
+            });
+        }
+
         return NextResponse.json({
             success: true,
             ...data

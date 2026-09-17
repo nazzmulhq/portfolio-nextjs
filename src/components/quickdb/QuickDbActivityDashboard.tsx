@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useMemo } from "react";
 import Link from "next/link";
-import { ParsedActivityEvent, ActivitySummary } from "@src/lib/api/activityCsvService";
+import { ParsedActivityEvent, ActivitySummary, computeActivitySummary } from "@src/lib/api/activitySummaryHelper";
 
 interface QuickDbActivityDashboardProps {
     initialEvents: ParsedActivityEvent[];
@@ -14,12 +14,16 @@ export default function QuickDbActivityDashboard({
     initialSummary
 }: QuickDbActivityDashboardProps) {
     const [events, setEvents] = useState<ParsedActivityEvent[]>(initialEvents);
-    const [summary, setSummary] = useState<ActivitySummary>(initialSummary);
+    const [rawSummary, setRawSummary] = useState<ActivitySummary>(initialSummary);
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
     const [selectedOs, setSelectedOs] = useState<string>("all");
+    const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "7d" | "30d" | "single" | "range">("all");
+    const [singleDate, setSingleDate] = useState<string>("");
+    const [startDate, setStartDate] = useState<string>("");
+    const [endDate, setEndDate] = useState<string>("");
     const [selectedMetadataEvent, setSelectedMetadataEvent] = useState<ParsedActivityEvent | null>(null);
     const [pageSize, setPageSize] = useState(25);
     const [currentPage, setCurrentPage] = useState(1);
@@ -35,7 +39,7 @@ export default function QuickDbActivityDashboard({
                 const data = await res.json();
                 if (data.success) {
                     setEvents(data.events || []);
-                    setSummary(data.summary || initialSummary);
+                    setRawSummary(data.summary || initialSummary);
                 }
             }
         } catch (err) {
@@ -102,8 +106,23 @@ export default function QuickDbActivityDashboard({
         return () => clearInterval(interval);
     }, []);
 
-    // Filtered events
+    // Filtered events with global search, feature, OS, and date filtering support
     const filteredEvents = useMemo(() => {
+        const now = new Date();
+        const nowTime = now.getTime();
+        const todayUtc = now.toISOString().split("T")[0];
+        const todayLocal = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+        const startOfTodayLocal = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
+        const endOfTodayLocal = startOfTodayLocal + 24 * 60 * 60 * 1000;
+
+        const yesterday = new Date(nowTime - 24 * 60 * 60 * 1000);
+        const yesterdayUtc = yesterday.toISOString().split("T")[0];
+        const yesterdayLocal = `${yesterday.getFullYear()}-${String(yesterday.getMonth() + 1).padStart(2, "0")}-${String(yesterday.getDate()).padStart(2, "0")}`;
+        const startOfYesterdayLocal = startOfTodayLocal - 24 * 60 * 60 * 1000;
+
+        const sevenDaysAgo = nowTime - 7 * 24 * 60 * 60 * 1000;
+        const thirtyDaysAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
+
         return events.filter((evt) => {
             const query = searchQuery.toLowerCase().trim();
             const matchesQuery =
@@ -125,9 +144,61 @@ export default function QuickDbActivityDashboard({
                 selectedOs === "all" ||
                 evt.os_name.toLowerCase() === selectedOs.toLowerCase();
 
-            return matchesQuery && matchesFeature && matchesOs;
+            // Date filtering
+            let matchesDate = true;
+            const rawDate = evt.occurred_at || evt.received_at;
+            if (rawDate && dateFilter !== "all") {
+                const d = new Date(rawDate);
+                const evtTime = d.getTime();
+                const evtUtc = rawDate.split("T")[0];
+                const evtLocal = !isNaN(evtTime)
+                    ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                    : evtUtc;
+
+                if (dateFilter === "today") {
+                    matchesDate =
+                        evtUtc === todayUtc ||
+                        evtLocal === todayLocal ||
+                        (evtTime >= startOfTodayLocal && evtTime < endOfTodayLocal);
+                } else if (dateFilter === "yesterday") {
+                    matchesDate =
+                        evtUtc === yesterdayUtc ||
+                        evtLocal === yesterdayLocal ||
+                        (evtTime >= startOfYesterdayLocal && evtTime < startOfTodayLocal);
+                } else if (dateFilter === "7d") {
+                    matchesDate = evtTime >= sevenDaysAgo;
+                } else if (dateFilter === "30d") {
+                    matchesDate = evtTime >= thirtyDaysAgo;
+                } else if (dateFilter === "single") {
+                    if (singleDate) {
+                        matchesDate = evtLocal === singleDate || evtUtc === singleDate;
+                    }
+                } else if (dateFilter === "range") {
+                    if (startDate && evtLocal < startDate && evtUtc < startDate) matchesDate = false;
+                    if (endDate && evtLocal > endDate && evtUtc > endDate) matchesDate = false;
+                }
+            }
+
+            return matchesQuery && matchesFeature && matchesOs && matchesDate;
         });
-    }, [events, searchQuery, selectedFeature, selectedOs]);
+    }, [events, searchQuery, selectedFeature, selectedOs, dateFilter, singleDate, startDate, endDate]);
+
+    // Derived summary: dynamically recalculate metrics for filtered view
+    const summary = useMemo(() => {
+        const isFilterActive =
+            Boolean(searchQuery) ||
+            selectedFeature !== "all" ||
+            selectedOs !== "all" ||
+            dateFilter !== "all" ||
+            Boolean(singleDate) ||
+            Boolean(startDate) ||
+            Boolean(endDate);
+
+        if (!isFilterActive && rawSummary.totalEvents > 0 && events.length === rawSummary.totalEvents) {
+            return rawSummary;
+        }
+        return computeActivitySummary(filteredEvents);
+    }, [filteredEvents, searchQuery, selectedFeature, selectedOs, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
 
     // Pagination
     const totalPages = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
@@ -466,13 +537,13 @@ export default function QuickDbActivityDashboard({
                 </div>
 
                 {/* Filter and Search Toolbar */}
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3">
-                    <div className="flex flex-col sm:flex-row gap-3 items-center justify-between">
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3 shadow-sm">
+                    <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
                         {/* Search Input */}
-                        <div className="relative w-full sm:w-80">
+                        <div className="relative w-full lg:w-72 shrink-0">
                             <input
                                 type="text"
-                                placeholder="Search by feature, item, device, IP..."
+                                placeholder="Search events, features, IPs..."
                                 value={searchQuery}
                                 onChange={(e) => {
                                     setSearchQuery(e.target.value);
@@ -490,8 +561,36 @@ export default function QuickDbActivityDashboard({
                             </svg>
                         </div>
 
-                        {/* Filters */}
-                        <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto justify-start sm:justify-end">
+                        {/* Global Date Filter Quick Pills */}
+                        <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] overflow-x-auto">
+                            {[
+                                { id: "all", label: "All Time" },
+                                { id: "today", label: "Today" },
+                                { id: "yesterday", label: "Yesterday" },
+                                { id: "7d", label: "Week (7d)" },
+                                { id: "30d", label: "Month (30d)" },
+                                { id: "single", label: "Custom Date" },
+                                { id: "range", label: "Date Range" }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    onClick={() => {
+                                        setDateFilter(tab.id as any);
+                                        setCurrentPage(1);
+                                    }}
+                                    className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer whitespace-nowrap ${
+                                        dateFilter === tab.id
+                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+
+                        {/* Dropdowns & Reset */}
+                        <div className="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
                             {/* Feature Filter */}
                             <select
                                 value={selectedFeature}
@@ -526,12 +625,16 @@ export default function QuickDbActivityDashboard({
                             </select>
 
                             {/* Clear Filters */}
-                            {(searchQuery || selectedFeature !== "all" || selectedOs !== "all") && (
+                            {(searchQuery || selectedFeature !== "all" || selectedOs !== "all" || dateFilter !== "all" || singleDate || startDate || endDate) && (
                                 <button
                                     onClick={() => {
                                         setSearchQuery("");
                                         setSelectedFeature("all");
                                         setSelectedOs("all");
+                                        setDateFilter("all");
+                                        setSingleDate("");
+                                        setStartDate("");
+                                        setEndDate("");
                                         setCurrentPage(1);
                                     }}
                                     className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
@@ -541,6 +644,88 @@ export default function QuickDbActivityDashboard({
                             )}
                         </div>
                     </div>
+
+                    {/* Single Custom Date Picker Row */}
+                    {dateFilter === "single" && (
+                        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--line)] text-xs font-mono">
+                            <span className="text-[var(--muted)] flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Pick Specific Date:
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <input
+                                    type="date"
+                                    value={singleDate}
+                                    onChange={(e) => {
+                                        setSingleDate(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+                                />
+                            </div>
+                            {singleDate && (
+                                <button
+                                    onClick={() => {
+                                        setSingleDate("");
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2 py-1 rounded text-xs text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
+                                >
+                                    Clear Date
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Custom Date Range Picker Row */}
+                    {dateFilter === "range" && (
+                        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--line)] text-xs font-mono">
+                            <span className="text-[var(--muted)] flex items-center gap-1.5">
+                                <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Custom Date Range:
+                            </span>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[var(--muted)] text-[11px]">From:</label>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => {
+                                        setStartDate(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <label className="text-[var(--muted)] text-[11px]">To:</label>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => {
+                                        setEndDate(e.target.value);
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
+                                />
+                            </div>
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={() => {
+                                        setStartDate("");
+                                        setEndDate("");
+                                        setCurrentPage(1);
+                                    }}
+                                    className="px-2 py-1 rounded text-xs text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
+                                >
+                                    Clear Range
+                                </button>
+                            )}
+                        </div>
+                    )}
                 </div>
 
                 {/* Activity Events Data Table */}
@@ -636,7 +821,10 @@ export default function QuickDbActivityDashboard({
                     <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
                         <div>
                             Showing {filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
-                            {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events
+                            {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events{" "}
+                            {filteredEvents.length !== events.length && (
+                                <span className="text-[var(--accent)] font-semibold">(filtered from {events.length} total)</span>
+                            )}
                         </div>
                         <div className="flex items-center gap-2">
                             <button
