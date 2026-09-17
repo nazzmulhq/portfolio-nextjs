@@ -20,7 +20,7 @@ const defaultSummary: ActivitySummary = {
     topFeature: { name: "None", count: 0 },
     latestSyncAt: null,
     featureDistribution: [],
-    deviceDistribution: { laptop: 0, desktop: 0, unknown: 0 },
+    deviceDistribution: { laptop: 0, desktop: 0, mobile: 0, unknown: 0 },
     osDistribution: [],
     locationDistribution: [],
     timeline: []

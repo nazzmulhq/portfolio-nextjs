@@ -22,7 +22,7 @@ export interface ActivitySummary {
     topFeature: { name: string; count: number };
     latestSyncAt: string | null;
     featureDistribution: Array<{ name: string; count: number; percentage: number }>;
-    deviceDistribution: { laptop: number; desktop: number; unknown: number };
+    deviceDistribution: { laptop: number; desktop: number; mobile: number; unknown: number };
     osDistribution: Array<{ name: string; count: number }>;
     locationDistribution: Array<{ location: string; count: number }>;
     timeline: Array<{ date: string; count: number }>;
@@ -35,7 +35,7 @@ export function buildEmptyActivitySummary(): ActivitySummary {
         topFeature: { name: "None", count: 0 },
         latestSyncAt: null,
         featureDistribution: [],
-        deviceDistribution: { laptop: 0, desktop: 0, unknown: 0 },
+        deviceDistribution: { laptop: 0, desktop: 0, mobile: 0, unknown: 0 },
         osDistribution: [],
         locationDistribution: [],
         timeline: []
@@ -44,24 +44,27 @@ export function buildEmptyActivitySummary(): ActivitySummary {
 
 export function computeActivitySummary(events: ParsedActivityEvent[]): ActivitySummary {
     const devices = new Set<string>();
+    const deviceTypeMap = new Map<string, string>();
     const featureCounts: Record<string, number> = {};
     const osCounts: Record<string, number> = {};
     const locationCounts: Record<string, number> = {};
     const timelineCounts: Record<string, number> = {};
-    const deviceTypeCounts = { laptop: 0, desktop: 0, unknown: 0 };
 
     for (const evt of events) {
-        if (evt.device_id) devices.add(evt.device_id);
+        const devId = evt.device_id || "unknown";
+        devices.add(devId);
+
+        if (!deviceTypeMap.has(devId) || deviceTypeMap.get(devId) === "unknown") {
+            if (evt.device_name && evt.device_name.toLowerCase() !== "unknown") {
+                deviceTypeMap.set(devId, evt.device_name);
+            } else if (!deviceTypeMap.has(devId)) {
+                deviceTypeMap.set(devId, evt.device_name || "unknown");
+            }
+        }
 
         // Feature counts
         const feat = evt.feature_name || "other";
         featureCounts[feat] = (featureCounts[feat] || 0) + 1;
-
-        // Form factor
-        const dev = (evt.device_name || "").toLowerCase();
-        if (dev === "laptop") deviceTypeCounts.laptop++;
-        else if (dev === "desktop") deviceTypeCounts.desktop++;
-        else deviceTypeCounts.unknown++;
 
         // OS counts
         const os = evt.os_name || "unknown";
@@ -104,6 +107,23 @@ export function computeActivitySummary(events: ParsedActivityEvent[]): ActivityS
     const timeline = Object.entries(timelineCounts)
         .map(([date, count]) => ({ date, count }))
         .sort((a, b) => a.date.localeCompare(b.date));
+
+    // Unique devices breakdown by device type (NOT event count)
+    const deviceTypeCounts = { laptop: 0, desktop: 0, mobile: 0, unknown: 0 };
+    for (const devName of deviceTypeMap.values()) {
+        const dev = (devName || "").toLowerCase();
+        if (dev.includes("laptop") || dev.includes("macbook") || dev.includes("notebook") || dev.includes("thinkpad") || dev.includes("chromebook")) {
+            deviceTypeCounts.laptop++;
+        } else if (dev.includes("mobile") || dev.includes("phone") || dev.includes("iphone") || dev.includes("android") || dev.includes("tablet") || dev.includes("ipad")) {
+            deviceTypeCounts.mobile++;
+        } else if (dev.includes("desktop") || dev.includes("pc") || dev.includes("imac") || dev.includes("mac mini") || dev.includes("workstation") || dev.includes("tower")) {
+            deviceTypeCounts.desktop++;
+        } else if (!dev || dev === "unknown") {
+            deviceTypeCounts.unknown++;
+        } else {
+            deviceTypeCounts.desktop++;
+        }
+    }
 
     return {
         totalEvents: events.length,

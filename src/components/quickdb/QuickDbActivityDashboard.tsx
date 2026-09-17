@@ -1372,13 +1372,25 @@ export default function QuickDbActivityDashboard({
                             <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--fg)]">
                                 {summary.uniqueDevices}
                             </div>
-                            <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)] font-mono">
-                                <span>💻 {summary.deviceDistribution.laptop}</span>
+                            <div className="flex flex-wrap items-center gap-2 mt-1.5 text-xs text-[var(--muted)] font-mono">
+                                <span title={`${summary.deviceDistribution?.laptop ?? 0} unique laptop device(s)`}>
+                                    💻 <strong className="text-[var(--fg)] font-semibold">{summary.deviceDistribution?.laptop ?? 0}</strong> {(summary.deviceDistribution?.laptop ?? 0) === 1 ? "Laptop" : "Laptops"}
+                                </span>
                                 <span>•</span>
-                                <span>🖥️ {summary.deviceDistribution.desktop}</span>
+                                <span title={`${summary.deviceDistribution?.desktop ?? 0} unique desktop device(s)`}>
+                                    🖥️ <strong className="text-[var(--fg)] font-semibold">{summary.deviceDistribution?.desktop ?? 0}</strong> {(summary.deviceDistribution?.desktop ?? 0) === 1 ? "Desktop" : "Desktops"}
+                                </span>
+                                {(summary.deviceDistribution?.mobile ?? 0) > 0 && (
+                                    <>
+                                        <span>•</span>
+                                        <span title={`${summary.deviceDistribution.mobile} unique mobile device(s)`}>
+                                            📱 <strong className="text-[var(--fg)] font-semibold">{summary.deviceDistribution.mobile}</strong> {summary.deviceDistribution.mobile === 1 ? "Mobile" : "Mobiles"}
+                                        </span>
+                                    </>
+                                )}
                                 <span>•</span>
                                 <span className="text-[var(--accent-2)]">
-                                    {summary.uniqueDevices > 0 ? (filteredEvents.length / summary.uniqueDevices).toFixed(1) : 0} avg/dev
+                                    {summary.uniqueDevices > 0 ? (filteredEvents.length / summary.uniqueDevices).toFixed(1) : 0} avg events/dev
                                 </span>
                             </div>
                         </div>
