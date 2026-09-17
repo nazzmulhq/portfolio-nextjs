@@ -9,6 +9,19 @@ interface QuickDbActivityDashboardProps {
     initialSummary: ActivitySummary;
 }
 
+export interface DeviceGroup {
+    deviceId: string;
+    deviceName: string;
+    osName: string;
+    ipAddress: string;
+    location: string;
+    events: ParsedActivityEvent[];
+    eventCount: number;
+    topFeature: { name: string; count: number };
+    firstSeenAt: string | null;
+    lastActiveAt: string | null;
+}
+
 export default function QuickDbActivityDashboard({
     initialEvents,
     initialSummary
@@ -17,6 +30,10 @@ export default function QuickDbActivityDashboard({
     const [rawSummary, setRawSummary] = useState<ActivitySummary>(initialSummary);
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [viewMode, setViewMode] = useState<"stream" | "devices">("stream");
+    const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
+    const [devicePage, setDevicePage] = useState(1);
+    const devicesPerPage = 10;
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
     const [selectedOs, setSelectedOs] = useState<string>("all");
@@ -200,12 +217,164 @@ export default function QuickDbActivityDashboard({
         return computeActivitySummary(filteredEvents);
     }, [filteredEvents, searchQuery, selectedFeature, selectedOs, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
 
-    // Pagination
+    // Pagination for flat stream
     const totalPages = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
     const paginatedEvents = useMemo(() => {
         const start = (currentPage - 1) * pageSize;
         return filteredEvents.slice(start, start + pageSize);
     }, [filteredEvents, currentPage, pageSize]);
+
+    // Group filtered events by unique device for nested table view
+    const deviceGroups = useMemo<DeviceGroup[]>(() => {
+        const map = new Map<string, DeviceGroup>();
+
+        for (const evt of filteredEvents) {
+            const id = evt.device_id || "unknown-device";
+            let group = map.get(id);
+            if (!group) {
+                group = {
+                    deviceId: id,
+                    deviceName: evt.device_name || "Unknown",
+                    osName: evt.os_name || "Unknown OS",
+                    ipAddress: evt.ip_address || "Unknown IP",
+                    location: evt.location || "Unknown Location",
+                    events: [],
+                    eventCount: 0,
+                    topFeature: { name: "None", count: 0 },
+                    firstSeenAt: null,
+                    lastActiveAt: null
+                };
+                map.set(id, group);
+            }
+
+            group.events.push(evt);
+            group.eventCount++;
+
+            if (evt.device_name && group.deviceName === "Unknown") group.deviceName = evt.device_name;
+            if (evt.os_name && (group.osName === "Unknown OS" || group.osName === "unknown")) group.osName = evt.os_name;
+            if (evt.ip_address && (group.ipAddress === "Unknown IP" || group.ipAddress === "unknown")) group.ipAddress = evt.ip_address;
+            if (evt.location && group.location === "Unknown Location") group.location = evt.location;
+        }
+
+        const groups = Array.from(map.values()).map((g) => {
+            // Sort device events (newest first)
+            g.events.sort((a, b) => {
+                const timeA = new Date(a.occurred_at || a.received_at || 0).getTime();
+                const timeB = new Date(b.occurred_at || b.received_at || 0).getTime();
+                return timeB - timeA;
+            });
+
+            g.lastActiveAt = g.events[0]?.occurred_at || g.events[0]?.received_at || null;
+            g.firstSeenAt = g.events[g.events.length - 1]?.occurred_at || g.events[g.events.length - 1]?.received_at || null;
+
+            // Top feature
+            const featCounts: Record<string, number> = {};
+            for (const e of g.events) {
+                const f = e.feature_name || "other";
+                featCounts[f] = (featCounts[f] || 0) + 1;
+            }
+            let maxCount = 0;
+            let topFeat = "None";
+            for (const [name, count] of Object.entries(featCounts)) {
+                if (count > maxCount) {
+                    maxCount = count;
+                    topFeat = name;
+                }
+            }
+            g.topFeature = { name: topFeat, count: maxCount };
+
+            return g;
+        });
+
+        // Sort device groups: highest activity first, then latest active
+        groups.sort((a, b) => {
+            if (b.eventCount !== a.eventCount) {
+                return b.eventCount - a.eventCount;
+            }
+            const timeA = a.lastActiveAt ? new Date(a.lastActiveAt).getTime() : 0;
+            const timeB = b.lastActiveAt ? new Date(b.lastActiveAt).getTime() : 0;
+            return timeB - timeA;
+        });
+
+        return groups;
+    }, [filteredEvents]);
+
+    const totalDevicePages = Math.max(1, Math.ceil(deviceGroups.length / devicesPerPage));
+    const paginatedDeviceGroups = useMemo(() => {
+        const start = (devicePage - 1) * devicesPerPage;
+        return deviceGroups.slice(start, start + devicesPerPage);
+    }, [deviceGroups, devicePage, devicesPerPage]);
+
+    const toggleDevice = (deviceId: string) => {
+        setExpandedDevices((prev) => {
+            const current = prev[deviceId] !== undefined ? prev[deviceId] : false;
+            return { ...prev, [deviceId]: !current };
+        });
+    };
+
+    const expandAllDevices = () => {
+        const next: Record<string, boolean> = {};
+        deviceGroups.forEach((g) => {
+            next[g.deviceId] = true;
+        });
+        setExpandedDevices(next);
+    };
+
+    const collapseAllDevices = () => {
+        const next: Record<string, boolean> = {};
+        deviceGroups.forEach((g) => {
+            next[g.deviceId] = false;
+        });
+        setExpandedDevices(next);
+    };
+
+    const handleExportDeviceCsv = (group: DeviceGroup) => {
+        if (!group.events.length) return;
+        const headers = [
+            "event_id",
+            "session_id",
+            "feature_name",
+            "action",
+            "item_id",
+            "item_name",
+            "occurred_at",
+            "device_id",
+            "device_name",
+            "os_name",
+            "ip_address",
+            "location",
+            "status",
+            "received_at",
+            "metadata"
+        ];
+        const rows = group.events.map((e) => [
+            e.event_id,
+            e.session_id,
+            e.feature_name,
+            e.action,
+            e.item_id,
+            e.item_name,
+            e.occurred_at,
+            e.device_id,
+            e.device_name,
+            e.os_name,
+            e.ip_address,
+            e.location,
+            e.status,
+            e.received_at,
+            e.metadata ? JSON.stringify(e.metadata).replace(/"/g, '""') : ""
+        ]);
+        const csvContent =
+            "data:text/csv;charset=utf-8," +
+            [headers.join(","), ...rows.map((r) => r.map((c) => `"${c}"`).join(","))].join("\n");
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement("a");
+        link.setAttribute("href", encodedUri);
+        link.setAttribute("download", `quickdb_activity_${group.deviceId}_${Date.now()}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+    };
 
     // Export CSV from client
     const handleExportCsv = () => {
@@ -387,9 +556,20 @@ export default function QuickDbActivityDashboard({
                     </div>
 
                     {/* Unique Devices */}
-                    <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm hover:border-[var(--line-strong)] transition-all">
+                    <div
+                        onClick={() => setViewMode((m) => (m === "devices" ? "stream" : "devices"))}
+                        title="Click to toggle nested unique devices table"
+                        className={`relative overflow-hidden rounded-xl border transition-all cursor-pointer group p-5 shadow-sm ${
+                            viewMode === "devices"
+                                ? "border-[var(--accent)] bg-[var(--surface-2)] ring-1 ring-[var(--accent)]/30"
+                                : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--line-strong)]"
+                        }`}
+                    >
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Unique Devices</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted)] group-hover:text-[var(--accent)] transition-colors flex items-center gap-1.5">
+                                Unique Devices
+                                <span className="text-[10px] text-[var(--accent)] font-bold">{viewMode === "devices" ? "● active" : "→"}</span>
+                            </span>
                             <span className="p-2 rounded-lg bg-sky-500/10 text-sky-400">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
@@ -636,6 +816,7 @@ export default function QuickDbActivityDashboard({
                                         setStartDate("");
                                         setEndDate("");
                                         setCurrentPage(1);
+                                        setDevicePage(1);
                                     }}
                                     className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
                                 >
@@ -728,124 +909,387 @@ export default function QuickDbActivityDashboard({
                     )}
                 </div>
 
-                {/* Activity Events Data Table */}
+                {/* Activity Events Data Table & Nested Devices View */}
                 <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] overflow-hidden shadow-sm">
-                    <div className="overflow-x-auto">
-                        <table className="w-full text-left text-xs font-mono border-collapse">
-                            <thead>
-                                <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Timestamp</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Feature</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Action</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Item / Target</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device & OS</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider">IP / Location</th>
-                                    <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
-                                {paginatedEvents.length === 0 ? (
-                                    <tr>
-                                        <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
-                                            No activity events found matching your criteria.
-                                        </td>
-                                    </tr>
-                                ) : (
-                                    paginatedEvents.map((evt) => (
-                                        <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/50 transition-colors">
-                                            <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                {formatRelativeTime(evt.occurred_at || evt.received_at)}
-                                                <div className="text-[10px] text-[var(--faint)]">
-                                                    {(evt.occurred_at || evt.received_at).split("T")[1]?.slice(0, 8)}
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap">
-                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] border ${getFeatureBadge(evt.feature_name)}`}>
-                                                    {evt.feature_name}
-                                                </span>
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap font-medium text-[var(--fg)]">
-                                                {evt.action}
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap text-[var(--accent-2)]">
-                                                {evt.item_name || evt.item_id || "—"}
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span>{evt.device_name === "laptop" ? "💻" : "🖥️"}</span>
-                                                    <span className="uppercase text-[11px]">{evt.os_name || "unknown"}</span>
-                                                </div>
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                {evt.location ? (
-                                                    <span>{evt.location}</span>
-                                                ) : (
-                                                    <span className="text-[var(--faint)]">{evt.ip_address || "local"}</span>
-                                                )}
-                                            </td>
-                                            <td className="py-3 px-4 whitespace-nowrap text-right">
-                                                <div className="flex items-center justify-end gap-1.5">
-                                                    {evt.metadata ? (
-                                                        <button
-                                                            onClick={() => setSelectedMetadataEvent(evt)}
-                                                            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
-                                                        >
-                                                            JSON
-                                                        </button>
-                                                    ) : null}
-                                                    <button
-                                                        onClick={() => handleDeleteEvent(evt.event_id)}
-                                                        disabled={deletingId === evt.event_id}
-                                                        title="Delete this row from CSV"
-                                                        className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
-                                                    >
-                                                        {deletingId === evt.event_id ? (
-                                                            <span className="w-2.5 h-2.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
-                                                        ) : (
-                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                                            </svg>
-                                                        )}
-                                                        <span>Delete</span>
-                                                    </button>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ))
-                                )}
-                            </tbody>
-                        </table>
+                    {/* View Mode Switcher Header */}
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-3.5 bg-[var(--surface-2)] border-b border-[var(--line)]">
+                        <div className="flex flex-wrap items-center gap-2">
+                            <span className="text-xs font-mono font-semibold uppercase tracking-wider text-[var(--muted)]">View:</span>
+                            <div className="inline-flex p-1 rounded-lg bg-[var(--surface-3)] border border-[var(--line)]">
+                                <button
+                                    onClick={() => setViewMode("stream")}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                        viewMode === "stream"
+                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]"
+                                    }`}
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 6h16M4 10h16M4 14h16M4 18h16" />
+                                    </svg>
+                                    Flat Stream ({filteredEvents.length})
+                                </button>
+                                <button
+                                    onClick={() => setViewMode("devices")}
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                        viewMode === "devices"
+                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]"
+                                    }`}
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                    </svg>
+                                    Unique Devices ({deviceGroups.length})
+                                </button>
+                            </div>
+                        </div>
+
+                        {viewMode === "devices" && (
+                            <div className="flex items-center gap-2 text-xs font-mono self-end sm:self-auto">
+                                <button
+                                    onClick={expandAllDevices}
+                                    className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--fg)] transition-colors cursor-pointer"
+                                >
+                                    Expand All
+                                </button>
+                                <button
+                                    onClick={collapseAllDevices}
+                                    className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
+                                >
+                                    Collapse All
+                                </button>
+                            </div>
+                        )}
                     </div>
 
-                    {/* Pagination Footer */}
-                    <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
-                        <div>
-                            Showing {filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
-                            {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events{" "}
-                            {filteredEvents.length !== events.length && (
-                                <span className="text-[var(--accent)] font-semibold">(filtered from {events.length} total)</span>
+                    {viewMode === "stream" ? (
+                        <>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left text-xs font-mono border-collapse">
+                                    <thead>
+                                        <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Timestamp</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Feature</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Action</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Item / Target</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device & OS</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">IP / Location</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
+                                        {paginatedEvents.length === 0 ? (
+                                            <tr>
+                                                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                                                    No activity events found matching your criteria.
+                                                </td>
+                                            </tr>
+                                        ) : (
+                                            paginatedEvents.map((evt) => (
+                                                <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/50 transition-colors">
+                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
+                                                        {formatRelativeTime(evt.occurred_at || evt.received_at)}
+                                                        <div className="text-[10px] text-[var(--faint)]">
+                                                            {(evt.occurred_at || evt.received_at).split("T")[1]?.slice(0, 8)}
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap">
+                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] border ${getFeatureBadge(evt.feature_name)}`}>
+                                                            {evt.feature_name}
+                                                        </span>
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap font-medium text-[var(--fg)]">
+                                                        {evt.action}
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--accent-2)]">
+                                                        {evt.item_name || evt.item_id || "—"}
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <span>{evt.device_name === "laptop" ? "💻" : "🖥️"}</span>
+                                                            <span className="uppercase text-[11px]">{evt.os_name || "unknown"}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
+                                                        {evt.location ? (
+                                                            <span>{evt.location}</span>
+                                                        ) : (
+                                                            <span className="text-[var(--faint)]">{evt.ip_address || "local"}</span>
+                                                        )}
+                                                    </td>
+                                                    <td className="py-3 px-4 whitespace-nowrap text-right">
+                                                        <div className="flex items-center justify-end gap-1.5">
+                                                            {evt.metadata ? (
+                                                                <button
+                                                                    onClick={() => setSelectedMetadataEvent(evt)}
+                                                                    className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                                >
+                                                                    JSON
+                                                                </button>
+                                                            ) : null}
+                                                            <button
+                                                                onClick={() => handleDeleteEvent(evt.event_id)}
+                                                                disabled={deletingId === evt.event_id}
+                                                                title="Delete this row from CSV"
+                                                                className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                                            >
+                                                                {deletingId === evt.event_id ? (
+                                                                    <span className="w-2.5 h-2.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                                                                ) : (
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    </svg>
+                                                                )}
+                                                                <span>Delete</span>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {/* Pagination Footer */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
+                                <div>
+                                    Showing {filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
+                                    {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events{" "}
+                                    {filteredEvents.length !== events.length && (
+                                        <span className="text-[var(--accent)] font-semibold">(filtered from {events.length} total)</span>
+                                    )}
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                                        disabled={currentPage === 1}
+                                        className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span>
+                                        Page {currentPage} of {totalPages}
+                                    </span>
+                                    <button
+                                        onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                                        disabled={currentPage === totalPages}
+                                        className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
+                            </div>
+                        </>
+                    ) : (
+                        <>
+                            {/* Device-Wise Nested Table View */}
+                            {deviceGroups.length === 0 ? (
+                                <div className="py-12 text-center text-xs font-mono text-[var(--muted)]">
+                                    No unique devices found matching your criteria.
+                                </div>
+                            ) : (
+                                <div className="divide-y divide-[var(--line)]">
+                                    {paginatedDeviceGroups.map((group, groupIdx) => {
+                                        const isExpanded = expandedDevices[group.deviceId] ?? (groupIdx === 0 && devicePage === 1);
+                                        return (
+                                            <div key={group.deviceId} className="transition-colors">
+                                                {/* Device Summary Header Bar */}
+                                                <div
+                                                    onClick={() => toggleDevice(group.deviceId)}
+                                                    className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 p-4 bg-[var(--surface)] hover:bg-[var(--surface-2)]/60 cursor-pointer transition-colors select-none"
+                                                >
+                                                    <div className="flex items-start sm:items-center gap-3">
+                                                        {/* Chevron Indicator */}
+                                                        <span className="p-1 rounded bg-[var(--surface-2)] text-[var(--muted)] mt-0.5 sm:mt-0 transition-transform duration-200">
+                                                            <svg
+                                                                className={`w-3.5 h-3.5 transition-transform duration-200 ${isExpanded ? "rotate-90 text-[var(--accent)]" : ""}`}
+                                                                fill="none"
+                                                                viewBox="0 0 24 24"
+                                                                stroke="currentColor"
+                                                            >
+                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 5l7 7-7 7" />
+                                                            </svg>
+                                                        </span>
+
+                                                        {/* Device Icon */}
+                                                        <span className="text-xl">
+                                                            {group.deviceName.toLowerCase().includes("laptop") ? "💻" : group.deviceName.toLowerCase().includes("desktop") ? "🖥️" : "📱"}
+                                                        </span>
+
+                                                        {/* Device ID and Meta */}
+                                                        <div>
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="text-xs font-mono font-bold text-[var(--fg)]">
+                                                                    {group.deviceId}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono capitalize bg-[var(--surface-2)] text-[var(--accent)] border border-[var(--line)] font-semibold">
+                                                                    {group.deviceName}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--line)]">
+                                                                    {group.osName}
+                                                                </span>
+                                                            </div>
+                                                            <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-mono text-[var(--muted)]">
+                                                                <span className="flex items-center gap-1">
+                                                                    <svg className="w-3 h-3 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                                                    </svg>
+                                                                    {group.location}
+                                                                </span>
+                                                                <span>•</span>
+                                                                <span className="text-[var(--faint)]">IP: {group.ipAddress}</span>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Right side stats */}
+                                                    <div className="flex items-center gap-3 self-end lg:self-center">
+                                                        <div className="text-right font-mono">
+                                                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30">
+                                                                {group.eventCount} event{group.eventCount === 1 ? "" : "s"}
+                                                            </span>
+                                                            <div className="text-[10px] text-[var(--muted)] mt-1">
+                                                                Last active: {formatRelativeTime(group.lastActiveAt)}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Nested Table for this Device */}
+                                                {isExpanded && (
+                                                    <div className="border-t border-[var(--line)] bg-[var(--canvas)]/50 p-4 space-y-3">
+                                                        {/* Device Ribbon */}
+                                                        <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-lg bg-[var(--surface-2)] text-xs font-mono border border-[var(--line)]">
+                                                            <div className="flex flex-wrap items-center gap-3 text-[var(--muted)]">
+                                                                <span>First Seen: <strong className="text-[var(--fg)]">{group.firstSeenAt ? new Date(group.firstSeenAt).toLocaleString() : "N/A"}</strong></span>
+                                                                <span>•</span>
+                                                                <span>Top Feature: <strong className="text-[var(--accent)] capitalize">{group.topFeature.name} ({group.topFeature.count}x)</strong></span>
+                                                            </div>
+                                                            <button
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleExportDeviceCsv(group);
+                                                                }}
+                                                                className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded bg-[var(--surface)] hover:bg-[var(--surface-3)] text-[var(--fg)] text-[11px] border border-[var(--line)] transition-colors cursor-pointer"
+                                                            >
+                                                                <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                                                </svg>
+                                                                Export Device Events
+                                                            </button>
+                                                        </div>
+
+                                                        {/* Nested Sub-Table */}
+                                                        <div className="overflow-x-auto rounded-lg border border-[var(--line)] bg-[var(--surface)] shadow-xs">
+                                                            <table className="w-full text-left text-xs font-mono border-collapse">
+                                                                <thead>
+                                                                    <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Timestamp</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Feature</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Action</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Item / Target</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Status</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Actions</th>
+                                                                    </tr>
+                                                                </thead>
+                                                                <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
+                                                                    {group.events.map((evt) => (
+                                                                        <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/40 transition-colors">
+                                                                            <td className="py-2 px-3 whitespace-nowrap text-[var(--muted)]">
+                                                                                {formatRelativeTime(evt.occurred_at || evt.received_at)}
+                                                                                <span className="text-[10px] text-[var(--faint)] ml-1.5">
+                                                                                    {(evt.occurred_at || evt.received_at).split("T")[1]?.slice(0, 8)}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="py-2 px-3 whitespace-nowrap">
+                                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${getFeatureBadge(evt.feature_name)}`}>
+                                                                                    {evt.feature_name}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="py-2 px-3 whitespace-nowrap font-medium text-[var(--fg)]">
+                                                                                {evt.action}
+                                                                            </td>
+                                                                            <td className="py-2 px-3 whitespace-nowrap text-[var(--accent-2)]">
+                                                                                {evt.item_name || evt.item_id || "—"}
+                                                                            </td>
+                                                                            <td className="py-2 px-3 whitespace-nowrap">
+                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+                                                                                    {evt.status || "ok"}
+                                                                                </span>
+                                                                            </td>
+                                                                            <td className="py-2 px-3 whitespace-nowrap text-right">
+                                                                                <div className="flex items-center justify-end gap-1.5">
+                                                                                    {evt.metadata && (
+                                                                                        <button
+                                                                                            onClick={() => setSelectedMetadataEvent(evt)}
+                                                                                            className="px-2 py-0.5 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                                                        >
+                                                                                            JSON
+                                                                                        </button>
+                                                                                    )}
+                                                                                    <button
+                                                                                        onClick={() => handleDeleteEvent(evt.event_id)}
+                                                                                        disabled={deletingId === evt.event_id}
+                                                                                        title="Delete this row from CSV"
+                                                                                        className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                                                                    >
+                                                                                        {deletingId === evt.event_id ? (
+                                                                                            <span className="w-2 h-2 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                                                                                        ) : (
+                                                                                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                            </svg>
+                                                                                        )}
+                                                                                        <span>Delete</span>
+                                                                                    </button>
+                                                                                </div>
+                                                                            </td>
+                                                                        </tr>
+                                                                    ))}
+                                                                </tbody>
+                                                            </table>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
                             )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <button
-                                onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                disabled={currentPage === 1}
-                                className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
-                            >
-                                Prev
-                            </button>
-                            <span>
-                                Page {currentPage} of {totalPages}
-                            </span>
-                            <button
-                                onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                disabled={currentPage === totalPages}
-                                className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
-                            >
-                                Next
-                            </button>
-                        </div>
-                    </div>
+
+                            {/* Device Pagination Footer */}
+                            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
+                                <div>
+                                    Showing {deviceGroups.length === 0 ? 0 : (devicePage - 1) * devicesPerPage + 1} to{" "}
+                                    {Math.min(devicePage * devicesPerPage, deviceGroups.length)} of {deviceGroups.length} unique devices (totaling {filteredEvents.length} events)
+                                </div>
+                                {totalDevicePages > 1 && (
+                                    <div className="flex items-center gap-2">
+                                        <button
+                                            onClick={() => setDevicePage((p) => Math.max(1, p - 1))}
+                                            disabled={devicePage === 1}
+                                            className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                        >
+                                            Prev
+                                        </button>
+                                        <span>
+                                            Page {devicePage} of {totalDevicePages}
+                                        </span>
+                                        <button
+                                            onClick={() => setDevicePage((p) => Math.min(totalDevicePages, p + 1))}
+                                            disabled={devicePage === totalDevicePages}
+                                            className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                        >
+                                            Next
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        </>
+                    )}
                 </div>
             </div>
 
