@@ -33,7 +33,7 @@ export default function QuickDbActivityDashboard({
     const [viewMode, setViewMode] = useState<"stream" | "devices">("stream");
     const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
     const [devicePage, setDevicePage] = useState(1);
-    const devicesPerPage = 10;
+    const [devicesPerPage, setDevicesPerPage] = useState<number | "all">(10);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
     const [selectedDevice, setSelectedDevice] = useState<string>("all");
@@ -44,7 +44,7 @@ export default function QuickDbActivityDashboard({
     const [startDate, setStartDate] = useState<string>("");
     const [endDate, setEndDate] = useState<string>("");
     const [selectedMetadataEvent, setSelectedMetadataEvent] = useState<ParsedActivityEvent | null>(null);
-    const [pageSize, setPageSize] = useState(25);
+    const [pageSize, setPageSize] = useState<number | "all">(25);
     const [currentPage, setCurrentPage] = useState(1);
     const [deletingId, setDeletingId] = useState<string | null>(null);
     const [showClearModal, setShowClearModal] = useState<boolean>(false);
@@ -309,8 +309,9 @@ export default function QuickDbActivityDashboard({
     }, [filteredEvents, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedStatus, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
 
     // Pagination for flat stream
-    const totalPages = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
+    const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filteredEvents.length / pageSize));
     const paginatedEvents = useMemo(() => {
+        if (pageSize === "all") return filteredEvents;
         const start = (currentPage - 1) * pageSize;
         return filteredEvents.slice(start, start + pageSize);
     }, [filteredEvents, currentPage, pageSize]);
@@ -390,8 +391,9 @@ export default function QuickDbActivityDashboard({
         return groups;
     }, [filteredEvents]);
 
-    const totalDevicePages = Math.max(1, Math.ceil(deviceGroups.length / devicesPerPage));
+    const totalDevicePages = devicesPerPage === "all" ? 1 : Math.max(1, Math.ceil(deviceGroups.length / devicesPerPage));
     const paginatedDeviceGroups = useMemo(() => {
+        if (devicesPerPage === "all") return deviceGroups;
         const start = (devicePage - 1) * devicesPerPage;
         return deviceGroups.slice(start, start + devicesPerPage);
     }, [deviceGroups, devicePage, devicesPerPage]);
@@ -1387,20 +1389,66 @@ export default function QuickDbActivityDashboard({
                             </div>
                         </div>
 
-                        {viewMode === "devices" && (
+                        {/* Quick Page Size & Action Controls in Table Header */}
+                        {viewMode === "stream" ? (
                             <div className="flex items-center gap-2 text-xs font-mono self-end sm:self-auto">
-                                <button
-                                    onClick={expandAllDevices}
-                                    className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--fg)] transition-colors cursor-pointer"
-                                >
-                                    Expand All
-                                </button>
-                                <button
-                                    onClick={collapseAllDevices}
-                                    className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
-                                >
-                                    Collapse All
-                                </button>
+                                <span className="text-[var(--muted)]">Rows:</span>
+                                <div className="inline-flex p-0.5 rounded-lg bg-[var(--surface-3)] border border-[var(--line)]">
+                                    {([10, 25, 50, 100, "all"] as const).map((size) => (
+                                        <button
+                                            key={size}
+                                            onClick={() => {
+                                                setPageSize(size);
+                                                setCurrentPage(1);
+                                            }}
+                                            className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                                pageSize === size
+                                                    ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                                    : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]"
+                                            }`}
+                                        >
+                                            {size === "all" ? "All" : size}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            <div className="flex flex-wrap items-center gap-2 sm:gap-3 text-xs font-mono self-end sm:self-auto">
+                                <div className="flex items-center gap-1.5">
+                                    <span className="text-[var(--muted)]">Show:</span>
+                                    <div className="inline-flex p-0.5 rounded-lg bg-[var(--surface-3)] border border-[var(--line)]">
+                                        {([5, 10, 25, 50, "all"] as const).map((size) => (
+                                            <button
+                                                key={size}
+                                                onClick={() => {
+                                                    setDevicesPerPage(size);
+                                                    setDevicePage(1);
+                                                }}
+                                                className={`px-2.5 py-1 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                                    devicesPerPage === size
+                                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)]"
+                                                }`}
+                                            >
+                                                {size === "all" ? "All" : size}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1.5">
+                                    <button
+                                        onClick={expandAllDevices}
+                                        className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--fg)] transition-colors cursor-pointer"
+                                    >
+                                        Expand All
+                                    </button>
+                                    <button
+                                        onClick={collapseAllDevices}
+                                        className="px-2.5 py-1 rounded-md bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
+                                    >
+                                        Collapse All
+                                    </button>
+                                </div>
                             </div>
                         )}
                     </div>
@@ -1496,27 +1544,74 @@ export default function QuickDbActivityDashboard({
 
                             {/* Pagination Footer */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
-                                <div>
-                                    Showing {filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1} to{" "}
-                                    {Math.min(currentPage * pageSize, filteredEvents.length)} of {filteredEvents.length} events{" "}
-                                    {filteredEvents.length !== events.length && (
-                                        <span className="text-[var(--accent)] font-semibold">(filtered from {events.length} total)</span>
-                                    )}
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div>
+                                        {pageSize === "all" ? (
+                                            <>
+                                                Showing all <span className="font-semibold text-[var(--fg)]">{filteredEvents.length.toLocaleString()}</span> events
+                                            </>
+                                        ) : (
+                                            <>
+                                                Showing{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {filteredEvents.length === 0 ? 0 : (currentPage - 1) * pageSize + 1}
+                                                </span>{" "}
+                                                to{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {Math.min(currentPage * pageSize, filteredEvents.length)}
+                                                </span>{" "}
+                                                of{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {filteredEvents.length.toLocaleString()}
+                                                </span>{" "}
+                                                events
+                                            </>
+                                        )}
+                                        {filteredEvents.length !== events.length && (
+                                            <span className="text-[var(--accent)] font-semibold ml-1.5">
+                                                (filtered from {events.length.toLocaleString()} total)
+                                            </span>
+                                        )}
+                                    </div>
+
+                                    {/* Rows per page selector */}
+                                    <div className="flex items-center gap-1.5 pl-3 border-l border-[var(--line)]">
+                                        <span className="text-[var(--muted)]">Rows:</span>
+                                        <div className="inline-flex rounded-md bg-[var(--surface-2)] p-0.5 border border-[var(--line)]">
+                                            {([10, 25, 50, 100, "all"] as const).map((size) => (
+                                                <button
+                                                    key={size}
+                                                    onClick={() => {
+                                                        setPageSize(size);
+                                                        setCurrentPage(1);
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-all cursor-pointer ${
+                                                        pageSize === size
+                                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                                            : "text-[var(--muted)] hover:text-[var(--fg)]"
+                                                    }`}
+                                                >
+                                                    {size === "all" ? "All" : size}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div className="flex items-center gap-2">
                                     <button
                                         onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                                        disabled={currentPage === 1}
+                                        disabled={currentPage === 1 || pageSize === "all"}
                                         className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
                                     >
                                         Prev
                                     </button>
                                     <span>
-                                        Page {currentPage} of {totalPages}
+                                        Page {pageSize === "all" ? 1 : currentPage} of {pageSize === "all" ? 1 : totalPages}
                                     </span>
                                     <button
                                         onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
-                                        disabled={currentPage === totalPages}
+                                        disabled={currentPage === totalPages || pageSize === "all"}
                                         className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
                                     >
                                         Next
@@ -1704,31 +1799,74 @@ export default function QuickDbActivityDashboard({
 
                             {/* Device Pagination Footer */}
                             <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-4 border-t border-[var(--line)] text-xs font-mono text-[var(--muted)]">
-                                <div>
-                                    Showing {deviceGroups.length === 0 ? 0 : (devicePage - 1) * devicesPerPage + 1} to{" "}
-                                    {Math.min(devicePage * devicesPerPage, deviceGroups.length)} of {deviceGroups.length} unique devices (totaling {filteredEvents.length} events)
-                                </div>
-                                {totalDevicePages > 1 && (
-                                    <div className="flex items-center gap-2">
-                                        <button
-                                            onClick={() => setDevicePage((p) => Math.max(1, p - 1))}
-                                            disabled={devicePage === 1}
-                                            className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
-                                        >
-                                            Prev
-                                        </button>
-                                        <span>
-                                            Page {devicePage} of {totalDevicePages}
-                                        </span>
-                                        <button
-                                            onClick={() => setDevicePage((p) => Math.min(totalDevicePages, p + 1))}
-                                            disabled={devicePage === totalDevicePages}
-                                            className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
-                                        >
-                                            Next
-                                        </button>
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <div>
+                                        {devicesPerPage === "all" ? (
+                                            <>
+                                                Showing all <span className="font-semibold text-[var(--fg)]">{deviceGroups.length.toLocaleString()}</span> unique devices (totaling {filteredEvents.length.toLocaleString()} events)
+                                            </>
+                                        ) : (
+                                            <>
+                                                Showing{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {deviceGroups.length === 0 ? 0 : (devicePage - 1) * devicesPerPage + 1}
+                                                </span>{" "}
+                                                to{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {Math.min(devicePage * devicesPerPage, deviceGroups.length)}
+                                                </span>{" "}
+                                                of{" "}
+                                                <span className="font-semibold text-[var(--fg)]">
+                                                    {deviceGroups.length.toLocaleString()}
+                                                </span>{" "}
+                                                unique devices (totaling {filteredEvents.length.toLocaleString()} events)
+                                            </>
+                                        )}
                                     </div>
-                                )}
+
+                                    {/* Devices per page selector */}
+                                    <div className="flex items-center gap-1.5 pl-3 border-l border-[var(--line)]">
+                                        <span className="text-[var(--muted)]">Show:</span>
+                                        <div className="inline-flex rounded-md bg-[var(--surface-2)] p-0.5 border border-[var(--line)]">
+                                            {([5, 10, 25, 50, "all"] as const).map((size) => (
+                                                <button
+                                                    key={size}
+                                                    onClick={() => {
+                                                        setDevicesPerPage(size);
+                                                        setDevicePage(1);
+                                                    }}
+                                                    className={`px-2 py-0.5 rounded text-[11px] font-mono font-medium transition-all cursor-pointer ${
+                                                        devicesPerPage === size
+                                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                                            : "text-[var(--muted)] hover:text-[var(--fg)]"
+                                                    }`}
+                                                >
+                                                    {size === "all" ? "All" : size}
+                                                </button>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => setDevicePage((p) => Math.max(1, p - 1))}
+                                        disabled={devicePage === 1 || devicesPerPage === "all"}
+                                        className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                    >
+                                        Prev
+                                    </button>
+                                    <span>
+                                        Page {devicesPerPage === "all" ? 1 : devicePage} of {devicesPerPage === "all" ? 1 : totalDevicePages}
+                                    </span>
+                                    <button
+                                        onClick={() => setDevicePage((p) => Math.min(totalDevicePages, p + 1))}
+                                        disabled={devicePage === totalDevicePages || devicesPerPage === "all"}
+                                        className="px-2.5 py-1 rounded bg-[var(--surface-2)] border border-[var(--line)] disabled:opacity-40 hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
+                                    >
+                                        Next
+                                    </button>
+                                </div>
                             </div>
                         </>
                     )}
