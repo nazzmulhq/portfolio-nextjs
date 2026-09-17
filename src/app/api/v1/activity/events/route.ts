@@ -10,11 +10,18 @@ export async function GET(req: NextRequest) {
         const date = url.searchParams.get("date");
         const startDate = url.searchParams.get("start_date");
         const endDate = url.searchParams.get("end_date");
+        const q = url.searchParams.get("q")?.toLowerCase().trim();
+        const feature = url.searchParams.get("feature")?.toLowerCase();
+        const deviceId = url.searchParams.get("device_id");
+        const os = url.searchParams.get("os")?.toLowerCase();
+        const status = url.searchParams.get("status")?.toLowerCase();
 
         const data = await activityCsvService.getParsedEvents();
         let events = data.events;
 
-        if (range || date || startDate || endDate) {
+        const hasFilter = Boolean(range || date || startDate || endDate || q || feature || deviceId || os || status);
+
+        if (hasFilter) {
             const now = new Date();
             const nowTime = now.getTime();
             const todayUtc = now.toISOString().split("T")[0];
@@ -23,34 +30,55 @@ export async function GET(req: NextRequest) {
             const thirtyDaysAgo = nowTime - 30 * 24 * 60 * 60 * 1000;
 
             events = events.filter((evt) => {
-                const rawDate = evt.occurred_at || evt.received_at;
-                if (!rawDate) return false;
-                const d = new Date(rawDate);
-                const evtTime = d.getTime();
-                const evtUtc = rawDate.split("T")[0];
-                const evtLocal = !isNaN(evtTime)
-                    ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
-                    : evtUtc;
+                if (q) {
+                    const matchText =
+                        evt.event_id.toLowerCase().includes(q) ||
+                        evt.item_name.toLowerCase().includes(q) ||
+                        evt.item_id.toLowerCase().includes(q) ||
+                        evt.feature_name.toLowerCase().includes(q) ||
+                        evt.action.toLowerCase().includes(q) ||
+                        evt.device_id.toLowerCase().includes(q) ||
+                        evt.device_name.toLowerCase().includes(q) ||
+                        evt.location.toLowerCase().includes(q) ||
+                        evt.ip_address.toLowerCase().includes(q);
+                    if (!matchText) return false;
+                }
 
-                if (range === "today" || range === "day") {
-                    const matchesToday = evtUtc === todayUtc || evtLocal === todayUtc || (evtTime >= (nowTime - 24 * 60 * 60 * 1000) && evtTime <= nowTime);
-                    if (!matchesToday) return false;
+                if (feature && evt.feature_name.toLowerCase() !== feature) return false;
+                if (deviceId && evt.device_id !== deviceId) return false;
+                if (os && evt.os_name.toLowerCase() !== os) return false;
+                if (status && (evt.status || "synced").toLowerCase() !== status) return false;
+
+                const rawDate = evt.occurred_at || evt.received_at;
+                if (range || date || startDate || endDate) {
+                    if (!rawDate) return false;
+                    const d = new Date(rawDate);
+                    const evtTime = d.getTime();
+                    const evtUtc = rawDate.split("T")[0];
+                    const evtLocal = !isNaN(evtTime)
+                        ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`
+                        : evtUtc;
+
+                    if (range === "today" || range === "day") {
+                        const matchesToday = evtUtc === todayUtc || evtLocal === todayUtc || (evtTime >= (nowTime - 24 * 60 * 60 * 1000) && evtTime <= nowTime);
+                        if (!matchesToday) return false;
+                    }
+                    if (range === "yesterday") {
+                        const matchesYesterday = evtUtc === yesterdayUtc || evtLocal === yesterdayUtc;
+                        if (!matchesYesterday) return false;
+                    }
+                    if (range === "7d" || range === "week") {
+                        if (evtTime < sevenDaysAgo) return false;
+                    }
+                    if (range === "30d" || range === "month") {
+                        if (evtTime < thirtyDaysAgo) return false;
+                    }
+                    if (date) {
+                        if (evtUtc !== date && evtLocal !== date) return false;
+                    }
+                    if (startDate && evtUtc < startDate && evtLocal < startDate) return false;
+                    if (endDate && evtUtc > endDate && evtLocal > endDate) return false;
                 }
-                if (range === "yesterday") {
-                    const matchesYesterday = evtUtc === yesterdayUtc || evtLocal === yesterdayUtc;
-                    if (!matchesYesterday) return false;
-                }
-                if (range === "7d" || range === "week") {
-                    if (evtTime < sevenDaysAgo) return false;
-                }
-                if (range === "30d" || range === "month") {
-                    if (evtTime < thirtyDaysAgo) return false;
-                }
-                if (date) {
-                    if (evtUtc !== date && evtLocal !== date) return false;
-                }
-                if (startDate && evtUtc < startDate && evtLocal < startDate) return false;
-                if (endDate && evtUtc > endDate && evtLocal > endDate) return false;
 
                 return true;
             });

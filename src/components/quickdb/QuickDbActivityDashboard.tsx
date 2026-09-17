@@ -36,7 +36,9 @@ export default function QuickDbActivityDashboard({
     const devicesPerPage = 10;
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
+    const [selectedDevice, setSelectedDevice] = useState<string>("all");
     const [selectedOs, setSelectedOs] = useState<string>("all");
+    const [selectedStatus, setSelectedStatus] = useState<string>("all");
     const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "7d" | "30d" | "single" | "range">("all");
     const [singleDate, setSingleDate] = useState<string>("");
     const [startDate, setStartDate] = useState<string>("");
@@ -123,7 +125,85 @@ export default function QuickDbActivityDashboard({
         return () => clearInterval(interval);
     }, []);
 
-    // Filtered events with global search, feature, OS, and date filtering support
+    // Dynamic lists of unique features, devices, platforms, statuses with event counts
+    const availableFeatures = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const evt of events) {
+            const f = evt.feature_name || "other";
+            counts[f] = (counts[f] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+    }, [events]);
+
+    const availableDevices = useMemo(() => {
+        const map = new Map<string, { id: string; name: string; count: number }>();
+        for (const evt of events) {
+            const id = evt.device_id || "unknown";
+            const existing = map.get(id);
+            if (existing) {
+                existing.count++;
+                if (evt.device_name && existing.name === "Unknown") existing.name = evt.device_name;
+            } else {
+                map.set(id, {
+                    id,
+                    name: evt.device_name || "Unknown",
+                    count: 1
+                });
+            }
+        }
+        return Array.from(map.values()).sort((a, b) => b.count - a.count);
+    }, [events]);
+
+    const availablePlatforms = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const evt of events) {
+            const os = evt.os_name || "unknown";
+            counts[os] = (counts[os] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+    }, [events]);
+
+    const availableStatuses = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const evt of events) {
+            const s = evt.status || "synced";
+            counts[s] = (counts[s] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+    }, [events]);
+
+    const activeFilterCount = useMemo(() => {
+        let count = 0;
+        if (searchQuery.trim()) count++;
+        if (dateFilter !== "all") count++;
+        if (selectedFeature !== "all") count++;
+        if (selectedDevice !== "all") count++;
+        if (selectedOs !== "all") count++;
+        if (selectedStatus !== "all") count++;
+        return count;
+    }, [searchQuery, dateFilter, selectedFeature, selectedDevice, selectedOs, selectedStatus]);
+
+    const handleResetAllFilters = () => {
+        setSearchQuery("");
+        setSelectedFeature("all");
+        setSelectedDevice("all");
+        setSelectedOs("all");
+        setSelectedStatus("all");
+        setDateFilter("all");
+        setSingleDate("");
+        setStartDate("");
+        setEndDate("");
+        setCurrentPage(1);
+        setDevicePage(1);
+    };
+
+    // Filtered events with global search, feature, OS, device, status, and date filtering support
     const filteredEvents = useMemo(() => {
         const now = new Date();
         const nowTime = now.getTime();
@@ -150,6 +230,7 @@ export default function QuickDbActivityDashboard({
                 evt.feature_name.toLowerCase().includes(query) ||
                 evt.action.toLowerCase().includes(query) ||
                 evt.device_id.toLowerCase().includes(query) ||
+                evt.device_name.toLowerCase().includes(query) ||
                 evt.location.toLowerCase().includes(query) ||
                 evt.ip_address.toLowerCase().includes(query);
 
@@ -157,9 +238,17 @@ export default function QuickDbActivityDashboard({
                 selectedFeature === "all" ||
                 evt.feature_name.toLowerCase() === selectedFeature.toLowerCase();
 
+            const matchesDevice =
+                selectedDevice === "all" ||
+                evt.device_id === selectedDevice;
+
             const matchesOs =
                 selectedOs === "all" ||
                 evt.os_name.toLowerCase() === selectedOs.toLowerCase();
+
+            const matchesStatus =
+                selectedStatus === "all" ||
+                (evt.status || "synced").toLowerCase() === selectedStatus.toLowerCase();
 
             // Date filtering
             let matchesDate = true;
@@ -196,16 +285,18 @@ export default function QuickDbActivityDashboard({
                 }
             }
 
-            return matchesQuery && matchesFeature && matchesOs && matchesDate;
+            return matchesQuery && matchesFeature && matchesDevice && matchesOs && matchesStatus && matchesDate;
         });
-    }, [events, searchQuery, selectedFeature, selectedOs, dateFilter, singleDate, startDate, endDate]);
+    }, [events, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedStatus, dateFilter, singleDate, startDate, endDate]);
 
     // Derived summary: dynamically recalculate metrics for filtered view
     const summary = useMemo(() => {
         const isFilterActive =
             Boolean(searchQuery) ||
             selectedFeature !== "all" ||
+            selectedDevice !== "all" ||
             selectedOs !== "all" ||
+            selectedStatus !== "all" ||
             dateFilter !== "all" ||
             Boolean(singleDate) ||
             Boolean(startDate) ||
@@ -215,7 +306,7 @@ export default function QuickDbActivityDashboard({
             return rawSummary;
         }
         return computeActivitySummary(filteredEvents);
-    }, [filteredEvents, searchQuery, selectedFeature, selectedOs, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
+    }, [filteredEvents, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedStatus, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
 
     // Pagination for flat stream
     const totalPages = Math.max(1, Math.ceil(filteredEvents.length / pageSize));
@@ -532,6 +623,550 @@ export default function QuickDbActivityDashboard({
                     </div>
                 </div>
 
+                {/* Top Global Filter Toolbar */}
+                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 sm:p-5 shadow-sm space-y-4">
+                    {/* Header: Title, Matches Count & Reset All */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 border-b border-[var(--line)] pb-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                            <span className="p-1.5 rounded-md bg-[var(--accent-soft)] text-[var(--accent)]">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                </svg>
+                            </span>
+                            <h2 className="text-xs font-mono font-semibold uppercase tracking-wider text-[var(--fg)]">
+                                Global Activity Filters
+                            </h2>
+                            {activeFilterCount > 0 && (
+                                <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-mono font-medium bg-[var(--accent-soft)] text-[var(--accent)] border border-[var(--accent)]/30">
+                                    {activeFilterCount} active
+                                </span>
+                            )}
+                            <span className="text-xs font-mono text-[var(--muted)]">
+                                Showing{" "}
+                                <span className="text-[var(--fg)] font-semibold">
+                                    {filteredEvents.length.toLocaleString()}
+                                </span>{" "}
+                                of {events.length.toLocaleString()} events
+                                {events.length > filteredEvents.length && (
+                                    <span className="text-[var(--muted)] ml-1">
+                                        ({events.length - filteredEvents.length} filtered out)
+                                    </span>
+                                )}
+                            </span>
+                        </div>
+
+                        {activeFilterCount > 0 && (
+                            <button
+                                onClick={handleResetAllFilters}
+                                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-md text-xs font-mono font-medium text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer"
+                                title="Reset all applied filters"
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Reset All Filters
+                            </button>
+                        )}
+                    </div>
+
+                    {/* Row 1: Search & Date Presets */}
+                    <div className="flex flex-col lg:flex-row items-stretch lg:items-center gap-3">
+                        {/* Search Input */}
+                        <div className="relative flex-1 min-w-[260px]">
+                            <svg
+                                className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-[var(--muted)] pointer-events-none"
+                                fill="none"
+                                viewBox="0 0 24 24"
+                                stroke="currentColor"
+                            >
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                            <input
+                                type="text"
+                                value={searchQuery}
+                                onChange={(e) => {
+                                    setSearchQuery(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                placeholder="Search by ID, action, feature, device, OS, IP..."
+                                className="w-full pl-10 pr-9 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] transition-colors"
+                            />
+                            {searchQuery && (
+                                <button
+                                    onClick={() => {
+                                        setSearchQuery("");
+                                        setCurrentPage(1);
+                                        setDevicePage(1);
+                                    }}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[var(--muted)] hover:text-[var(--fg)] p-1 rounded-md transition-colors cursor-pointer"
+                                    title="Clear search"
+                                >
+                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                                    </svg>
+                                </button>
+                            )}
+                        </div>
+
+                        {/* Quick Date Presets */}
+                        <div className="flex flex-wrap items-center gap-1.5 p-1 rounded-lg bg-[var(--surface-2)] border border-[var(--line)]">
+                            <button
+                                onClick={() => {
+                                    setDateFilter("all");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "all"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                All Time
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("today");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "today"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                Today
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("yesterday");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "yesterday"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                Yesterday
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("7d");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "7d"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                7 Days
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("30d");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "30d"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                30 Days
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("single");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "single"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                                Custom Date
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setDateFilter("range");
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-mono font-medium transition-all cursor-pointer ${
+                                    dateFilter === "range"
+                                        ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
+                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
+                                }`}
+                            >
+                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
+                                </svg>
+                                Date Range
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Row 2: Dynamic Dropdown Selectors (Feature, Device, Platform, Status) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                        {/* Feature Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+                                <span>Feature Module</span>
+                                {selectedFeature !== "all" && (
+                                    <button
+                                        onClick={() => setSelectedFeature("all")}
+                                        className="text-[var(--accent)] hover:underline cursor-pointer lowercase font-normal"
+                                    >
+                                        reset
+                                    </button>
+                                )}
+                            </label>
+                            <select
+                                value={selectedFeature}
+                                onChange={(e) => {
+                                    setSelectedFeature(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border text-[var(--fg)] focus:outline-none transition-colors cursor-pointer ${
+                                    selectedFeature !== "all"
+                                        ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30"
+                                        : "border-[var(--line)] focus:border-[var(--accent)]"
+                                }`}
+                            >
+                                <option value="all">All Features ({events.length})</option>
+                                {availableFeatures.map((f) => (
+                                    <option key={f.name} value={f.name}>
+                                        {f.name} ({f.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Device Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+                                <span>Specific Device</span>
+                                {selectedDevice !== "all" && (
+                                    <button
+                                        onClick={() => setSelectedDevice("all")}
+                                        className="text-[var(--accent)] hover:underline cursor-pointer lowercase font-normal"
+                                    >
+                                        reset
+                                    </button>
+                                )}
+                            </label>
+                            <select
+                                value={selectedDevice}
+                                onChange={(e) => {
+                                    setSelectedDevice(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border text-[var(--fg)] focus:outline-none transition-colors cursor-pointer ${
+                                    selectedDevice !== "all"
+                                        ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30"
+                                        : "border-[var(--line)] focus:border-[var(--accent)]"
+                                }`}
+                            >
+                                <option value="all">All Devices ({availableDevices.length})</option>
+                                {availableDevices.map((d) => (
+                                    <option key={d.id} value={d.id}>
+                                        {d.name} · {d.id.length > 12 ? `${d.id.slice(0, 10)}...` : d.id} ({d.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Platform / OS Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+                                <span>Platform / OS</span>
+                                {selectedOs !== "all" && (
+                                    <button
+                                        onClick={() => setSelectedOs("all")}
+                                        className="text-[var(--accent)] hover:underline cursor-pointer lowercase font-normal"
+                                    >
+                                        reset
+                                    </button>
+                                )}
+                            </label>
+                            <select
+                                value={selectedOs}
+                                onChange={(e) => {
+                                    setSelectedOs(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border text-[var(--fg)] focus:outline-none transition-colors cursor-pointer ${
+                                    selectedOs !== "all"
+                                        ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30"
+                                        : "border-[var(--line)] focus:border-[var(--accent)]"
+                                }`}
+                            >
+                                <option value="all">All Platforms ({availablePlatforms.length})</option>
+                                {availablePlatforms.map((p) => (
+                                    <option key={p.name} value={p.name}>
+                                        {p.name} ({p.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Event Status Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+                                <span>Event Status</span>
+                                {selectedStatus !== "all" && (
+                                    <button
+                                        onClick={() => setSelectedStatus("all")}
+                                        className="text-[var(--accent)] hover:underline cursor-pointer lowercase font-normal"
+                                    >
+                                        reset
+                                    </button>
+                                )}
+                            </label>
+                            <select
+                                value={selectedStatus}
+                                onChange={(e) => {
+                                    setSelectedStatus(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border text-[var(--fg)] focus:outline-none transition-colors cursor-pointer ${
+                                    selectedStatus !== "all"
+                                        ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30"
+                                        : "border-[var(--line)] focus:border-[var(--accent)]"
+                                }`}
+                            >
+                                <option value="all">All Statuses ({events.length})</option>
+                                {availableStatuses.map((s) => (
+                                    <option key={s.name} value={s.name}>
+                                        {s.name.toUpperCase()} ({s.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+                    </div>
+
+                    {/* Row 3: Conditional Custom Date / Range Inputs */}
+                    {dateFilter === "single" && (
+                        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--line)]">
+                            <span className="text-xs font-mono font-medium text-[var(--fg)]">Select Date:</span>
+                            <input
+                                type="date"
+                                value={singleDate}
+                                onChange={(e) => {
+                                    setSingleDate(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className="px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--surface)] border border-[var(--line)] text-[var(--fg)] focus:outline-none focus:border-[var(--accent)]"
+                            />
+                            <button
+                                onClick={() => {
+                                    const today = new Date().toISOString().split("T")[0];
+                                    setSingleDate(today);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className="px-2.5 py-1.5 rounded-md text-xs font-mono bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
+                            >
+                                Today
+                            </button>
+                            {singleDate && (
+                                <button
+                                    onClick={() => {
+                                        setSingleDate("");
+                                        setCurrentPage(1);
+                                        setDevicePage(1);
+                                    }}
+                                    className="text-xs font-mono text-rose-400 hover:underline cursor-pointer"
+                                >
+                                    Clear
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {dateFilter === "range" && (
+                        <div className="flex flex-wrap items-center gap-3 p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--line)]">
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono text-[var(--muted)]">From:</span>
+                                <input
+                                    type="date"
+                                    value={startDate}
+                                    onChange={(e) => {
+                                        setStartDate(e.target.value);
+                                        setCurrentPage(1);
+                                        setDevicePage(1);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--surface)] border border-[var(--line)] text-[var(--fg)] focus:outline-none focus:border-[var(--accent)]"
+                                />
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <span className="text-xs font-mono text-[var(--muted)]">To:</span>
+                                <input
+                                    type="date"
+                                    value={endDate}
+                                    onChange={(e) => {
+                                        setEndDate(e.target.value);
+                                        setCurrentPage(1);
+                                        setDevicePage(1);
+                                    }}
+                                    className="px-3 py-1.5 rounded-lg text-xs font-mono bg-[var(--surface)] border border-[var(--line)] text-[var(--fg)] focus:outline-none focus:border-[var(--accent)]"
+                                />
+                            </div>
+                            {(startDate || endDate) && (
+                                <button
+                                    onClick={() => {
+                                        setStartDate("");
+                                        setEndDate("");
+                                        setCurrentPage(1);
+                                        setDevicePage(1);
+                                    }}
+                                    className="text-xs font-mono text-rose-400 hover:underline cursor-pointer"
+                                >
+                                    Clear Range
+                                </button>
+                            )}
+                        </div>
+                    )}
+
+                    {/* Row 4: Active Filter Chips Bar */}
+                    {activeFilterCount > 0 && (
+                        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-[var(--line)]">
+                            <span className="text-[11px] font-mono uppercase tracking-wider text-[var(--muted)]">
+                                Applied Filters:
+                            </span>
+
+                            {searchQuery.trim() && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">search:</span>
+                                    <span className="font-semibold">&quot;{searchQuery}&quot;</span>
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove search filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            {dateFilter !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">date:</span>
+                                    <span className="font-semibold">
+                                        {dateFilter === "today"
+                                            ? "Today"
+                                            : dateFilter === "yesterday"
+                                            ? "Yesterday"
+                                            : dateFilter === "7d"
+                                            ? "Past 7 Days"
+                                            : dateFilter === "30d"
+                                            ? "Past 30 Days"
+                                            : dateFilter === "single"
+                                            ? singleDate || "Custom Date"
+                                            : startDate || endDate
+                                            ? `${startDate || "..."} → ${endDate || "..."}`
+                                            : "Date Range"}
+                                    </span>
+                                    <button
+                                        onClick={() => {
+                                            setDateFilter("all");
+                                            setSingleDate("");
+                                            setStartDate("");
+                                            setEndDate("");
+                                        }}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove date filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            {selectedFeature !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">feature:</span>
+                                    <span className="font-semibold text-[var(--accent)]">{selectedFeature}</span>
+                                    <button
+                                        onClick={() => setSelectedFeature("all")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove feature filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            {selectedDevice !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">device:</span>
+                                    <span className="font-semibold text-sky-400">
+                                        {availableDevices.find((d) => d.id === selectedDevice)?.name || selectedDevice}
+                                    </span>
+                                    <button
+                                        onClick={() => setSelectedDevice("all")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove device filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            {selectedOs !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">OS:</span>
+                                    <span className="font-semibold">{selectedOs}</span>
+                                    <button
+                                        onClick={() => setSelectedOs("all")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove OS filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            {selectedStatus !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">status:</span>
+                                    <span className="font-semibold uppercase">{selectedStatus}</span>
+                                    <button
+                                        onClick={() => setSelectedStatus("all")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove status filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
+                            <button
+                                onClick={handleResetAllFilters}
+                                className="text-xs font-mono text-rose-400 hover:underline cursor-pointer ml-auto"
+                            >
+                                Clear all
+                            </button>
+                        </div>
+                    )}
+                </div>
+
                 {/* Hero KPI Cards */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                     {/* Total Events */}
@@ -714,199 +1349,6 @@ export default function QuickDbActivityDashboard({
                             )}
                         </div>
                     </div>
-                </div>
-
-                {/* Filter and Search Toolbar */}
-                <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-4 space-y-3 shadow-sm">
-                    <div className="flex flex-col lg:flex-row gap-3 items-stretch lg:items-center justify-between">
-                        {/* Search Input */}
-                        <div className="relative w-full lg:w-72 shrink-0">
-                            <input
-                                type="text"
-                                placeholder="Search events, features, IPs..."
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                className="w-full px-3.5 py-2 pl-9 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs text-[var(--fg)] placeholder-[var(--muted)] focus:outline-none focus:border-[var(--accent)] font-mono"
-                            />
-                            <svg
-                                className="w-4 h-4 absolute left-3 top-2.5 text-[var(--muted)]"
-                                fill="none"
-                                viewBox="0 0 24 24"
-                                stroke="currentColor"
-                            >
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                        </div>
-
-                        {/* Global Date Filter Quick Pills */}
-                        <div className="flex flex-wrap items-center gap-1 p-1 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] overflow-x-auto">
-                            {[
-                                { id: "all", label: "All Time" },
-                                { id: "today", label: "Today" },
-                                { id: "yesterday", label: "Yesterday" },
-                                { id: "7d", label: "Week (7d)" },
-                                { id: "30d", label: "Month (30d)" },
-                                { id: "single", label: "Custom Date" },
-                                { id: "range", label: "Date Range" }
-                            ].map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    onClick={() => {
-                                        setDateFilter(tab.id as any);
-                                        setCurrentPage(1);
-                                    }}
-                                    className={`px-2.5 py-1 rounded-md text-xs font-mono transition-all cursor-pointer whitespace-nowrap ${
-                                        dateFilter === tab.id
-                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold shadow-xs"
-                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)]"
-                                    }`}
-                                >
-                                    {tab.label}
-                                </button>
-                            ))}
-                        </div>
-
-                        {/* Dropdowns & Reset */}
-                        <div className="flex flex-wrap items-center gap-2 justify-start lg:justify-end">
-                            {/* Feature Filter */}
-                            <select
-                                value={selectedFeature}
-                                onChange={(e) => {
-                                    setSelectedFeature(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                className="px-3 py-2 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                            >
-                                <option value="all">All Features</option>
-                                <option value="table">Tables</option>
-                                <option value="query">Query Console</option>
-                                <option value="erd">ERD Diagram</option>
-                                <option value="ai">AI Assistant</option>
-                                <option value="tools">Tools</option>
-                            </select>
-
-                            {/* OS Filter */}
-                            <select
-                                value={selectedOs}
-                                onChange={(e) => {
-                                    setSelectedOs(e.target.value);
-                                    setCurrentPage(1);
-                                }}
-                                className="px-3 py-2 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                            >
-                                <option value="all">All Platforms</option>
-                                <option value="mac">macOS</option>
-                                <option value="windows">Windows</option>
-                                <option value="linux">Linux</option>
-                                <option value="ubuntu">Ubuntu</option>
-                            </select>
-
-                            {/* Clear Filters */}
-                            {(searchQuery || selectedFeature !== "all" || selectedOs !== "all" || dateFilter !== "all" || singleDate || startDate || endDate) && (
-                                <button
-                                    onClick={() => {
-                                        setSearchQuery("");
-                                        setSelectedFeature("all");
-                                        setSelectedOs("all");
-                                        setDateFilter("all");
-                                        setSingleDate("");
-                                        setStartDate("");
-                                        setEndDate("");
-                                        setCurrentPage(1);
-                                        setDevicePage(1);
-                                    }}
-                                    className="px-2.5 py-1.5 rounded-lg text-xs font-mono text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
-                                >
-                                    Reset
-                                </button>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Single Custom Date Picker Row */}
-                    {dateFilter === "single" && (
-                        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--line)] text-xs font-mono">
-                            <span className="text-[var(--muted)] flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Pick Specific Date:
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <input
-                                    type="date"
-                                    value={singleDate}
-                                    onChange={(e) => {
-                                        setSingleDate(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                                />
-                            </div>
-                            {singleDate && (
-                                <button
-                                    onClick={() => {
-                                        setSingleDate("");
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2 py-1 rounded text-xs text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
-                                >
-                                    Clear Date
-                                </button>
-                            )}
-                        </div>
-                    )}
-
-                    {/* Custom Date Range Picker Row */}
-                    {dateFilter === "range" && (
-                        <div className="flex flex-wrap items-center gap-3 pt-3 border-t border-[var(--line)] text-xs font-mono">
-                            <span className="text-[var(--muted)] flex items-center gap-1.5">
-                                <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                                </svg>
-                                Custom Date Range:
-                            </span>
-                            <div className="flex items-center gap-2">
-                                <label className="text-[var(--muted)] text-[11px]">From:</label>
-                                <input
-                                    type="date"
-                                    value={startDate}
-                                    onChange={(e) => {
-                                        setStartDate(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                                />
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <label className="text-[var(--muted)] text-[11px]">To:</label>
-                                <input
-                                    type="date"
-                                    value={endDate}
-                                    onChange={(e) => {
-                                        setEndDate(e.target.value);
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] focus:outline-none focus:border-[var(--accent)] cursor-pointer"
-                                />
-                            </div>
-                            {(startDate || endDate) && (
-                                <button
-                                    onClick={() => {
-                                        setStartDate("");
-                                        setEndDate("");
-                                        setCurrentPage(1);
-                                    }}
-                                    className="px-2 py-1 rounded text-xs text-[var(--hot)] hover:bg-[var(--hot-soft)] transition-colors cursor-pointer"
-                                >
-                                    Clear Range
-                                </button>
-                            )}
-                        </div>
-                    )}
                 </div>
 
                 {/* Activity Events Data Table & Nested Devices View */}
