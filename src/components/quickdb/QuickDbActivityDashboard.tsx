@@ -17,7 +17,9 @@ export interface DeviceGroup {
     location: string;
     events: ParsedActivityEvent[];
     eventCount: number;
+    sessionCount: number;
     topFeature: { name: string; count: number };
+    topAction: { name: string; count: number };
     firstSeenAt: string | null;
     lastActiveAt: string | null;
 }
@@ -30,6 +32,7 @@ export default function QuickDbActivityDashboard({
     const [rawSummary, setRawSummary] = useState<ActivitySummary>(initialSummary);
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
+    const [copiedText, setCopiedText] = useState<string | null>(null);
     const [viewMode, setViewMode] = useState<"stream" | "devices">("stream");
     const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
     const [devicePage, setDevicePage] = useState(1);
@@ -322,20 +325,22 @@ export default function QuickDbActivityDashboard({
 
         for (const evt of filteredEvents) {
             const id = evt.device_id || "unknown-device";
-            let group = map.get(id);
-            if (!group) {
-                group = {
-                    deviceId: id,
-                    deviceName: evt.device_name || "Unknown",
-                    osName: evt.os_name || "Unknown OS",
-                    ipAddress: evt.ip_address || "Unknown IP",
-                    location: evt.location || "Unknown Location",
-                    events: [],
-                    eventCount: 0,
-                    topFeature: { name: "None", count: 0 },
-                    firstSeenAt: null,
-                    lastActiveAt: null
-                };
+            const existing = map.get(id);
+            const group: DeviceGroup = existing || {
+                deviceId: id,
+                deviceName: evt.device_name || "Unknown",
+                osName: evt.os_name || "Unknown OS",
+                ipAddress: evt.ip_address || "Unknown IP",
+                location: evt.location || "Unknown Location",
+                events: [],
+                eventCount: 0,
+                sessionCount: 0,
+                topFeature: { name: "None", count: 0 },
+                topAction: { name: "None", count: 0 },
+                firstSeenAt: null,
+                lastActiveAt: null
+            };
+            if (!existing) {
                 map.set(id, group);
             }
 
@@ -359,21 +364,42 @@ export default function QuickDbActivityDashboard({
             g.lastActiveAt = g.events[0]?.occurred_at || g.events[0]?.received_at || null;
             g.firstSeenAt = g.events[g.events.length - 1]?.occurred_at || g.events[g.events.length - 1]?.received_at || null;
 
-            // Top feature
+            // Top feature & Top action & unique sessions
             const featCounts: Record<string, number> = {};
+            const actCounts: Record<string, number> = {};
+            const sessionSet = new Set<string>();
+
             for (const e of g.events) {
                 const f = e.feature_name || "other";
                 featCounts[f] = (featCounts[f] || 0) + 1;
+
+                const a = e.action || "other";
+                actCounts[a] = (actCounts[a] || 0) + 1;
+
+                if (e.session_id) sessionSet.add(e.session_id);
             }
-            let maxCount = 0;
+
+            g.sessionCount = sessionSet.size;
+
+            let maxFeatCount = 0;
             let topFeat = "None";
             for (const [name, count] of Object.entries(featCounts)) {
-                if (count > maxCount) {
-                    maxCount = count;
+                if (count > maxFeatCount) {
+                    maxFeatCount = count;
                     topFeat = name;
                 }
             }
-            g.topFeature = { name: topFeat, count: maxCount };
+            g.topFeature = { name: topFeat, count: maxFeatCount };
+
+            let maxActCount = 0;
+            let topAct = "None";
+            for (const [name, count] of Object.entries(actCounts)) {
+                if (count > maxActCount) {
+                    maxActCount = count;
+                    topAct = name;
+                }
+            }
+            g.topAction = { name: topAct, count: maxActCount };
 
             return g;
         });
@@ -547,6 +573,135 @@ export default function QuickDbActivityDashboard({
         }
         return "bg-zinc-500/10 text-zinc-300 border-zinc-500/20";
     };
+
+    const handleCopy = (text: string, label: string) => {
+        if (!text) return;
+        try {
+            navigator.clipboard.writeText(text);
+            setCopiedText(label);
+            setTimeout(() => setCopiedText(null), 2000);
+        } catch (err) {
+            console.error("Copy failed:", err);
+        }
+    };
+
+    const formatDrift = (occurredAt?: string, receivedAt?: string) => {
+        if (!occurredAt || !receivedAt) return null;
+        const occ = new Date(occurredAt).getTime();
+        const rec = new Date(receivedAt).getTime();
+        if (isNaN(occ) || isNaN(rec)) return null;
+        const diffSec = Math.round((rec - occ) / 1000);
+        if (Math.abs(diffSec) < 5) return { text: "Immediate (<5s)", label: "Immediate (<5s)", isOffline: false, color: "text-emerald-400" };
+        if (diffSec > 0 && diffSec < 60) return { text: `+${diffSec}s lag`, label: `+${diffSec}s lag`, isOffline: false, color: "text-emerald-400" };
+        if (diffSec >= 60 && diffSec < 3600) return { text: `+${Math.round(diffSec / 60)}m offline`, label: `+${Math.round(diffSec / 60)}m offline`, isOffline: true, color: "text-amber-400" };
+        if (diffSec >= 3600) return { text: `+${(diffSec / 3600).toFixed(1)}h offline`, label: `+${(diffSec / 3600).toFixed(1)}h offline`, isOffline: true, color: "text-rose-400" };
+        return { text: `${diffSec}s drift`, label: `${diffSec}s drift`, isOffline: false, color: "text-cyan-400" };
+    };
+
+    const getStatusBadge = (status?: string) => {
+        const s = (status || "synced").toLowerCase();
+        if (s === "synced" || s === "ok" || s === "success") {
+            return {
+                label: "SYNCED",
+                badgeClass: "bg-emerald-500/10 text-emerald-400 border-emerald-500/20",
+                dotClass: "bg-emerald-400",
+                bg: "bg-emerald-500/10",
+                text: "text-emerald-400",
+                border: "border-emerald-500/20",
+                dot: "bg-emerald-400"
+            };
+        }
+        if (s === "pending" || s === "queued") {
+            return {
+                label: "PENDING",
+                badgeClass: "bg-amber-500/10 text-amber-400 border-amber-500/20",
+                dotClass: "bg-amber-400 animate-pulse",
+                bg: "bg-amber-500/10",
+                text: "text-amber-400",
+                border: "border-amber-500/20",
+                dot: "bg-amber-400 animate-pulse"
+            };
+        }
+        return {
+            label: s.toUpperCase(),
+            badgeClass: "bg-rose-500/10 text-rose-400 border-rose-500/20",
+            dotClass: "bg-rose-400",
+            bg: "bg-rose-500/10",
+            text: "text-rose-400",
+            border: "border-rose-500/20",
+            dot: "bg-rose-400"
+        };
+    };
+
+    const extractMetadataHighlights = (metadata?: Record<string, any> | null) => {
+        if (!metadata || typeof metadata !== "object") return [];
+        const chips: Array<{ label: string; value: string; type?: string }> = [];
+        const keys = Object.keys(metadata);
+
+        for (const k of keys) {
+            const val = metadata[k];
+            if (val === null || val === undefined) continue;
+            const strVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+            if (strVal.length > 25) continue;
+
+            const lk = k.toLowerCase();
+            if (lk.includes("db") || lk.includes("database") || lk.includes("dialect")) {
+                chips.push({ label: "db", value: strVal, type: "db" });
+            } else if (lk.includes("time") || lk.includes("duration") || lk.includes("ms")) {
+                chips.push({ label: "time", value: `${strVal}ms`, type: "duration" });
+            } else if (lk.includes("row") || lk.includes("count")) {
+                chips.push({ label: "rows", value: strVal, type: "rows" });
+            } else if (lk.includes("error") || lk.includes("err")) {
+                chips.push({ label: "error", value: strVal, type: "error" });
+            } else if (chips.length < 2) {
+                chips.push({ label: k, value: strVal, type: "default" });
+            }
+            if (chips.length >= 2) break;
+        }
+        return chips;
+    };
+
+    // Telemetry Statistics across current filtered view
+    const telemetryStats = useMemo(() => {
+        const sessionIds = new Set<string>();
+        let syncedCount = 0;
+        let pendingCount = 0;
+        let failedCount = 0;
+        const actionCounts: Record<string, number> = {};
+
+        for (const evt of filteredEvents) {
+            if (evt.session_id) sessionIds.add(evt.session_id);
+            const status = (evt.status || "synced").toLowerCase();
+            if (status === "synced" || status === "ok" || status === "success") {
+                syncedCount++;
+            } else if (status === "pending") {
+                pendingCount++;
+            } else {
+                failedCount++;
+            }
+
+            const act = evt.action || "unknown";
+            actionCounts[act] = (actionCounts[act] || 0) + 1;
+        }
+
+        const topActions = Object.entries(actionCounts)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 5)
+            .map(([name, count]) => ({
+                name,
+                count,
+                percentage: filteredEvents.length > 0 ? Math.round((count / filteredEvents.length) * 100) : 0
+            }));
+
+        return {
+            uniqueSessions: sessionIds.size,
+            syncedCount,
+            pendingCount,
+            failedCount,
+            syncHealthRate: filteredEvents.length > 0 ? Math.round((syncedCount / filteredEvents.length) * 100) : 100,
+            topActions
+        };
+    }, [filteredEvents]);
 
     return (
         <div className="min-h-screen bg-[var(--canvas)] text-[var(--fg)] selection:bg-[var(--accent-soft)] selection:text-[var(--accent)] font-sans antialiased">
@@ -1170,7 +1325,7 @@ export default function QuickDbActivityDashboard({
                 </div>
 
                 {/* Hero KPI Cards */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
                     {/* Total Events */}
                     <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm hover:border-[var(--line-strong)] transition-all">
                         <div className="flex items-center justify-between">
@@ -1182,12 +1337,12 @@ export default function QuickDbActivityDashboard({
                             </span>
                         </div>
                         <div className="mt-3">
-                            <div className="text-3xl font-mono font-bold text-[var(--fg)]">
+                            <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--fg)]">
                                 {summary.totalEvents.toLocaleString()}
                             </div>
-                            <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--muted)]">
-                                <span className="inline-block w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                Permanently written in CSV
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-[var(--muted)] font-mono">
+                                <span className={`inline-block w-1.5 h-1.5 rounded-full ${telemetryStats.failedCount === 0 ? "bg-emerald-400" : "bg-amber-400"}`} />
+                                <span>{telemetryStats.syncHealthRate}% synced · CSV logged</span>
                             </div>
                         </div>
                     </div>
@@ -1214,12 +1369,39 @@ export default function QuickDbActivityDashboard({
                             </span>
                         </div>
                         <div className="mt-3">
-                            <div className="text-3xl font-mono font-bold text-[var(--fg)]">
+                            <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--fg)]">
                                 {summary.uniqueDevices}
                             </div>
-                            <div className="flex items-center gap-3 mt-1 text-xs text-[var(--muted)] font-mono">
-                                <span>💻 {summary.deviceDistribution.laptop} laptops</span>
-                                <span>🖥️ {summary.deviceDistribution.desktop} desktops</span>
+                            <div className="flex items-center gap-2 mt-1 text-xs text-[var(--muted)] font-mono">
+                                <span>💻 {summary.deviceDistribution.laptop}</span>
+                                <span>•</span>
+                                <span>🖥️ {summary.deviceDistribution.desktop}</span>
+                                <span>•</span>
+                                <span className="text-[var(--accent-2)]">
+                                    {summary.uniqueDevices > 0 ? (filteredEvents.length / summary.uniqueDevices).toFixed(1) : 0} avg/dev
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Active Sessions */}
+                    <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm hover:border-[var(--line-strong)] transition-all">
+                        <div className="flex items-center justify-between">
+                            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Active Sessions</span>
+                            <span className="p-2 rounded-lg bg-emerald-500/10 text-emerald-400">
+                                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z" />
+                                </svg>
+                            </span>
+                        </div>
+                        <div className="mt-3">
+                            <div className="text-2xl sm:text-3xl font-mono font-bold text-[var(--fg)]">
+                                {telemetryStats.uniqueSessions}
+                            </div>
+                            <div className="mt-1 text-xs text-[var(--muted)] font-mono truncate">
+                                {telemetryStats.uniqueSessions > 0
+                                    ? `${(filteredEvents.length / telemetryStats.uniqueSessions).toFixed(1)} avg events / session`
+                                    : "No session IDs recorded"}
                             </div>
                         </div>
                     </div>
@@ -1227,7 +1409,7 @@ export default function QuickDbActivityDashboard({
                     {/* Top Active Feature */}
                     <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm hover:border-[var(--line-strong)] transition-all">
                         <div className="flex items-center justify-between">
-                            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Top Feature</span>
+                            <span className="text-xs font-mono uppercase tracking-wider text-[var(--muted)]">Top Module</span>
                             <span className="p-2 rounded-lg bg-purple-500/10 text-purple-400">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
@@ -1235,11 +1417,11 @@ export default function QuickDbActivityDashboard({
                             </span>
                         </div>
                         <div className="mt-3">
-                            <div className="text-2xl font-mono font-bold text-[var(--accent)] truncate">
+                            <div className="text-xl sm:text-2xl font-mono font-bold text-[var(--accent)] truncate">
                                 {summary.topFeature.name.toUpperCase()}
                             </div>
-                            <div className="mt-1 text-xs text-[var(--muted)]">
-                                {summary.topFeature.count} interactions recorded
+                            <div className="mt-1 text-xs text-[var(--muted)] font-mono truncate">
+                                {summary.topFeature.count}x · Top: {telemetryStats.topActions[0]?.name || "None"}
                             </div>
                         </div>
                     </div>
@@ -1255,37 +1437,40 @@ export default function QuickDbActivityDashboard({
                             </span>
                         </div>
                         <div className="mt-3">
-                            <div className="text-xl font-mono font-bold text-[var(--fg)]">
+                            <div className="text-xl sm:text-2xl font-mono font-bold text-[var(--fg)]">
                                 {formatRelativeTime(summary.latestSyncAt)}
                             </div>
-                            <div className="mt-1 text-xs text-[var(--muted)] truncate">
-                                {summary.latestSyncAt ? new Date(summary.latestSyncAt).toLocaleString() : "No sync yet"}
+                            <div className="mt-1 text-xs text-[var(--muted)] truncate font-mono">
+                                {summary.latestSyncAt ? new Date(summary.latestSyncAt).toLocaleTimeString() : "No sync yet"}
+                                {telemetryStats.failedCount > 0 && (
+                                    <span className="text-rose-400 ml-1">({telemetryStats.failedCount} err)</span>
+                                )}
                             </div>
                         </div>
                     </div>
                 </div>
 
                 {/* Visual Distribution Section */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
                     {/* Feature Breakdown */}
-                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4">
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-semibold text-[var(--fg)]">Feature Distribution</h2>
-                            <span className="text-xs font-mono text-[var(--muted)]">Interactions</span>
+                            <h2 className="text-sm font-semibold text-[var(--fg)]">Feature Modules</h2>
+                            <span className="text-xs font-mono text-[var(--muted)]">Activity</span>
                         </div>
-                        <div className="space-y-3 pt-2">
+                        <div className="space-y-3 pt-1">
                             {summary.featureDistribution.length === 0 ? (
                                 <div className="text-xs text-[var(--muted)] py-4 text-center font-mono">No data in CSV yet</div>
                             ) : (
-                                summary.featureDistribution.map((feat) => (
+                                summary.featureDistribution.slice(0, 5).map((feat) => (
                                     <div key={feat.name} className="space-y-1">
                                         <div className="flex justify-between text-xs font-mono">
-                                            <span className="text-[var(--fg)] capitalize">{feat.name}</span>
-                                            <span className="text-[var(--muted)]">
+                                            <span className="text-[var(--fg)] capitalize truncate">{feat.name}</span>
+                                            <span className="text-[var(--muted)] shrink-0">
                                                 {feat.count} ({feat.percentage}%)
                                             </span>
                                         </div>
-                                        <div className="w-full bg-[var(--surface-2)] h-2 rounded-full overflow-hidden">
+                                        <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
                                             <div
                                                 className="bg-[var(--accent)] h-full rounded-full transition-all duration-500"
                                                 style={{ width: `${Math.max(5, feat.percentage)}%` }}
@@ -1297,25 +1482,55 @@ export default function QuickDbActivityDashboard({
                         </div>
                     </div>
 
-                    {/* Operating System Distribution */}
-                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4">
+                    {/* Top Action Types & Verbs */}
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
                         <div className="flex items-center justify-between">
-                            <h2 className="text-sm font-semibold text-[var(--fg)]">Operating System Breakdown</h2>
-                            <span className="text-xs font-mono text-[var(--muted)]">Devices</span>
+                            <h2 className="text-sm font-semibold text-[var(--fg)]">Interaction Verbs</h2>
+                            <span className="text-xs font-mono text-[var(--muted)]">Actions</span>
                         </div>
-                        <div className="space-y-3 pt-2">
+                        <div className="space-y-3 pt-1">
+                            {telemetryStats.topActions.length === 0 ? (
+                                <div className="text-xs text-[var(--muted)] py-4 text-center font-mono">No actions recorded</div>
+                            ) : (
+                                telemetryStats.topActions.map((act) => (
+                                    <div key={act.name} className="space-y-1">
+                                        <div className="flex justify-between text-xs font-mono">
+                                            <span className="text-[var(--fg)] truncate">{act.name}</span>
+                                            <span className="text-[var(--muted)] shrink-0">
+                                                {act.count} ({act.percentage}%)
+                                            </span>
+                                        </div>
+                                        <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
+                                            <div
+                                                className="bg-purple-400 h-full rounded-full transition-all duration-500"
+                                                style={{ width: `${Math.max(5, act.percentage)}%` }}
+                                            />
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Operating System Distribution */}
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-semibold text-[var(--fg)]">Client Platforms</h2>
+                            <span className="text-xs font-mono text-[var(--muted)]">OS</span>
+                        </div>
+                        <div className="space-y-3 pt-1">
                             {summary.osDistribution.length === 0 ? (
                                 <div className="text-xs text-[var(--muted)] py-4 text-center font-mono">No OS data</div>
                             ) : (
-                                summary.osDistribution.map((os) => {
+                                summary.osDistribution.slice(0, 5).map((os) => {
                                     const pct = summary.totalEvents > 0 ? Math.round((os.count / summary.totalEvents) * 100) : 0;
                                     return (
                                         <div key={os.name} className="space-y-1">
                                             <div className="flex justify-between text-xs font-mono">
-                                                <span className="text-[var(--fg)] uppercase">{os.name}</span>
-                                                <span className="text-[var(--muted)]">{os.count} events ({pct}%)</span>
+                                                <span className="text-[var(--fg)] uppercase truncate">{os.name}</span>
+                                                <span className="text-[var(--muted)] shrink-0">{os.count} ({pct}%)</span>
                                             </div>
-                                            <div className="w-full bg-[var(--surface-2)] h-2 rounded-full overflow-hidden">
+                                            <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
                                                 <div
                                                     className="bg-sky-400 h-full rounded-full transition-all duration-500"
                                                     style={{ width: `${Math.max(5, pct)}%` }}
@@ -1328,23 +1543,23 @@ export default function QuickDbActivityDashboard({
                         </div>
                     </div>
 
-                    {/* Detected Locations */}
-                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4">
+                    {/* Detected Locations & Geo */}
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
                         <div className="flex items-center justify-between">
                             <h2 className="text-sm font-semibold text-[var(--fg)]">Geographic Nodes</h2>
-                            <span className="text-xs font-mono text-[var(--muted)]">Geo & IP</span>
+                            <span className="text-xs font-mono text-[var(--muted)]">Locations</span>
                         </div>
-                        <div className="pt-2 flex flex-wrap gap-2">
+                        <div className="pt-1 flex flex-wrap gap-2">
                             {summary.locationDistribution.length === 0 ? (
                                 <div className="text-xs text-[var(--muted)] py-4 text-center font-mono w-full">Local / Private networks</div>
                             ) : (
                                 summary.locationDistribution.map((loc) => (
                                     <div
                                         key={loc.location}
-                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-mono text-[var(--fg)]"
+                                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg border border-[var(--line)] bg-[var(--surface-2)] text-xs font-mono text-[var(--fg)]"
                                     >
                                         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                        <span>{loc.location}</span>
+                                        <span className="truncate max-w-[120px]">{loc.location}</span>
                                         <span className="text-[var(--muted)]">({loc.count})</span>
                                     </div>
                                 ))
@@ -1459,84 +1674,199 @@ export default function QuickDbActivityDashboard({
                                 <table className="w-full text-left text-xs font-mono border-collapse">
                                     <thead>
                                         <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Timestamp</th>
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Feature</th>
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Action</th>
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Item / Target</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Timestamp & Drift</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Event & Session</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Feature & Action</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Target Item</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device & OS</th>
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">IP / Location</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Network & Geo</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Status & Metadata</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
                                         {paginatedEvents.length === 0 ? (
                                             <tr>
-                                                <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
+                                                <td colSpan={8} className="py-12 text-center text-[var(--muted)] font-mono">
                                                     No activity events found matching your criteria.
                                                 </td>
                                             </tr>
                                         ) : (
-                                            paginatedEvents.map((evt) => (
-                                                <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/50 transition-colors">
-                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                        {formatRelativeTime(evt.occurred_at || evt.received_at)}
-                                                        <div className="text-[10px] text-[var(--faint)]">
-                                                            {(evt.occurred_at || evt.received_at).split("T")[1]?.slice(0, 8)}
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap">
-                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[11px] border ${getFeatureBadge(evt.feature_name)}`}>
-                                                            {evt.feature_name}
-                                                        </span>
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap font-medium text-[var(--fg)]">
-                                                        {evt.action}
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--accent-2)]">
-                                                        {evt.item_name || evt.item_id || "—"}
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                        <div className="flex items-center gap-1.5">
-                                                            <span>{evt.device_name === "laptop" ? "💻" : "🖥️"}</span>
-                                                            <span className="uppercase text-[11px]">{evt.os_name || "unknown"}</span>
-                                                        </div>
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap text-[var(--muted)]">
-                                                        {evt.location ? (
-                                                            <span>{evt.location}</span>
-                                                        ) : (
-                                                            <span className="text-[var(--faint)]">{evt.ip_address || "local"}</span>
-                                                        )}
-                                                    </td>
-                                                    <td className="py-3 px-4 whitespace-nowrap text-right">
-                                                        <div className="flex items-center justify-end gap-1.5">
-                                                            {evt.metadata ? (
+                                            paginatedEvents.map((evt) => {
+                                                const drift = formatDrift(evt.occurred_at, evt.received_at);
+                                                const statusInfo = getStatusBadge(evt.status);
+                                                const metaHighlights = extractMetadataHighlights(evt.metadata);
+                                                const isLaptop = evt.device_name?.toLowerCase().includes("laptop");
+                                                const isDesktop = evt.device_name?.toLowerCase().includes("desktop");
+
+                                                return (
+                                                    <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/50 transition-colors">
+                                                        {/* Timestamp & Drift */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div className="text-[var(--fg)] font-medium">
+                                                                {formatRelativeTime(evt.occurred_at || evt.received_at)}
+                                                            </div>
+                                                            <div className="text-[10px] text-[var(--muted)] mt-0.5" title={`Server received at: ${evt.received_at || "N/A"}`}>
+                                                                {(evt.occurred_at || evt.received_at).replace("T", " ").slice(0, 19)}
+                                                            </div>
+                                                            {drift && (
+                                                                <span
+                                                                    className={`inline-block mt-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono border ${
+                                                                        drift.isOffline
+                                                                            ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                                                            : "bg-emerald-500/10 text-emerald-400 border-emerald-500/20"
+                                                                    }`}
+                                                                    title={`Occurred: ${evt.occurred_at} | Ingested: ${evt.received_at}`}
+                                                                >
+                                                                    {drift.text}
+                                                                </span>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Event ID & Session */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-1.5">
+                                                                <span className="font-semibold text-[var(--fg)]">
+                                                                    {evt.event_id.length > 13 ? `${evt.event_id.slice(0, 11)}...` : evt.event_id}
+                                                                </span>
+                                                                <button
+                                                                    onClick={() => handleCopy(evt.event_id, "Event ID")}
+                                                                    className="text-[var(--muted)] hover:text-[var(--accent)] transition-colors p-0.5 cursor-pointer"
+                                                                    title="Copy Event ID"
+                                                                >
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                </button>
+                                                            </div>
+                                                            {evt.session_id ? (
+                                                                <div className="flex items-center gap-1 text-[10px] text-[var(--muted)] mt-0.5">
+                                                                    <span className="text-[var(--faint)]">sess:</span>
+                                                                    <span className="truncate max-w-[80px]" title={evt.session_id}>
+                                                                        {evt.session_id.slice(0, 8)}...
+                                                                    </span>
+                                                                    <button
+                                                                        onClick={() => handleCopy(evt.session_id, "Session ID")}
+                                                                        className="text-[var(--faint)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                                        title="Copy Session ID"
+                                                                    >
+                                                                        <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                        </svg>
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-[10px] text-[var(--faint)] mt-0.5 block">single event</span>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Feature & Action */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div>
+                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${getFeatureBadge(evt.feature_name)}`}>
+                                                                    {evt.feature_name}
+                                                                </span>
+                                                            </div>
+                                                            <div className="mt-1 font-medium text-[var(--fg)]">
+                                                                {evt.action}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Target Item */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div className="font-medium text-[var(--accent-2)] truncate max-w-[140px]" title={evt.item_name || evt.item_id}>
+                                                                {evt.item_name || evt.item_id || "—"}
+                                                            </div>
+                                                            {evt.item_name && evt.item_id && evt.item_name !== evt.item_id && (
+                                                                <div className="text-[10px] text-[var(--muted)] truncate max-w-[140px]" title={evt.item_id}>
+                                                                    id: {evt.item_id}
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Device & OS */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-1.5 text-[var(--fg)]">
+                                                                <span>{isLaptop ? "💻" : isDesktop ? "🖥️" : "📱"}</span>
+                                                                <span className="capitalize">{evt.device_name || "Device"}</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-1.5 text-[10px] text-[var(--muted)] mt-0.5">
+                                                                <span className="uppercase px-1.5 py-0.2 rounded bg-[var(--surface-2)] border border-[var(--line)]">
+                                                                    {evt.os_name || "unknown"}
+                                                                </span>
+                                                                <span className="text-[var(--faint)] truncate max-w-[70px]" title={evt.device_id}>
+                                                                    {evt.device_id ? evt.device_id.slice(0, 6) + "..." : ""}
+                                                                </span>
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Network & Geo */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <div className="flex items-center gap-1 text-[var(--fg)]">
+                                                                {evt.location ? (
+                                                                    <>
+                                                                        <span className="text-emerald-400">📍</span>
+                                                                        <span className="truncate max-w-[120px]" title={evt.location}>{evt.location}</span>
+                                                                    </>
+                                                                ) : (
+                                                                    <span className="text-[var(--faint)]">Private Net</span>
+                                                                )}
+                                                            </div>
+                                                            <div className="text-[10px] text-[var(--faint)] mt-0.5">
+                                                                IP: {evt.ip_address || "127.0.0.1"}
+                                                            </div>
+                                                        </td>
+
+                                                        {/* Status & Telemetry Metadata */}
+                                                        <td className="py-3 px-4 whitespace-nowrap">
+                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${statusInfo.badgeClass}`}>
+                                                                <span className={`w-1.5 h-1.5 rounded-full ${statusInfo.dotClass}`} />
+                                                                {statusInfo.label}
+                                                            </span>
+                                                            {metaHighlights.length > 0 && (
+                                                                <div className="flex items-center gap-1 mt-1 flex-wrap max-w-[150px]">
+                                                                    {metaHighlights.map((c, i) => (
+                                                                        <span key={i} className="px-1.5 py-0.2 rounded text-[9px] bg-[var(--surface-3)] text-[var(--muted)] border border-[var(--line)]">
+                                                                            <span className="text-[var(--faint)]">{c.label}:</span> {c.value}
+                                                                        </span>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </td>
+
+                                                        {/* Actions */}
+                                                        <td className="py-3 px-4 whitespace-nowrap text-right">
+                                                            <div className="flex items-center justify-end gap-1.5">
                                                                 <button
                                                                     onClick={() => setSelectedMetadataEvent(evt)}
-                                                                    className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-xs font-mono transition-colors cursor-pointer"
+                                                                    title="Inspect full telemetry, session & metadata payload"
                                                                 >
-                                                                    JSON
-                                                                </button>
-                                                            ) : null}
-                                                            <button
-                                                                onClick={() => handleDeleteEvent(evt.event_id)}
-                                                                disabled={deletingId === evt.event_id}
-                                                                title="Delete this row from CSV"
-                                                                className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
-                                                            >
-                                                                {deletingId === evt.event_id ? (
-                                                                    <span className="w-2.5 h-2.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
-                                                                ) : (
-                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                    <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                                     </svg>
-                                                                )}
-                                                                <span>Delete</span>
-                                                            </button>
-                                                        </div>
-                                                    </td>
-                                                </tr>
-                                            ))
+                                                                    <span>Inspect</span>
+                                                                </button>
+                                                                <button
+                                                                    onClick={() => handleDeleteEvent(evt.event_id)}
+                                                                    disabled={deletingId === evt.event_id}
+                                                                    title="Delete this row from CSV"
+                                                                    className="p-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 transition-colors cursor-pointer inline-flex items-center disabled:opacity-50"
+                                                                >
+                                                                    {deletingId === evt.event_id ? (
+                                                                        <span className="w-3.5 h-3.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                                                                    ) : (
+                                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                        </svg>
+                                                                    )}
+                                                                </button>
+                                                            </div>
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })
                                         )}
                                     </tbody>
                                 </table>
@@ -1661,11 +1991,26 @@ export default function QuickDbActivityDashboard({
                                                                 <span className="text-xs font-mono font-bold text-[var(--fg)]">
                                                                     {group.deviceId}
                                                                 </span>
+                                                                <button
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleCopy(group.deviceId, "Device ID");
+                                                                    }}
+                                                                    title="Copy Device ID"
+                                                                    className="p-1 rounded bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                                >
+                                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                    </svg>
+                                                                </button>
                                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono capitalize bg-[var(--surface-2)] text-[var(--accent)] border border-[var(--line)] font-semibold">
                                                                     {group.deviceName}
                                                                 </span>
                                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--line)]">
                                                                     {group.osName}
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
+                                                                    {group.sessionCount} session{group.sessionCount === 1 ? "" : "s"}
                                                                 </span>
                                                             </div>
                                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-mono text-[var(--muted)]">
@@ -1677,6 +2022,8 @@ export default function QuickDbActivityDashboard({
                                                                 </span>
                                                                 <span>•</span>
                                                                 <span className="text-[var(--faint)]">IP: {group.ipAddress}</span>
+                                                                <span>•</span>
+                                                                <span>Top action: <strong className="text-[var(--fg)]">{group.topAction.name}</strong></span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -1702,7 +2049,11 @@ export default function QuickDbActivityDashboard({
                                                             <div className="flex flex-wrap items-center gap-3 text-[var(--muted)]">
                                                                 <span>First Seen: <strong className="text-[var(--fg)]">{group.firstSeenAt ? new Date(group.firstSeenAt).toLocaleString() : "N/A"}</strong></span>
                                                                 <span>•</span>
+                                                                <span>Last Seen: <strong className="text-[var(--fg)]">{group.lastActiveAt ? new Date(group.lastActiveAt).toLocaleString() : "N/A"}</strong></span>
+                                                                <span>•</span>
                                                                 <span>Top Feature: <strong className="text-[var(--accent)] capitalize">{group.topFeature.name} ({group.topFeature.count}x)</strong></span>
+                                                                <span>•</span>
+                                                                <span>Top Action: <strong className="text-[var(--accent-2)]">{group.topAction.name} ({group.topAction.count}x)</strong></span>
                                                             </div>
                                                             <button
                                                                 onClick={(e) => {
@@ -1723,69 +2074,169 @@ export default function QuickDbActivityDashboard({
                                                             <table className="w-full text-left text-xs font-mono border-collapse">
                                                                 <thead>
                                                                     <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Timestamp</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Feature</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Action</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Item / Target</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Status</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Timestamp & Drift</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Event & Session</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Feature & Action</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Target Item</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Status & Telemetry</th>
                                                                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Actions</th>
                                                                     </tr>
                                                                 </thead>
                                                                 <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
-                                                                    {group.events.map((evt) => (
-                                                                        <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/40 transition-colors">
-                                                                            <td className="py-2 px-3 whitespace-nowrap text-[var(--muted)]">
-                                                                                {formatRelativeTime(evt.occurred_at || evt.received_at)}
-                                                                                <span className="text-[10px] text-[var(--faint)] ml-1.5">
-                                                                                    {(evt.occurred_at || evt.received_at).split("T")[1]?.slice(0, 8)}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="py-2 px-3 whitespace-nowrap">
-                                                                                <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${getFeatureBadge(evt.feature_name)}`}>
-                                                                                    {evt.feature_name}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="py-2 px-3 whitespace-nowrap font-medium text-[var(--fg)]">
-                                                                                {evt.action}
-                                                                            </td>
-                                                                            <td className="py-2 px-3 whitespace-nowrap text-[var(--accent-2)]">
-                                                                                {evt.item_name || evt.item_id || "—"}
-                                                                            </td>
-                                                                            <td className="py-2 px-3 whitespace-nowrap">
-                                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
-                                                                                    <span className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
-                                                                                    {evt.status || "ok"}
-                                                                                </span>
-                                                                            </td>
-                                                                            <td className="py-2 px-3 whitespace-nowrap text-right">
-                                                                                <div className="flex items-center justify-end gap-1.5">
-                                                                                    {evt.metadata && (
+                                                                    {group.events.map((evt) => {
+                                                                        const drift = formatDrift(evt.occurred_at, evt.received_at);
+                                                                        const statusBadge = getStatusBadge(evt.status);
+                                                                        const metaChips = extractMetadataHighlights(evt.metadata);
+                                                                        return (
+                                                                            <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/40 transition-colors">
+                                                                                {/* Timestamp & Drift */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                                    <div className="flex flex-col">
+                                                                                        <span className="font-semibold text-[var(--fg)]">
+                                                                                            {formatRelativeTime(evt.occurred_at || evt.received_at)}
+                                                                                        </span>
+                                                                                        <span className="text-[10px] text-[var(--muted)]">
+                                                                                            {(evt.occurred_at || evt.received_at).replace("T", " ").slice(0, 19)}
+                                                                                        </span>
+                                                                                        {drift ? (
+                                                                                            <span className={`inline-block mt-0.5 text-[9px] ${drift.color}`}>
+                                                                                                {drift.label}
+                                                                                            </span>
+                                                                                        ) : (
+                                                                                            <span className="inline-block mt-0.5 text-[9px] text-[var(--muted)]">
+                                                                                                Direct sync
+                                                                                            </span>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {/* Event & Session */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                                    <div className="flex flex-col gap-1">
+                                                                                        <div className="flex items-center gap-1">
+                                                                                            <span className="text-[10px] text-[var(--muted)] font-mono">EVT:</span>
+                                                                                            <span className="font-mono text-[11px] text-[var(--fg)]">{evt.event_id.slice(0, 8)}…</span>
+                                                                                            <button
+                                                                                                onClick={() => handleCopy(evt.event_id, "Event ID")}
+                                                                                                title="Copy Event ID"
+                                                                                                className="p-0.5 rounded text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                                                            >
+                                                                                                <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                                                </svg>
+                                                                                            </button>
+                                                                                        </div>
+                                                                                        {evt.session_id && (
+                                                                                            <div className="flex items-center gap-1">
+                                                                                                <span className="text-[10px] text-[var(--faint)] font-mono">SES:</span>
+                                                                                                <span className="font-mono text-[10px] text-[var(--muted)]">{evt.session_id.slice(0, 8)}…</span>
+                                                                                                <button
+                                                                                                    onClick={() => handleCopy(evt.session_id, "Session ID")}
+                                                                                                    title="Copy Session ID"
+                                                                                                    className="p-0.5 rounded text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                                                                >
+                                                                                                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                                                                    </svg>
+                                                                                                </button>
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {/* Feature & Action */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                                    <div className="flex flex-col items-start gap-1">
+                                                                                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] border ${getFeatureBadge(evt.feature_name)}`}>
+                                                                                            {evt.feature_name}
+                                                                                        </span>
+                                                                                        <span className="text-[11px] font-semibold text-[var(--fg)]">
+                                                                                            {evt.action}
+                                                                                        </span>
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {/* Target Item */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                                    {evt.item_name || evt.item_id ? (
+                                                                                        <div className="flex flex-col">
+                                                                                            {evt.item_name && (
+                                                                                                <span className="font-medium text-[var(--accent-2)]">
+                                                                                                    {evt.item_name}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            {evt.item_id && (
+                                                                                                <span className="text-[10px] font-mono text-[var(--faint)]">
+                                                                                                    ID: {evt.item_id}
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <span className="text-[var(--faint)]">—</span>
+                                                                                    )}
+                                                                                </td>
+
+                                                                                {/* Status & Telemetry */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap">
+                                                                                    <div className="flex flex-col items-start gap-1">
+                                                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+                                                                                            <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+                                                                                            {statusBadge.label}
+                                                                                        </span>
+                                                                                        {metaChips.length > 0 && (
+                                                                                            <div className="flex flex-wrap gap-1 max-w-[200px]">
+                                                                                                {metaChips.slice(0, 2).map((chip, idx) => (
+                                                                                                    <span
+                                                                                                        key={idx}
+                                                                                                        className={`text-[9px] px-1.5 py-0.2 rounded border font-mono ${
+                                                                                                            chip.type === "error"
+                                                                                                                ? "bg-rose-500/10 text-rose-400 border-rose-500/20"
+                                                                                                                : chip.type === "duration"
+                                                                                                                ? "bg-amber-500/10 text-amber-400 border-amber-500/20"
+                                                                                                                : "bg-[var(--surface-2)] text-[var(--muted)] border-[var(--line)]"
+                                                                                                        }`}
+                                                                                                    >
+                                                                                                        {chip.label}
+                                                                                                    </span>
+                                                                                                ))}
+                                                                                            </div>
+                                                                                        )}
+                                                                                    </div>
+                                                                                </td>
+
+                                                                                {/* Actions */}
+                                                                                <td className="py-2.5 px-3 whitespace-nowrap text-right">
+                                                                                    <div className="flex items-center justify-end gap-1.5">
                                                                                         <button
                                                                                             onClick={() => setSelectedMetadataEvent(evt)}
-                                                                                            className="px-2 py-0.5 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer"
+                                                                                            className="px-2 py-1 rounded bg-[var(--surface-2)] hover:bg-[var(--accent-soft)] hover:text-[var(--accent)] text-[var(--muted)] border border-[var(--line)] text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1"
                                                                                         >
-                                                                                            JSON
-                                                                                        </button>
-                                                                                    )}
-                                                                                    <button
-                                                                                        onClick={() => handleDeleteEvent(evt.event_id)}
-                                                                                        disabled={deletingId === evt.event_id}
-                                                                                        title="Delete this row from CSV"
-                                                                                        className="px-2 py-0.5 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
-                                                                                    >
-                                                                                        {deletingId === evt.event_id ? (
-                                                                                            <span className="w-2 h-2 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
-                                                                                        ) : (
                                                                                             <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                                                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
                                                                                             </svg>
-                                                                                        )}
-                                                                                        <span>Delete</span>
-                                                                                    </button>
-                                                                                </div>
-                                                                            </td>
-                                                                        </tr>
-                                                                    ))}
+                                                                                            <span>Inspect</span>
+                                                                                        </button>
+                                                                                        <button
+                                                                                            onClick={() => handleDeleteEvent(evt.event_id)}
+                                                                                            disabled={deletingId === evt.event_id}
+                                                                                            title="Delete this row from CSV"
+                                                                                            className="px-2 py-1 rounded bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-[10px] transition-colors cursor-pointer inline-flex items-center gap-1 disabled:opacity-50"
+                                                                                        >
+                                                                                            {deletingId === evt.event_id ? (
+                                                                                                <span className="w-2.5 h-2.5 border-2 border-rose-400/30 border-t-rose-400 rounded-full animate-spin" />
+                                                                                            ) : (
+                                                                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                                                                </svg>
+                                                                                            )}
+                                                                                            <span>Delete</span>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </td>
+                                                                            </tr>
+                                                                        );
+                                                                    })}
                                                                 </tbody>
                                                             </table>
                                                         </div>
@@ -1873,55 +2324,294 @@ export default function QuickDbActivityDashboard({
                 </div>
             </div>
 
-            {/* Metadata Modal */}
-            {selectedMetadataEvent && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
-                    <div className="w-full max-w-xl rounded-xl border border-[var(--line-strong)] bg-[var(--surface)] shadow-2xl p-6 space-y-4">
-                        <div className="flex items-center justify-between border-b border-[var(--line)] pb-3">
-                            <div className="flex items-center gap-2">
-                                <span className="font-mono text-xs font-bold text-[var(--accent)]">
-                                    Event: {selectedMetadataEvent.event_id}
-                                </span>
+            {/* Metadata & Telemetry Inspector Modal */}
+            {selectedMetadataEvent && (() => {
+                const drift = formatDrift(selectedMetadataEvent.occurred_at, selectedMetadataEvent.received_at);
+                const statusBadge = getStatusBadge(selectedMetadataEvent.status);
+                const metaEntries = selectedMetadataEvent.metadata ? Object.entries(selectedMetadataEvent.metadata) : [];
+
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-in fade-in duration-200">
+                        <div className="w-full max-w-3xl max-h-[90vh] flex flex-col rounded-2xl border border-[var(--line-strong)] bg-[var(--surface)] shadow-2xl overflow-hidden">
+                            {/* Header */}
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-[var(--line)] bg-[var(--surface-2)]/60">
+                                <div className="flex items-center gap-2.5">
+                                    <span className="p-2 rounded-lg bg-[var(--accent-soft)] text-[var(--accent)]">
+                                        <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                        </svg>
+                                    </span>
+                                    <div>
+                                        <div className="flex items-center gap-2">
+                                            <h3 className="text-sm font-mono font-bold text-[var(--fg)]">
+                                                Event Telemetry & Metadata Inspector
+                                            </h3>
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-mono border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+                                                <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+                                                {statusBadge.label}
+                                            </span>
+                                        </div>
+                                        <div className="flex items-center gap-1 text-[11px] font-mono text-[var(--muted)] mt-0.5">
+                                            <span>ID: <span className="text-[var(--fg)]">{selectedMetadataEvent.event_id}</span></span>
+                                            <button
+                                                onClick={() => handleCopy(selectedMetadataEvent.event_id, "Event ID")}
+                                                title="Copy Event ID"
+                                                className="p-1 rounded hover:bg-[var(--surface-3)] text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                                <button
+                                    onClick={() => setSelectedMetadataEvent(null)}
+                                    className="p-2 rounded-lg text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-3)] transition-colors text-lg leading-none cursor-pointer"
+                                >
+                                    ✕
+                                </button>
                             </div>
-                            <button
-                                onClick={() => setSelectedMetadataEvent(null)}
-                                className="text-[var(--muted)] hover:text-[var(--fg)] text-lg leading-none cursor-pointer"
-                            >
-                                ✕
-                            </button>
-                        </div>
-                        <div className="text-xs space-y-1 text-[var(--muted)] font-mono">
-                            <div>Feature: <span className="text-[var(--fg)]">{selectedMetadataEvent.feature_name}</span> ({selectedMetadataEvent.action})</div>
-                            <div>Occurred At: <span className="text-[var(--fg)]">{selectedMetadataEvent.occurred_at}</span></div>
-                            <div>Device ID: <span className="text-[var(--fg)]">{selectedMetadataEvent.device_id}</span></div>
-                        </div>
-                        <div className="space-y-1">
-                            <span className="text-xs font-mono text-[var(--muted)]">Metadata JSON:</span>
-                            <pre className="p-3 rounded-lg bg-[var(--canvas)] border border-[var(--line)] text-emerald-400 text-xs font-mono overflow-auto max-h-60">
-                                {JSON.stringify(selectedMetadataEvent.metadata, null, 2)}
-                            </pre>
-                        </div>
-                        <div className="flex items-center justify-between pt-2">
-                            <button
-                                onClick={() => handleDeleteEvent(selectedMetadataEvent.event_id)}
-                                disabled={deletingId === selectedMetadataEvent.event_id}
-                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
-                            >
-                                <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                                </svg>
-                                {deletingId === selectedMetadataEvent.event_id ? "Deleting..." : "Delete Row"}
-                            </button>
-                            <button
-                                onClick={() => setSelectedMetadataEvent(null)}
-                                className="px-4 py-1.5 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] hover:bg-[var(--surface-3)] transition-colors cursor-pointer"
-                            >
-                                Close
-                            </button>
+
+                            {/* Scrollable Content */}
+                            <div className="p-6 overflow-y-auto space-y-6">
+                                {/* Action & Feature Banner */}
+                                <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-xl bg-[var(--surface-2)] border border-[var(--line)]">
+                                    <div className="flex items-center gap-2.5">
+                                        <span className={`px-2.5 py-1 rounded text-xs font-mono font-semibold border ${getFeatureBadge(selectedMetadataEvent.feature_name)}`}>
+                                            {selectedMetadataEvent.feature_name}
+                                        </span>
+                                        <span className="text-sm font-mono font-bold text-[var(--fg)]">
+                                            {selectedMetadataEvent.action}
+                                        </span>
+                                    </div>
+                                    <span className={`text-xs font-mono px-2.5 py-1 rounded-full border ${drift ? drift.color : "text-emerald-400 border-emerald-500/20"} bg-[var(--surface)]`}>
+                                        Sync Drift: {drift ? drift.label : "Immediate (<5s)"}
+                                    </span>
+                                </div>
+
+                                {/* 3-Column Diagnostic Cards Grid */}
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                    {/* Column 1: Temporal & Sync */}
+                                    <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--canvas)] space-y-2.5 font-mono text-xs">
+                                        <div className="flex items-center gap-1.5 text-[var(--muted)] text-[10px] font-semibold uppercase tracking-wider border-b border-[var(--line)] pb-2">
+                                            <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Temporal & Sync
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Occurred (Client):</div>
+                                            <div className="text-[var(--fg)] font-semibold break-all">
+                                                {selectedMetadataEvent.occurred_at || "N/A"}
+                                            </div>
+                                            <div className="text-[10px] text-[var(--accent-2)]">
+                                                {formatRelativeTime(selectedMetadataEvent.occurred_at)}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Received (Server):</div>
+                                            <div className="text-[var(--fg)] font-semibold break-all">
+                                                {selectedMetadataEvent.received_at || "Immediate / Local"}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Session ID:</div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[var(--fg)] break-all text-[11px]">
+                                                    {selectedMetadataEvent.session_id || "N/A"}
+                                                </span>
+                                                {selectedMetadataEvent.session_id && (
+                                                    <button
+                                                        onClick={() => handleCopy(selectedMetadataEvent.session_id, "Session ID")}
+                                                        title="Copy Session ID"
+                                                        className="p-1 text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Column 2: Context & Target */}
+                                    <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--canvas)] space-y-2.5 font-mono text-xs">
+                                        <div className="flex items-center gap-1.5 text-[var(--muted)] text-[10px] font-semibold uppercase tracking-wider border-b border-[var(--line)] pb-2">
+                                            <svg className="w-3.5 h-3.5 text-[var(--accent-2)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
+                                            </svg>
+                                            Target Object Context
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Target Name:</div>
+                                            <div className="text-[var(--fg)] font-semibold">
+                                                {selectedMetadataEvent.item_name || "—"}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Target Item ID:</div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[var(--fg)] break-all text-[11px]">
+                                                    {selectedMetadataEvent.item_id || "—"}
+                                                </span>
+                                                {selectedMetadataEvent.item_id && (
+                                                    <button
+                                                        onClick={() => handleCopy(selectedMetadataEvent.item_id!, "Item ID")}
+                                                        title="Copy Item ID"
+                                                        className="p-1 text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                    >
+                                                        <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                        </svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Log Status:</div>
+                                            <div className="text-[var(--fg)] font-semibold capitalize">
+                                                {selectedMetadataEvent.status || "synced"}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Column 3: Client Hardware & Network */}
+                                    <div className="p-4 rounded-xl border border-[var(--line)] bg-[var(--canvas)] space-y-2.5 font-mono text-xs">
+                                        <div className="flex items-center gap-1.5 text-[var(--muted)] text-[10px] font-semibold uppercase tracking-wider border-b border-[var(--line)] pb-2">
+                                            <svg className="w-3.5 h-3.5 text-sky-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+                                            </svg>
+                                            Client & Network Node
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Device ID:</div>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-[var(--fg)] break-all text-[11px] font-bold">
+                                                    {selectedMetadataEvent.device_id}
+                                                </span>
+                                                <button
+                                                    onClick={() => handleCopy(selectedMetadataEvent.device_id, "Device ID")}
+                                                    title="Copy Device ID"
+                                                    className="p-1 text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                >
+                                                    <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Platform & Type:</div>
+                                            <div className="text-[var(--fg)] font-semibold capitalize">
+                                                {selectedMetadataEvent.device_name} · {selectedMetadataEvent.os_name}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Geo & IP Address:</div>
+                                            <div className="text-[var(--fg)]">
+                                                📍 {selectedMetadataEvent.location}
+                                            </div>
+                                            <div className="flex items-center gap-1 text-[10px] text-[var(--muted)] mt-0.5">
+                                                <span>IP: {selectedMetadataEvent.ip_address}</span>
+                                                <button
+                                                    onClick={() => handleCopy(selectedMetadataEvent.ip_address, "IP Address")}
+                                                    title="Copy IP Address"
+                                                    className="p-0.5 text-[var(--muted)] hover:text-[var(--accent)] transition-colors cursor-pointer"
+                                                >
+                                                    <svg className="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Metadata Parameter Highlights Cards */}
+                                {metaEntries.length > 0 && (
+                                    <div className="space-y-2">
+                                        <div className="flex items-center justify-between">
+                                            <span className="text-xs font-mono font-semibold text-[var(--muted)] uppercase tracking-wider">
+                                                Telemetry Parameters ({metaEntries.length})
+                                            </span>
+                                            <button
+                                                onClick={() => handleCopy(JSON.stringify(selectedMetadataEvent.metadata, null, 2), "Metadata JSON")}
+                                                className="inline-flex items-center gap-1 text-[11px] font-mono text-[var(--accent)] hover:underline cursor-pointer"
+                                            >
+                                                <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                                </svg>
+                                                Copy Metadata JSON
+                                            </button>
+                                        </div>
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+                                            {metaEntries.map(([key, val]) => (
+                                                <div key={key} className="p-3 rounded-lg bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono space-y-1">
+                                                    <div className="text-[10px] text-[var(--muted)] truncate uppercase tracking-wider font-semibold">
+                                                        {key.replace(/_/g, " ")}
+                                                    </div>
+                                                    <div className="text-[var(--fg)] font-medium break-all max-h-24 overflow-y-auto">
+                                                        {typeof val === "object" ? JSON.stringify(val) : String(val)}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Raw JSON Block */}
+                                <div className="space-y-1.5">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-xs font-mono text-[var(--muted)]">Raw Payload:</span>
+                                        <span className="text-[10px] font-mono text-[var(--faint)]">JSON-formatted</span>
+                                    </div>
+                                    <pre className="p-4 rounded-xl bg-[var(--canvas)] border border-[var(--line)] text-emerald-400 text-xs font-mono overflow-auto max-h-52">
+                                        {JSON.stringify(selectedMetadataEvent.metadata || {}, null, 2)}
+                                    </pre>
+                                </div>
+                            </div>
+
+                            {/* Footer Controls */}
+                            <div className="flex flex-wrap items-center justify-between gap-3 px-6 py-4 border-t border-[var(--line)] bg-[var(--surface-2)]/60">
+                                <div className="flex items-center gap-2">
+                                    <button
+                                        onClick={() => handleCopy(JSON.stringify(selectedMetadataEvent, null, 2), "Full Event JSON")}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[var(--surface)] hover:bg-[var(--surface-3)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] transition-colors cursor-pointer"
+                                    >
+                                        <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        Copy Complete Event JSON
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const id = selectedMetadataEvent.event_id;
+                                            setSelectedMetadataEvent(null);
+                                            handleDeleteEvent(id);
+                                        }}
+                                        disabled={deletingId === selectedMetadataEvent.event_id}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 text-xs font-mono transition-colors cursor-pointer disabled:opacity-50"
+                                    >
+                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                        </svg>
+                                        Delete Row
+                                    </button>
+                                </div>
+
+                                <button
+                                    onClick={() => setSelectedMetadataEvent(null)}
+                                    className="px-5 py-1.5 rounded-lg bg-[var(--surface-3)] hover:bg-[var(--surface-2)] border border-[var(--line)] text-xs font-mono text-[var(--fg)] font-semibold transition-colors cursor-pointer"
+                                >
+                                    Close
+                                </button>
+                            </div>
                         </div>
                     </div>
-                </div>
-            )}
+                );
+            })()}
 
             {/* Clear All Events Confirmation Modal */}
             {showClearModal && (
@@ -1974,6 +2664,14 @@ export default function QuickDbActivityDashboard({
                             </button>
                         </div>
                     </div>
+                </div>
+            )}
+
+            {/* Floating Toast Notification for Clipboard Copying */}
+            {copiedText && (
+                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-2.5 px-4 py-2.5 rounded-xl bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--accent)]/40 shadow-2xl font-mono text-xs animate-in fade-in slide-in-from-bottom-2 duration-150">
+                    <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                    <span>Copied <strong className="text-[var(--accent)]">{copiedText}</strong> to clipboard</span>
                 </div>
             )}
         </div>
