@@ -1,5 +1,6 @@
 import * as fs from "fs";
 import * as path from "path";
+import * as os from "os";
 
 export interface ActivityEventInput {
     event_id: string;
@@ -49,12 +50,20 @@ const CSV_HEADER = [
 ].join(",") + "\n";
 
 class ActivityCsvService {
-    private readonly filePath: string;
+    private filePath: string;
     private seenEventIds: Set<string> | null = null;
     private writeLock: Promise<void> = Promise.resolve();
 
     constructor() {
-        const dataDir = process.env.QUICKDB_ACTIVITY_DATA_DIR || path.join(process.cwd(), "data");
+        const isServerless = Boolean(
+            process.env.VERCEL ||
+            process.env.AWS_LAMBDA_FUNCTION_NAME ||
+            process.env.LAMBDA_TASK_ROOT
+        );
+        const defaultDir = isServerless
+            ? path.join(os.tmpdir(), "quickdb_activity")
+            : path.join(process.cwd(), "data");
+        const dataDir = process.env.QUICKDB_ACTIVITY_DATA_DIR || defaultDir;
         this.filePath = path.join(dataDir, "activity_events.csv");
     }
 
@@ -67,22 +76,67 @@ class ActivityCsvService {
         return str;
     }
 
+    private resolveReadFilePath(): string | null {
+        try {
+            // 1. Configured file path
+            if (fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
+                return this.filePath;
+            }
+
+            // 2. Check local repo data folder fallback
+            const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
+            if (fs.existsSync(/*turbopackIgnore: true*/ localFallback)) {
+                return localFallback;
+            }
+
+            // 3. Check /tmp fallback
+            const tmpFallback = path.join(os.tmpdir(), "quickdb_activity", "activity_events.csv");
+            if (fs.existsSync(/*turbopackIgnore: true*/ tmpFallback)) {
+                return tmpFallback;
+            }
+        } catch (err) {
+            console.error("Error resolving activity CSV path:", err);
+        }
+
+        return null;
+    }
+
     private async ensureInitialized(): Promise<void> {
         if (this.seenEventIds !== null) return;
         this.seenEventIds = new Set<string>();
 
-        const dir = path.dirname(this.filePath);
-        if (!fs.existsSync(dir)) {
-            await fs.promises.mkdir(dir, { recursive: true });
-        }
-
-        if (!fs.existsSync(this.filePath)) {
-            await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
-            return;
-        }
-
-        // Read existing CSV to index event_ids for idempotency
+        let dir = path.dirname(this.filePath);
         try {
+            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+                await fs.promises.mkdir(dir, { recursive: true });
+            }
+        } catch (err) {
+            // Fallback to /tmp if write permission denied (e.g. read-only filesystem on Vercel)
+            const fallbackDir = path.join(os.tmpdir(), "quickdb_activity");
+            this.filePath = path.join(fallbackDir, "activity_events.csv");
+            dir = fallbackDir;
+            if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
+                await fs.promises.mkdir(dir, { recursive: true });
+            }
+        }
+
+        try {
+            if (!fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
+                // If local fallback file exists, copy it as seed
+                const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
+                if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
+                    try {
+                        await fs.promises.copyFile(localFallback, this.filePath);
+                    } catch {
+                        await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
+                    }
+                } else {
+                    await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
+                }
+                return;
+            }
+
+            // Read existing CSV to index event_ids for idempotency
             const content = await fs.promises.readFile(this.filePath, "utf8");
             const lines = content.split(/\r?\n/);
             // Skip header (line 0)
@@ -186,16 +240,16 @@ class ActivityCsvService {
     }
 
     public getCsvPath(): string {
-        return this.filePath;
+        return this.resolveReadFilePath() || this.filePath;
     }
 
     /**
      * Read and parse all activity events from the CSV file, returning typed events and aggregated metrics.
      */
     public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary }> {
-        await this.ensureInitialized();
+        const targetPath = this.resolveReadFilePath();
 
-        if (!fs.existsSync(this.filePath)) {
+        if (!targetPath || !fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
             return {
                 events: [],
                 summary: this.buildEmptySummary()
@@ -203,7 +257,7 @@ class ActivityCsvService {
         }
 
         try {
-            const content = await fs.promises.readFile(this.filePath, "utf8");
+            const content = await fs.promises.readFile(targetPath, "utf8");
             const rawLines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
 
             if (rawLines.length <= 1) {

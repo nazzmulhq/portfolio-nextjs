@@ -16,11 +16,11 @@ export default function QuickDbActivityDashboard({
     const [events, setEvents] = useState<ParsedActivityEvent[]>(initialEvents);
     const [summary, setSummary] = useState<ActivitySummary>(initialSummary);
     const [isLoading, setIsLoading] = useState(false);
+    const [mounted, setMounted] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
     const [selectedOs, setSelectedOs] = useState<string>("all");
     const [selectedMetadataEvent, setSelectedMetadataEvent] = useState<ParsedActivityEvent | null>(null);
-    const [lastRefreshed, setLastRefreshed] = useState<Date>(new Date());
     const [pageSize, setPageSize] = useState(25);
     const [currentPage, setCurrentPage] = useState(1);
 
@@ -33,7 +33,6 @@ export default function QuickDbActivityDashboard({
                 if (data.success) {
                     setEvents(data.events || []);
                     setSummary(data.summary || initialSummary);
-                    setLastRefreshed(new Date());
                 }
             }
         } catch (err) {
@@ -43,8 +42,9 @@ export default function QuickDbActivityDashboard({
         }
     };
 
-    // Auto-refresh every 30 seconds
+    // Auto-refresh every 30 seconds and handle client mount
     useEffect(() => {
+        setMounted(true);
         const interval = setInterval(refreshData, 30000);
         return () => clearInterval(interval);
     }, []);
@@ -134,6 +134,7 @@ export default function QuickDbActivityDashboard({
 
     const formatRelativeTime = (isoString?: string | null) => {
         if (!isoString) return "Never";
+        if (!mounted) return isoString.slice(0, 10);
         const date = new Date(isoString);
         const diffMs = Date.now() - date.getTime();
         const diffMins = Math.floor(diffMs / 60000);

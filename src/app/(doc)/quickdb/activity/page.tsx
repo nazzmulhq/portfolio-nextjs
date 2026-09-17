@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { activityCsvService } from "@src/lib/api/activityCsvService";
+import { activityCsvService, ParsedActivityEvent, ActivitySummary } from "@src/lib/api/activityCsvService";
 import QuickDbActivityDashboard from "@src/components/quickdb/QuickDbActivityDashboard";
 import DocThemeToggle from "@src/components/DocThemeToggle";
 
@@ -14,8 +14,31 @@ export const metadata: Metadata = {
     },
 };
 
+const defaultSummary: ActivitySummary = {
+    totalEvents: 0,
+    uniqueDevices: 0,
+    topFeature: { name: "None", count: 0 },
+    latestSyncAt: null,
+    featureDistribution: [],
+    deviceDistribution: { laptop: 0, desktop: 0, unknown: 0 },
+    osDistribution: [],
+    locationDistribution: [],
+    timeline: []
+};
+
 export default async function QuickDbActivityPage() {
-    const { events, summary } = await activityCsvService.getParsedEvents();
+    let events: ParsedActivityEvent[] = [];
+    let summary: ActivitySummary = defaultSummary;
+
+    try {
+        const data = await activityCsvService.getParsedEvents();
+        if (data) {
+            events = data.events || [];
+            summary = data.summary || defaultSummary;
+        }
+    } catch (err) {
+        console.error("Error loading activity events in QuickDbActivityPage:", err);
+    }
 
     return (
         <main className="relative min-h-screen">
