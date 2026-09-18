@@ -89,7 +89,8 @@ export async function GET(req: NextRequest) {
             return NextResponse.json({
                 success: true,
                 events,
-                summary: computeActivitySummary(events)
+                summary: computeActivitySummary(events),
+                deviceStore: data.deviceStore
             });
         }
 
