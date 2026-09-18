@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { activityCsvService, computeActivitySummary } from "../../../../../lib/api/activityCsvService";
+import { activityJsonService, computeActivitySummary } from "../../../../../lib/api/activityJsonService";
 
 export const dynamic = "force-dynamic";
 
@@ -17,7 +17,7 @@ export async function GET(req: NextRequest) {
         const editor = url.searchParams.get("editor")?.toLowerCase();
         const status = url.searchParams.get("status")?.toLowerCase();
 
-        const data = await activityCsvService.getParsedEvents();
+        const data = await activityJsonService.getParsedEvents();
         let events = data.events;
 
         const hasFilter = Boolean(range || date || startDate || endDate || q || feature || deviceId || os || editor || status);
@@ -91,12 +91,22 @@ export async function GET(req: NextRequest) {
                 events,
                 summary: computeActivitySummary(events),
                 deviceStore: data.deviceStore
+            }, {
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Access-Control-Allow-Origin": "*"
+                }
             });
         }
 
         return NextResponse.json({
             success: true,
             ...data
+        }, {
+            headers: {
+                "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                "Access-Control-Allow-Origin": "*"
+            }
         });
     } catch (err: any) {
         console.error("Error fetching activity events:", err);
@@ -117,26 +127,36 @@ export async function DELETE(req: NextRequest) {
         const clearAll = url.searchParams.get("all") === "true";
 
         if (clearAll) {
-            await activityCsvService.clearAllEvents();
+            await activityJsonService.clearAllEvents();
             return NextResponse.json({
                 success: true,
                 message: "All activity events cleared successfully"
+            }, {
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Access-Control-Allow-Origin": "*"
+                }
             });
         }
 
         if (eventId) {
-            const deleted = await activityCsvService.deleteEvent(eventId);
+            const deleted = await activityJsonService.deleteEvent(eventId);
             return NextResponse.json({
                 success: true,
                 deleted,
                 message: deleted ? `Event ${eventId} deleted successfully` : `Event ${eventId} not found`
+            }, {
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Access-Control-Allow-Origin": "*"
+                }
             });
         }
 
         try {
             const body = await req.json();
             if (body && Array.isArray(body.event_ids) && body.event_ids.length > 0) {
-                const count = await activityCsvService.deleteEvents(body.event_ids);
+                const count = await activityJsonService.deleteEvents(body.event_ids);
                 return NextResponse.json({
                     success: true,
                     count,

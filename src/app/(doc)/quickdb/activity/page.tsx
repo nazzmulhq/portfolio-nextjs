@@ -1,14 +1,14 @@
 import type { Metadata } from "next";
-import { activityCsvService, ParsedActivityEvent, ActivitySummary } from "@src/lib/api/activityCsvService";
+import { activityJsonService, ParsedActivityEvent, ActivitySummary } from "@src/lib/api/activityJsonService";
 import QuickDbActivityDashboard from "@src/components/quickdb/QuickDbActivityDashboard";
 import DocThemeToggle from "@src/components/DocThemeToggle";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-    title: "QuickDB Telemetry & Activity Stream - CSV Live Feed",
+    title: "QuickDB Telemetry & Activity Stream - JSON Live Feed",
     description:
-        "Real-time visualization and analytics of QuickDB extension usage, feature engagement, and device telemetry stored in local CSV files.",
+        "Real-time visualization and analytics of QuickDB extension usage, feature engagement, and device telemetry stored in data.json.",
     alternates: {
         canonical: "/quickdb/activity",
     },
@@ -33,7 +33,7 @@ export default async function QuickDbActivityPage() {
     let deviceStore = {};
 
     try {
-        const data = await activityCsvService.getParsedEvents();
+        const data = await activityJsonService.getParsedEvents();
         if (data) {
             events = data.events || [];
             summary = data.summary || defaultSummary;

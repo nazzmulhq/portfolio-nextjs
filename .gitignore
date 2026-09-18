@@ -46,4 +46,6 @@ data/
 /data
 /data/
 *.csv
+src/data/data.json
+public/data.json
 

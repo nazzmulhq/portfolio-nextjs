@@ -52,9 +52,7 @@ export default function QuickDbActivityDashboard({
                 const data = await res.json();
                 if (data.success) {
                     setEvents(data.events || []);
-                    if (data.deviceStore) {
-                        setDeviceStore(data.deviceStore);
-                    }
+                    setDeviceStore(data.deviceStore || {});
                 }
             }
         } catch (err) {
@@ -294,7 +292,7 @@ export default function QuickDbActivityDashboard({
                         <p className="text-xs sm:text-sm text-[var(--muted)]">
                             Real-time engagement telemetry stored as unique device keys in{" "}
                             <code className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] font-mono text-xs border border-[var(--line)]">
-                                public/data.json
+                                /data.json
                             </code>
                         </p>
                     </div>
@@ -738,7 +736,7 @@ export default function QuickDbActivityDashboard({
                         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-2)]">
                             <span className="text-xs font-mono text-[var(--muted)] flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                public/data.json Live Content
+                                /data.json Live Content
                             </span>
                             <button
                                 onClick={() => handleCopy(JSON.stringify(deviceStore, null, 2), "raw_json")}
