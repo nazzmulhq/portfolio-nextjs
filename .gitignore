@@ -40,12 +40,10 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
-# local data / csv / json storage
+# local data / csv storage
 data
 data/
 /data
 /data/
 *.csv
-public/data.json
-/public/data.json
 

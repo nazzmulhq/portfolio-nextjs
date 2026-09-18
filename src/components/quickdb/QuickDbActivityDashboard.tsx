@@ -7,6 +7,7 @@ import { ParsedActivityEvent, ActivitySummary, computeActivitySummary } from "@s
 interface QuickDbActivityDashboardProps {
     initialEvents: ParsedActivityEvent[];
     initialSummary: ActivitySummary;
+    initialDeviceStore?: Record<string, any>;
 }
 
 export interface DeviceGroup {
@@ -34,7 +35,7 @@ export default function QuickDbActivityDashboard({
     const [isLoading, setIsLoading] = useState(false);
     const [mounted, setMounted] = useState(false);
     const [copiedText, setCopiedText] = useState<string | null>(null);
-    const [viewMode, setViewMode] = useState<"stream" | "devices">("stream");
+    const [viewMode, setViewMode] = useState<"stream" | "devices">("devices");
     const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
     const [devicePage, setDevicePage] = useState(1);
     const [devicesPerPage, setDevicesPerPage] = useState<number | "all">(10);
@@ -758,15 +759,26 @@ export default function QuickDbActivityDashboard({
                             </h1>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                Live CSV Feed
+                                Live data.json Feed
                             </span>
                         </div>
                         <p className="text-sm text-[var(--muted)] mt-1">
-                            Synchronized once per calendar day from local SQLite instances into backend CSV storage.
+                            Stored as unique device keys with code editor, country, city, and daily open timestamps in <code className="text-[var(--accent)] font-mono">public/data.json</code>.
                         </p>
                     </div>
 
                     <div className="flex items-center gap-3">
+                        <a
+                            href="/data.json"
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-mono font-medium bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--line)] hover:border-[var(--line-strong)] transition-all cursor-pointer"
+                        >
+                            <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                            </svg>
+                            View data.json
+                        </a>
                         <button
                             onClick={refreshData}
                             disabled={isLoading}
@@ -780,7 +792,7 @@ export default function QuickDbActivityDashboard({
                             >
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                             </svg>
-                            {isLoading ? "Reading CSV..." : "Refresh"}
+                            {isLoading ? "Reading data.json..." : "Refresh"}
                         </button>
 
                         <button
@@ -802,7 +814,7 @@ export default function QuickDbActivityDashboard({
                             <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                             </svg>
-                            Clear CSV
+                            Clear Data
                         </button>
                     </div>
                 </div>
@@ -2136,24 +2148,22 @@ export default function QuickDbActivityDashboard({
                                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono uppercase bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--line)]">
                                                                     {group.osName}
                                                                 </span>
-                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
-                                                                    {group.sessionCount} session{group.sessionCount === 1 ? "" : "s"}
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20 font-medium">
+                                                                    {group.eventCount} open{group.eventCount === 1 ? "" : "s"} in day
                                                                 </span>
                                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">
                                                                     ⚙️ {group.codeEditor || "Visual Studio Code"}
                                                                 </span>
                                                             </div>
                                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-mono text-[var(--muted)]">
-                                                                <span className="flex items-center gap-1">
-                                                                    <svg className="w-3 h-3 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                                <span className="flex items-center gap-1 text-[var(--fg)]">
+                                                                    <svg className="w-3 h-3 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
                                                                     </svg>
-                                                                    {group.location}
+                                                                    📍 {group.location || "Global"}
                                                                 </span>
                                                                 <span>•</span>
-                                                                <span className="text-[var(--faint)]">IP: {group.ipAddress}</span>
-                                                                <span>•</span>
-                                                                <span>Top action: <strong className="text-[var(--fg)]">{group.topAction.name}</strong></span>
+                                                                <span>Daily Opens: <strong className="text-[var(--accent)]">{group.eventCount}x</strong></span>
                                                             </div>
                                                         </div>
                                                     </div>
@@ -2204,10 +2214,10 @@ export default function QuickDbActivityDashboard({
                                                             <table className="w-full text-left text-xs font-mono border-collapse">
                                                                 <thead>
                                                                     <tr className="border-b border-[var(--line)] bg-[var(--surface-2)] text-[var(--muted)]">
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Timestamp & Drift</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Event & Session</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Date & Time ("how many time open quickdb in a day")</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Event ID</th>
                                                                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Feature & Action</th>
-                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Target Item</th>
+                                                                        <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Code Editor & Location</th>
                                                                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider">Status & Telemetry</th>
                                                                         <th className="py-2.5 px-3 font-semibold uppercase tracking-wider text-right">Actions</th>
                                                                     </tr>

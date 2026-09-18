@@ -11,6 +11,20 @@ import {
 export type { ParsedActivityEvent, ActivitySummary };
 export { computeActivitySummary, buildEmptyActivitySummary };
 
+export interface DeviceActivityRecord {
+    "name of code editor"?: string;
+    "name of country"?: string;
+    "name of city"?: string;
+    "how many time open quickdb in a day"?: string[];
+    // Standard aliases for internal code access
+    code_editor?: string;
+    country?: string;
+    city?: string;
+    opens?: string[];
+}
+
+export type DeviceActivityStore = Record<string, DeviceActivityRecord>;
+
 export interface ActivityEventInput {
     event_id: string;
     session_id?: string;
@@ -44,6 +58,54 @@ export interface DailySyncResult {
     failed_event_ids: string[];
 }
 
+export const DEFAULT_SEED_STORE: DeviceActivityStore = {
+    "e22bcd81383d63cb4cee7aa180d3604d6bae47da892f84545d10c063fc04be1a": {
+        "name of code editor": "Antigravity IDE",
+        "name of country": "Bangladesh",
+        "name of city": "Dhaka",
+        "how many time open quickdb in a day": [
+            "2026-09-18 14:16:15",
+            "2026-09-18 14:23:47",
+            "2026-09-18 16:42:46",
+            "2026-09-18 17:38:25",
+            "2026-09-18 18:01:46",
+            "2026-09-18 20:24:38",
+            "2026-09-18 20:30:43"
+        ]
+    },
+    "dev_1789735198240": {
+        "name of code editor": "Visual Studio Code",
+        "name of country": "United States",
+        "name of city": "San Francisco",
+        "how many time open quickdb in a day": [
+            "2026-09-18 12:39:58",
+            "2026-09-18 15:10:22",
+            "2026-09-18 18:45:00"
+        ]
+    },
+    "dev_1789731935828": {
+        "name of code editor": "Cursor",
+        "name of country": "Germany",
+        "name of city": "Berlin",
+        "how many time open quickdb in a day": [
+            "2026-09-18 08:30:15",
+            "2026-09-18 11:45:35",
+            "2026-09-18 16:20:10"
+        ]
+    },
+    "dev_1789730815993": {
+        "name of code editor": "Antigravity IDE",
+        "name of country": "United Kingdom",
+        "name of city": "London",
+        "how many time open quickdb in a day": [
+            "2026-09-18 10:15:00",
+            "2026-09-18 11:26:56",
+            "2026-09-18 14:50:30",
+            "2026-09-18 19:10:45"
+        ]
+    }
+};
+
 class ActivityCsvService {
     private filePath: string;
     private seenEventIds: Set<string> | null = null;
@@ -64,7 +126,7 @@ class ActivityCsvService {
 
     private resolveReadFilePath(): string {
         try {
-            // 1. If configured path exists, check it
+            // 1. Configured file path
             if (fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
                 return this.filePath;
             }
@@ -97,7 +159,6 @@ class ActivityCsvService {
                 await fs.promises.mkdir(dir, { recursive: true });
             }
         } catch {
-            // Fallback to /tmp if write permission denied (e.g. read-only filesystem on Vercel)
             const fallbackDir = path.join(os.tmpdir(), "quickdb_activity");
             this.filePath = path.join(fallbackDir, "data.json");
             dir = fallbackDir;
@@ -113,22 +174,17 @@ class ActivityCsvService {
                     try {
                         await fs.promises.copyFile(publicSeed, this.filePath);
                     } catch {
-                        await fs.promises.writeFile(this.filePath, "[]", "utf8");
+                        await fs.promises.writeFile(this.filePath, "{}", "utf8");
                     }
                 } else {
-                    await fs.promises.writeFile(this.filePath, "[]", "utf8");
+                    await fs.promises.writeFile(this.filePath, "{}", "utf8");
                 }
             }
 
-            const targetPath = this.resolveReadFilePath();
-            if (fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
-                const content = await fs.promises.readFile(targetPath, "utf8");
-                const parsed = JSON.parse(content);
-                const rawEvents: ParsedActivityEvent[] = Array.isArray(parsed) ? parsed : parsed.events || [];
-                for (const evt of rawEvents) {
-                    if (evt?.event_id) {
-                        this.seenEventIds.add(evt.event_id);
-                    }
+            const events = await this.readEventsFromFile();
+            for (const evt of events) {
+                if (evt?.event_id) {
+                    this.seenEventIds.add(evt.event_id);
                 }
             }
         } catch (err) {
@@ -136,9 +192,43 @@ class ActivityCsvService {
         }
     }
 
+    public async readDeviceStore(): Promise<DeviceActivityStore> {
+        const targetPath = this.resolveReadFilePath();
+        if (!targetPath || !fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
+            return DEFAULT_SEED_STORE;
+        }
+
+        try {
+            const content = await fs.promises.readFile(targetPath, "utf8");
+            if (!content.trim()) return DEFAULT_SEED_STORE;
+            const parsed = JSON.parse(content);
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed) && Object.keys(parsed).length > 0) {
+                return parsed as DeviceActivityStore;
+            }
+            return DEFAULT_SEED_STORE;
+        } catch (err) {
+            console.error("Error reading device store from data.json:", err);
+            return DEFAULT_SEED_STORE;
+        }
+    }
+
+    public async writeDeviceStore(store: DeviceActivityStore): Promise<void> {
+        const jsonContent = JSON.stringify(store, null, 2);
+        await fs.promises.writeFile(this.filePath, jsonContent, "utf8");
+
+        const publicFile = path.join(process.cwd(), "public", "data.json");
+        if (fs.existsSync(/*turbopackIgnore: true*/ publicFile) && publicFile !== this.filePath) {
+            try {
+                await fs.promises.writeFile(publicFile, jsonContent, "utf8");
+            } catch {
+                // ignore in read-only environment
+            }
+        }
+    }
+
     private async readEventsFromFile(): Promise<ParsedActivityEvent[]> {
         const targetPath = this.resolveReadFilePath();
-        if (!targetPath || !fs.existsSync(targetPath)) {
+        if (!targetPath || !fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
             return [];
         }
 
@@ -146,25 +236,102 @@ class ActivityCsvService {
             const content = await fs.promises.readFile(targetPath, "utf8");
             if (!content.trim()) return [];
             const parsed = JSON.parse(content);
-            const events: ParsedActivityEvent[] = Array.isArray(parsed) ? parsed : parsed.events || [];
-            return events;
-        } catch (err) {
-            console.error("Error reading events from JSON file:", err);
-            return [];
-        }
-    }
 
-    private async writeEventsToFile(events: ParsedActivityEvent[]): Promise<void> {
-        const jsonContent = JSON.stringify(events, null, 2);
-        await fs.promises.writeFile(this.filePath, jsonContent, "utf8");
+            // Handle user-specified device-keyed schema: { "device_id": { ... } }
+            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                const events: ParsedActivityEvent[] = [];
+                const store = parsed as DeviceActivityStore;
 
-        const publicFile = path.join(process.cwd(), "public", "data.json");
-        if (fs.existsSync(publicFile) && publicFile !== this.filePath) {
-            try {
-                await fs.promises.writeFile(publicFile, jsonContent, "utf8");
-            } catch {
-                // ignore in read-only environment
+                for (const [deviceId, devData] of Object.entries(store)) {
+                    if (!devData || typeof devData !== "object") continue;
+
+                    const codeEditor =
+                        devData["name of code editor"] ||
+                        devData.code_editor ||
+                        "Visual Studio Code";
+                    const country = devData["name of country"] || devData.country || "";
+                    const city = devData["name of city"] || devData.city || "";
+                    const location = [city, country].filter(Boolean).join(", ") || "Global";
+                    const opens =
+                        devData["how many time open quickdb in a day"] ||
+                        devData.opens ||
+                        [];
+
+                    if (Array.isArray(opens) && opens.length > 0) {
+                        opens.forEach((timeStr, idx) => {
+                            const dateObj = new Date(timeStr);
+                            const isoTime = !isNaN(dateObj.getTime())
+                                ? dateObj.toISOString()
+                                : timeStr;
+
+                            events.push({
+                                event_id: `open_${deviceId.slice(0, 10)}_${idx}_${timeStr.replace(/[^0-9]/g, "").slice(0, 12)}`,
+                                session_id: `sess_${deviceId.slice(0, 10)}_${idx}`,
+                                feature_name: "app",
+                                action: "open_quickdb",
+                                item_id: "quickdb",
+                                item_name: "QuickDB Extension",
+                                occurred_at: isoTime,
+                                device_id: deviceId,
+                                device_name: "laptop",
+                                os_name: "mac",
+                                code_editor: codeEditor,
+                                ip_address: "127.0.0.1",
+                                location: location,
+                                status: "synced",
+                                received_at: isoTime,
+                                metadata: {
+                                    "name of code editor": codeEditor,
+                                    "name of country": country,
+                                    "name of city": city,
+                                    "how many time open quickdb in a day": opens.length,
+                                    daily_opens_count: opens.length,
+                                    open_timestamp: timeStr,
+                                    open_timestamps: opens
+                                }
+                            });
+                        });
+                    } else {
+                        // Device registered but no opens yet
+                        const nowIso = new Date().toISOString();
+                        events.push({
+                            event_id: `reg_${deviceId.slice(0, 10)}`,
+                            session_id: `sess_${deviceId.slice(0, 10)}`,
+                            feature_name: "app",
+                            action: "registered",
+                            item_id: "quickdb",
+                            item_name: "QuickDB Extension",
+                            occurred_at: nowIso,
+                            device_id: deviceId,
+                            device_name: "laptop",
+                            os_name: "mac",
+                            code_editor: codeEditor,
+                            ip_address: "127.0.0.1",
+                            location: location,
+                            status: "synced",
+                            received_at: nowIso,
+                            metadata: {
+                                "name of code editor": codeEditor,
+                                "name of country": country,
+                                "name of city": city,
+                                "how many time open quickdb in a day": 0
+                            }
+                        });
+                    }
+                }
+
+                return events;
             }
+
+            // Legacy array support
+            if (Array.isArray(parsed)) {
+                return parsed as ParsedActivityEvent[];
+            }
+
+            return [];
+        } catch (err) {
+            console.error("Error reading events from data.json:", err);
+            return [];
         }
     }
 
@@ -176,13 +343,16 @@ class ActivityCsvService {
         return this.getDataPath();
     }
 
-    public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary }> {
+    public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary; deviceStore?: DeviceActivityStore }> {
         try {
             const events = await this.readEventsFromFile();
+            const deviceStore = await this.readDeviceStore();
+
             if (events.length === 0) {
                 return {
                     events: [],
-                    summary: buildEmptyActivitySummary()
+                    summary: buildEmptyActivitySummary(),
+                    deviceStore
                 };
             }
 
@@ -195,13 +365,15 @@ class ActivityCsvService {
 
             return {
                 events,
-                summary: computeActivitySummary(events)
+                summary: computeActivitySummary(events),
+                deviceStore
             };
         } catch (err) {
             console.error("Error getting parsed events:", err);
             return {
                 events: [],
-                summary: buildEmptyActivitySummary()
+                summary: buildEmptyActivitySummary(),
+                deviceStore: {}
             };
         }
     }
@@ -226,70 +398,42 @@ class ActivityCsvService {
             this.writeLock = this.writeLock
                 .then(async () => {
                     await this.ensureInitialized();
-                    const seen = this.seenEventIds!;
-                    const existingEvents = await this.readEventsFromFile();
-                    const newEvents: ParsedActivityEvent[] = [];
-                    const receivedAt = new Date().toISOString();
+                    const deviceStore = await this.readDeviceStore();
+                    const deviceId = payload.device_id || "unknown_device";
+
+                    const editor =
+                        payload.code_editor ||
+                        payload.editor_name ||
+                        "Visual Studio Code";
+
+                    if (!deviceStore[deviceId]) {
+                        deviceStore[deviceId] = {
+                            "name of code editor": editor,
+                            "name of country": "",
+                            "name of city": "",
+                            "how many time open quickdb in a day": []
+                        };
+                    }
+
+                    if (!Array.isArray(deviceStore[deviceId]["how many time open quickdb in a day"])) {
+                        deviceStore[deviceId]["how many time open quickdb in a day"] = [];
+                    }
+
+                    const openTimes = deviceStore[deviceId]["how many time open quickdb in a day"]!;
 
                     for (const evt of payload.events) {
                         if (!evt || !evt.event_id) continue;
 
-                        if (seen.has(evt.event_id)) {
+                        const time = evt.occurred_at || new Date().toISOString();
+                        if (openTimes.includes(time)) {
                             duplicateEventIds.push(evt.event_id);
-                            continue;
-                        }
-
-                        try {
-                            const codeEditor =
-                                evt.code_editor ||
-                                evt.editor_name ||
-                                (typeof evt.metadata === "object" && (evt.metadata?.code_editor || evt.metadata?.editor_name)) ||
-                                payload.code_editor ||
-                                payload.editor_name ||
-                                "Visual Studio Code";
-
-                            let metadataObj: Record<string, any> | null = null;
-                            if (typeof evt.metadata === "object") {
-                                metadataObj = evt.metadata;
-                            } else if (typeof evt.metadata === "string") {
-                                try {
-                                    metadataObj = JSON.parse(evt.metadata);
-                                } catch {
-                                    metadataObj = { raw: evt.metadata };
-                                }
-                            }
-
-                            const newEvt: ParsedActivityEvent = {
-                                event_id: evt.event_id,
-                                session_id: evt.session_id || "",
-                                feature_name: evt.feature_name || "unknown",
-                                action: evt.action || "unknown",
-                                item_id: evt.item_id || "",
-                                item_name: evt.item_name || "",
-                                occurred_at: evt.occurred_at || receivedAt,
-                                device_id: evt.device_id || payload.device_id || "",
-                                device_name: evt.device_name || "desktop",
-                                os_name: evt.os_name || "unknown",
-                                code_editor: codeEditor,
-                                ip_address: evt.ip_address || clientIp || "",
-                                location: evt.location || "",
-                                status: "synced",
-                                received_at: receivedAt,
-                                metadata: metadataObj
-                            };
-
-                            newEvents.push(newEvt);
-                            seen.add(evt.event_id);
+                        } else {
+                            openTimes.push(time);
                             acceptedEventIds.push(evt.event_id);
-                        } catch {
-                            failedEventIds.push(evt.event_id);
                         }
                     }
 
-                    if (newEvents.length > 0) {
-                        const updated = [...newEvents, ...existingEvents];
-                        await this.writeEventsToFile(updated);
-                    }
+                    await this.writeDeviceStore(deviceStore);
 
                     resolve({
                         success: true,
@@ -300,7 +444,7 @@ class ActivityCsvService {
                     });
                 })
                 .catch((err) => {
-                    console.error("Error writing activity events to JSON:", err);
+                    console.error("Error saving events to data.json:", err);
                     reject(err);
                 });
         });
@@ -319,19 +463,36 @@ class ActivityCsvService {
             this.writeLock = this.writeLock
                 .then(async () => {
                     await this.ensureInitialized();
-                    const existingEvents = await this.readEventsFromFile();
-                    const retainedEvents = existingEvents.filter((e) => !idSet.has(e.event_id));
-                    const deletedCount = existingEvents.length - retainedEvents.length;
+                    const deviceStore = await this.readDeviceStore();
+                    let deletedCount = 0;
 
                     for (const id of idSet) {
-                        this.seenEventIds?.delete(id);
+                        // If id matches a device ID directly
+                        if (deviceStore[id]) {
+                            delete deviceStore[id];
+                            deletedCount++;
+                            continue;
+                        }
+
+                        // Check inside each device's open timestamps
+                        for (const device of Object.values(deviceStore)) {
+                            if (Array.isArray(device["how many time open quickdb in a day"])) {
+                                const prevLen = device["how many time open quickdb in a day"]!.length;
+                                device["how many time open quickdb in a day"] = device[
+                                    "how many time open quickdb in a day"
+                                ]!.filter((t) => !id.includes(t.replace(/[^0-9]/g, "").slice(0, 10)));
+                                if (device["how many time open quickdb in a day"]!.length < prevLen) {
+                                    deletedCount++;
+                                }
+                            }
+                        }
                     }
 
-                    await this.writeEventsToFile(retainedEvents);
+                    await this.writeDeviceStore(deviceStore);
                     resolve(deletedCount);
                 })
                 .catch((err) => {
-                    console.error("Error deleting activity event(s):", err);
+                    console.error("Error deleting events from data.json:", err);
                     reject(err);
                 });
         });
@@ -343,11 +504,11 @@ class ActivityCsvService {
                 .then(async () => {
                     await this.ensureInitialized();
                     this.seenEventIds = new Set<string>();
-                    await this.writeEventsToFile([]);
+                    await this.writeDeviceStore({});
                     resolve(true);
                 })
                 .catch((err) => {
-                    console.error("Error clearing all activity events:", err);
+                    console.error("Error clearing data.json:", err);
                     reject(err);
                 });
         });

@@ -30,12 +30,14 @@ const defaultSummary: ActivitySummary = {
 export default async function QuickDbActivityPage() {
     let events: ParsedActivityEvent[] = [];
     let summary: ActivitySummary = defaultSummary;
+    let deviceStore = {};
 
     try {
         const data = await activityCsvService.getParsedEvents();
         if (data) {
             events = data.events || [];
             summary = data.summary || defaultSummary;
+            deviceStore = data.deviceStore || {};
         }
     } catch (err) {
         console.error("Error loading activity events in QuickDbActivityPage:", err);
@@ -44,7 +46,11 @@ export default async function QuickDbActivityPage() {
     return (
         <main className="relative min-h-screen">
             <DocThemeToggle />
-            <QuickDbActivityDashboard initialEvents={events} initialSummary={summary} />
+            <QuickDbActivityDashboard
+                initialEvents={events}
+                initialSummary={summary}
+                initialDeviceStore={deviceStore}
+            />
         </main>
     );
 }
