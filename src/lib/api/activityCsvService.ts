@@ -44,25 +44,6 @@ export interface DailySyncResult {
     failed_event_ids: string[];
 }
 
-const CSV_HEADER = [
-    "event_id",
-    "session_id",
-    "feature_name",
-    "action",
-    "item_id",
-    "item_name",
-    "occurred_at",
-    "device_id",
-    "device_name",
-    "os_name",
-    "code_editor",
-    "ip_address",
-    "location",
-    "status",
-    "received_at",
-    "metadata"
-].join(",") + "\n";
-
 class ActivityCsvService {
     private filePath: string;
     private seenEventIds: Set<string> | null = null;
@@ -76,43 +57,34 @@ class ActivityCsvService {
         );
         const defaultDir = isServerless
             ? path.join(os.tmpdir(), "quickdb_activity")
-            : path.join(process.cwd(), "data");
+            : path.join(process.cwd(), "public");
         const dataDir = process.env.QUICKDB_ACTIVITY_DATA_DIR || defaultDir;
-        this.filePath = path.join(dataDir, "activity_events.csv");
+        this.filePath = path.join(dataDir, "data.json");
     }
 
-    private escapeCsv(val: any): string {
-        if (val === null || val === undefined) return "";
-        let str = typeof val === "object" ? JSON.stringify(val) : String(val);
-        if (str.includes(",") || str.includes('"') || str.includes("\n") || str.includes("\r")) {
-            str = '"' + str.replace(/"/g, '""') + '"';
-        }
-        return str;
-    }
-
-    private resolveReadFilePath(): string | null {
+    private resolveReadFilePath(): string {
         try {
-            // 1. Configured file path
+            // 1. If configured path exists, check it
             if (fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
                 return this.filePath;
             }
 
-            // 2. Check local repo data folder fallback
-            const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
-            if (fs.existsSync(/*turbopackIgnore: true*/ localFallback)) {
-                return localFallback;
+            // 2. Main repo public/data.json
+            const publicFallback = path.join(process.cwd(), "public", "data.json");
+            if (fs.existsSync(/*turbopackIgnore: true*/ publicFallback)) {
+                return publicFallback;
             }
 
-            // 3. Check /tmp fallback
-            const tmpFallback = path.join(os.tmpdir(), "quickdb_activity", "activity_events.csv");
+            // 3. Serverless tmp fallback
+            const tmpFallback = path.join(os.tmpdir(), "quickdb_activity", "data.json");
             if (fs.existsSync(/*turbopackIgnore: true*/ tmpFallback)) {
                 return tmpFallback;
             }
         } catch (err) {
-            console.error("Error resolving activity CSV path:", err);
+            console.error("Error resolving activity JSON path:", err);
         }
 
-        return null;
+        return path.join(process.cwd(), "public", "data.json");
     }
 
     private async ensureInitialized(): Promise<void> {
@@ -124,10 +96,10 @@ class ActivityCsvService {
             if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
                 await fs.promises.mkdir(dir, { recursive: true });
             }
-        } catch (err) {
+        } catch {
             // Fallback to /tmp if write permission denied (e.g. read-only filesystem on Vercel)
             const fallbackDir = path.join(os.tmpdir(), "quickdb_activity");
-            this.filePath = path.join(fallbackDir, "activity_events.csv");
+            this.filePath = path.join(fallbackDir, "data.json");
             dir = fallbackDir;
             if (!fs.existsSync(/*turbopackIgnore: true*/ dir)) {
                 await fs.promises.mkdir(dir, { recursive: true });
@@ -135,39 +107,102 @@ class ActivityCsvService {
         }
 
         try {
+            const publicSeed = path.join(process.cwd(), "public", "data.json");
             if (!fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
-                // If local fallback file exists, copy it as seed
-                const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
-                if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
+                if (fs.existsSync(/*turbopackIgnore: true*/ publicSeed) && publicSeed !== this.filePath) {
                     try {
-                        await fs.promises.copyFile(localFallback, this.filePath);
+                        await fs.promises.copyFile(publicSeed, this.filePath);
                     } catch {
-                        await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
+                        await fs.promises.writeFile(this.filePath, "[]", "utf8");
                     }
                 } else {
-                    await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
+                    await fs.promises.writeFile(this.filePath, "[]", "utf8");
                 }
-                return;
             }
 
-            // Read existing CSV to index event_ids for idempotency
-            const content = await fs.promises.readFile(this.filePath, "utf8");
-            const lines = content.split(/\r?\n/);
-            // Skip header (line 0)
-            for (let i = 1; i < lines.length; i++) {
-                const line = lines[i].trim();
-                if (!line) continue;
-                // event_id is the first comma-separated field
-                const firstComma = line.indexOf(",");
-                const id = (firstComma >= 0 ? line.substring(0, firstComma) : line)
-                    .replace(/^"|"$/g, "")
-                    .trim();
-                if (id) {
-                    this.seenEventIds.add(id);
+            const targetPath = this.resolveReadFilePath();
+            if (fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
+                const content = await fs.promises.readFile(targetPath, "utf8");
+                const parsed = JSON.parse(content);
+                const rawEvents: ParsedActivityEvent[] = Array.isArray(parsed) ? parsed : parsed.events || [];
+                for (const evt of rawEvents) {
+                    if (evt?.event_id) {
+                        this.seenEventIds.add(evt.event_id);
+                    }
                 }
             }
         } catch (err) {
-            console.error("Failed to read existing activity CSV:", err);
+            console.error("Failed to initialize activity JSON data:", err);
+        }
+    }
+
+    private async readEventsFromFile(): Promise<ParsedActivityEvent[]> {
+        const targetPath = this.resolveReadFilePath();
+        if (!targetPath || !fs.existsSync(targetPath)) {
+            return [];
+        }
+
+        try {
+            const content = await fs.promises.readFile(targetPath, "utf8");
+            if (!content.trim()) return [];
+            const parsed = JSON.parse(content);
+            const events: ParsedActivityEvent[] = Array.isArray(parsed) ? parsed : parsed.events || [];
+            return events;
+        } catch (err) {
+            console.error("Error reading events from JSON file:", err);
+            return [];
+        }
+    }
+
+    private async writeEventsToFile(events: ParsedActivityEvent[]): Promise<void> {
+        const jsonContent = JSON.stringify(events, null, 2);
+        await fs.promises.writeFile(this.filePath, jsonContent, "utf8");
+
+        const publicFile = path.join(process.cwd(), "public", "data.json");
+        if (fs.existsSync(publicFile) && publicFile !== this.filePath) {
+            try {
+                await fs.promises.writeFile(publicFile, jsonContent, "utf8");
+            } catch {
+                // ignore in read-only environment
+            }
+        }
+    }
+
+    public getDataPath(): string {
+        return this.resolveReadFilePath();
+    }
+
+    public getCsvPath(): string {
+        return this.getDataPath();
+    }
+
+    public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary }> {
+        try {
+            const events = await this.readEventsFromFile();
+            if (events.length === 0) {
+                return {
+                    events: [],
+                    summary: buildEmptyActivitySummary()
+                };
+            }
+
+            // Sort most recent first
+            events.sort((a, b) => {
+                const ta = new Date(a.occurred_at || a.received_at).getTime() || 0;
+                const tb = new Date(b.occurred_at || b.received_at).getTime() || 0;
+                return tb - ta;
+            });
+
+            return {
+                events,
+                summary: computeActivitySummary(events)
+            };
+        } catch (err) {
+            console.error("Error getting parsed events:", err);
+            return {
+                events: [],
+                summary: buildEmptyActivitySummary()
+            };
         }
     }
 
@@ -187,21 +222,18 @@ class ActivityCsvService {
             };
         }
 
-        // Enqueue through write lock to serialize concurrent batch writes
         return new Promise<DailySyncResult>((resolve, reject) => {
             this.writeLock = this.writeLock
                 .then(async () => {
                     await this.ensureInitialized();
                     const seen = this.seenEventIds!;
-                    const rowsToAppend: string[] = [];
+                    const existingEvents = await this.readEventsFromFile();
+                    const newEvents: ParsedActivityEvent[] = [];
                     const receivedAt = new Date().toISOString();
 
                     for (const evt of payload.events) {
-                        if (!evt || !evt.event_id) {
-                            continue;
-                        }
+                        if (!evt || !evt.event_id) continue;
 
-                        // Idempotency: if event_id already recorded, mark as duplicate
                         if (seen.has(evt.event_id)) {
                             duplicateEventIds.push(evt.event_id);
                             continue;
@@ -216,26 +248,37 @@ class ActivityCsvService {
                                 payload.editor_name ||
                                 "Visual Studio Code";
 
-                            const row = [
-                                this.escapeCsv(evt.event_id),
-                                this.escapeCsv(evt.session_id || ""),
-                                this.escapeCsv(evt.feature_name || "unknown"),
-                                this.escapeCsv(evt.action || "unknown"),
-                                this.escapeCsv(evt.item_id || ""),
-                                this.escapeCsv(evt.item_name || ""),
-                                this.escapeCsv(evt.occurred_at || receivedAt),
-                                this.escapeCsv(evt.device_id || payload.device_id || ""),
-                                this.escapeCsv(evt.device_name || ""),
-                                this.escapeCsv(evt.os_name || ""),
-                                this.escapeCsv(codeEditor),
-                                this.escapeCsv(evt.ip_address || clientIp || ""),
-                                this.escapeCsv(evt.location || ""),
-                                this.escapeCsv("synced"),
-                                this.escapeCsv(receivedAt),
-                                this.escapeCsv(evt.metadata || "")
-                            ].join(",") + "\n";
+                            let metadataObj: Record<string, any> | null = null;
+                            if (typeof evt.metadata === "object") {
+                                metadataObj = evt.metadata;
+                            } else if (typeof evt.metadata === "string") {
+                                try {
+                                    metadataObj = JSON.parse(evt.metadata);
+                                } catch {
+                                    metadataObj = { raw: evt.metadata };
+                                }
+                            }
 
-                            rowsToAppend.push(row);
+                            const newEvt: ParsedActivityEvent = {
+                                event_id: evt.event_id,
+                                session_id: evt.session_id || "",
+                                feature_name: evt.feature_name || "unknown",
+                                action: evt.action || "unknown",
+                                item_id: evt.item_id || "",
+                                item_name: evt.item_name || "",
+                                occurred_at: evt.occurred_at || receivedAt,
+                                device_id: evt.device_id || payload.device_id || "",
+                                device_name: evt.device_name || "desktop",
+                                os_name: evt.os_name || "unknown",
+                                code_editor: codeEditor,
+                                ip_address: evt.ip_address || clientIp || "",
+                                location: evt.location || "",
+                                status: "synced",
+                                received_at: receivedAt,
+                                metadata: metadataObj
+                            };
+
+                            newEvents.push(newEvt);
                             seen.add(evt.event_id);
                             acceptedEventIds.push(evt.event_id);
                         } catch {
@@ -243,8 +286,9 @@ class ActivityCsvService {
                         }
                     }
 
-                    if (rowsToAppend.length > 0) {
-                        await fs.promises.appendFile(this.filePath, rowsToAppend.join(""), "utf8");
+                    if (newEvents.length > 0) {
+                        const updated = [...newEvents, ...existingEvents];
+                        await this.writeEventsToFile(updated);
                     }
 
                     resolve({
@@ -256,23 +300,17 @@ class ActivityCsvService {
                     });
                 })
                 .catch((err) => {
-                    console.error("Error writing activity events to CSV:", err);
+                    console.error("Error writing activity events to JSON:", err);
                     reject(err);
                 });
         });
     }
 
-    /**
-     * Delete a single activity event row by event_id.
-     */
     public async deleteEvent(eventId: string): Promise<boolean> {
         const count = await this.deleteEvents([eventId]);
         return count > 0;
     }
 
-    /**
-     * Delete multiple activity event rows by event_id list.
-     */
     public async deleteEvents(eventIds: string[]): Promise<number> {
         const idSet = new Set(eventIds.filter(Boolean));
         if (idSet.size === 0) return 0;
@@ -281,53 +319,15 @@ class ActivityCsvService {
             this.writeLock = this.writeLock
                 .then(async () => {
                     await this.ensureInitialized();
-                    const targetPath = this.resolveReadFilePath() || this.filePath;
+                    const existingEvents = await this.readEventsFromFile();
+                    const retainedEvents = existingEvents.filter((e) => !idSet.has(e.event_id));
+                    const deletedCount = existingEvents.length - retainedEvents.length;
 
-                    if (!fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
-                        resolve(0);
-                        return;
+                    for (const id of idSet) {
+                        this.seenEventIds?.delete(id);
                     }
 
-                    const content = await fs.promises.readFile(targetPath, "utf8");
-                    const lines = content.split(/\r?\n/);
-                    if (lines.length <= 1) {
-                        resolve(0);
-                        return;
-                    }
-
-                    const retainedLines: string[] = [lines[0]]; // Header
-                    let deletedCount = 0;
-
-                    for (let i = 1; i < lines.length; i++) {
-                        const line = lines[i].trim();
-                        if (!line) continue;
-
-                        const firstComma = line.indexOf(",");
-                        const id = (firstComma >= 0 ? line.substring(0, firstComma) : line)
-                            .replace(/^"|"$/g, "")
-                            .trim();
-
-                        if (idSet.has(id)) {
-                            deletedCount++;
-                            this.seenEventIds?.delete(id);
-                        } else {
-                            retainedLines.push(lines[i]);
-                        }
-                    }
-
-                    const newContent = retainedLines.join("\n") + (retainedLines.length > 0 ? "\n" : "");
-                    await fs.promises.writeFile(this.filePath, newContent, "utf8");
-
-                    // Also update localFallback if different and target was localFallback
-                    const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
-                    if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
-                        try {
-                            await fs.promises.writeFile(localFallback, newContent, "utf8");
-                        } catch {
-                            // ignore in read-only environment
-                        }
-                    }
-
+                    await this.writeEventsToFile(retainedEvents);
                     resolve(deletedCount);
                 })
                 .catch((err) => {
@@ -337,27 +337,13 @@ class ActivityCsvService {
         });
     }
 
-    /**
-     * Clear all activity event rows from the CSV file while preserving the CSV header.
-     */
     public async clearAllEvents(): Promise<boolean> {
         return new Promise<boolean>((resolve, reject) => {
             this.writeLock = this.writeLock
                 .then(async () => {
                     await this.ensureInitialized();
                     this.seenEventIds = new Set<string>();
-
-                    await fs.promises.writeFile(this.filePath, CSV_HEADER, "utf8");
-
-                    const localFallback = path.join(process.cwd(), "data", "activity_events.csv");
-                    if (fs.existsSync(/*turbopackIgnore: true*/ localFallback) && localFallback !== this.filePath) {
-                        try {
-                            await fs.promises.writeFile(localFallback, CSV_HEADER, "utf8");
-                        } catch {
-                            // ignore in read-only environment
-                        }
-                    }
-
+                    await this.writeEventsToFile([]);
                     resolve(true);
                 })
                 .catch((err) => {
@@ -366,140 +352,7 @@ class ActivityCsvService {
                 });
         });
     }
-
-    public getCsvPath(): string {
-        return this.resolveReadFilePath() || this.filePath;
-    }
-
-    /**
-     * Read and parse all activity events from the CSV file, returning typed events and aggregated metrics.
-     */
-    public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary }> {
-        const targetPath = this.resolveReadFilePath();
-
-        if (!targetPath || !fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
-            return {
-                events: [],
-                summary: this.buildEmptySummary()
-            };
-        }
-
-        try {
-            const content = await fs.promises.readFile(targetPath, "utf8");
-            const rawLines = content.split(/\r?\n/).filter((l) => l.trim().length > 0);
-
-            if (rawLines.length <= 1) {
-                return {
-                    events: [],
-                    summary: this.buildEmptySummary()
-                };
-            }
-
-            const headers = this.parseCsvLine(rawLines[0]).map((h) => h.trim().toLowerCase());
-            const hasCodeEditorCol = headers.includes("code_editor") || headers.includes("editor_name");
-            const editorColIdx = headers.indexOf("code_editor") !== -1 ? headers.indexOf("code_editor") : headers.indexOf("editor_name");
-
-            const events: ParsedActivityEvent[] = [];
-            // Skip header (index 0)
-            for (let i = 1; i < rawLines.length; i++) {
-                const cols = this.parseCsvLine(rawLines[i]);
-                if (!cols[0]) continue; // skip if event_id is missing
-
-                let metadataObj: Record<string, any> | null = null;
-                const metadataRaw = hasCodeEditorCol ? cols[15] : cols[14];
-                if (metadataRaw) {
-                    try {
-                        metadataObj = JSON.parse(metadataRaw);
-                    } catch {
-                        metadataObj = { raw: metadataRaw };
-                    }
-                }
-
-                let codeEditor = "Visual Studio Code";
-                if (hasCodeEditorCol && editorColIdx !== -1 && cols[editorColIdx]) {
-                    codeEditor = cols[editorColIdx];
-                } else if (metadataObj?.code_editor) {
-                    codeEditor = String(metadataObj.code_editor);
-                } else if (metadataObj?.editor_name) {
-                    codeEditor = String(metadataObj.editor_name);
-                }
-
-                const ipAddress = hasCodeEditorCol ? (cols[11] || "") : (cols[10] || "");
-                const location = hasCodeEditorCol ? (cols[12] || "") : (cols[11] || "");
-                const status = hasCodeEditorCol ? (cols[13] || "synced") : (cols[12] || "synced");
-                const receivedAt = hasCodeEditorCol ? (cols[14] || "") : (cols[13] || "");
-
-                events.push({
-                    event_id: cols[0] || "",
-                    session_id: cols[1] || "",
-                    feature_name: cols[2] || "unknown",
-                    action: cols[3] || "unknown",
-                    item_id: cols[4] || "",
-                    item_name: cols[5] || "",
-                    occurred_at: cols[6] || "",
-                    device_id: cols[7] || "",
-                    device_name: cols[8] || "desktop",
-                    os_name: cols[9] || "unknown",
-                    code_editor: codeEditor,
-                    ip_address: ipAddress,
-                    location: location,
-                    status: status,
-                    received_at: receivedAt,
-                    metadata: metadataObj
-                });
-            }
-
-            // Sort most recent first
-            events.sort((a, b) => {
-                const ta = new Date(a.occurred_at || a.received_at).getTime() || 0;
-                const tb = new Date(b.occurred_at || b.received_at).getTime() || 0;
-                return tb - ta;
-            });
-
-            return {
-                events,
-                summary: this.computeSummary(events)
-            };
-        } catch (err) {
-            console.error("Error reading activity CSV:", err);
-            return {
-                events: [],
-                summary: this.buildEmptySummary()
-            };
-        }
-    }
-
-    private parseCsvLine(text: string): string[] {
-        const result: string[] = [];
-        let cur = "";
-        let inQuotes = false;
-        for (let i = 0; i < text.length; i++) {
-            const char = text[i];
-            if (char === '"') {
-                if (inQuotes && text[i + 1] === '"') {
-                    cur += '"';
-                    i++;
-                } else {
-                    inQuotes = !inQuotes;
-                }
-            } else if (char === "," && !inQuotes) {
-                result.push(cur);
-                cur = "";
-            } else {
-                cur += char;
-            }
-        }
-        result.push(cur);
-        return result;
-    }
-
-    private buildEmptySummary(): ActivitySummary {
-        return buildEmptyActivitySummary();
-    }
-
-    private computeSummary(events: ParsedActivityEvent[]): ActivitySummary {
-        return computeActivitySummary(events);
-    }
 }
 
 export const activityCsvService = new ActivityCsvService();
+export const activityDataService = activityCsvService;

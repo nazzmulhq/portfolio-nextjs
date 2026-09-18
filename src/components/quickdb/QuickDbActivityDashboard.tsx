@@ -1525,11 +1525,13 @@ export default function QuickDbActivityDashboard({
                             </span>
                         </div>
                         <div className="mt-3">
-                            <div className="text-xl sm:text-2xl font-mono font-bold text-[var(--fg)]">
+                            <div className="text-xl sm:text-2xl font-mono font-bold text-[var(--fg)]" suppressHydrationWarning>
                                 {formatRelativeTime(summary.latestSyncAt)}
                             </div>
-                            <div className="mt-1 text-xs text-[var(--muted)] truncate font-mono">
-                                {summary.latestSyncAt ? new Date(summary.latestSyncAt).toLocaleTimeString() : "No sync yet"}
+                            <div className="mt-1 text-xs text-[var(--muted)] truncate font-mono" suppressHydrationWarning>
+                                {summary.latestSyncAt
+                                    ? (mounted ? new Date(summary.latestSyncAt).toLocaleTimeString() : summary.latestSyncAt.slice(11, 19))
+                                    : "No sync yet"}
                                 {telemetryStats.failedCount > 0 && (
                                     <span className="text-rose-400 ml-1">({telemetryStats.failedCount} err)</span>
                                 )}
@@ -1822,7 +1824,7 @@ export default function QuickDbActivityDashboard({
                                                     <tr key={evt.event_id} className="hover:bg-[var(--surface-2)]/50 transition-colors">
                                                         {/* Timestamp & Drift */}
                                                         <td className="py-3 px-4 whitespace-nowrap">
-                                                            <div className="text-[var(--fg)] font-medium">
+                                                            <div className="text-[var(--fg)] font-medium" suppressHydrationWarning>
                                                                 {formatRelativeTime(evt.occurred_at || evt.received_at)}
                                                             </div>
                                                             <div className="text-[10px] text-[var(--muted)] mt-0.5" title={`Server received at: ${evt.received_at || "N/A"}`}>
@@ -2175,9 +2177,9 @@ export default function QuickDbActivityDashboard({
                                                         {/* Device Ribbon */}
                                                         <div className="flex flex-wrap items-center justify-between gap-2 px-3.5 py-2 rounded-lg bg-[var(--surface-2)] text-xs font-mono border border-[var(--line)]">
                                                             <div className="flex flex-wrap items-center gap-3 text-[var(--muted)]">
-                                                                <span>First Seen: <strong className="text-[var(--fg)]">{group.firstSeenAt ? new Date(group.firstSeenAt).toLocaleString() : "N/A"}</strong></span>
+                                                                <span suppressHydrationWarning>First Seen: <strong className="text-[var(--fg)]">{group.firstSeenAt ? (mounted ? new Date(group.firstSeenAt).toLocaleString() : group.firstSeenAt.replace("T", " ").slice(0, 19)) : "N/A"}</strong></span>
                                                                 <span>•</span>
-                                                                <span>Last Seen: <strong className="text-[var(--fg)]">{group.lastActiveAt ? new Date(group.lastActiveAt).toLocaleString() : "N/A"}</strong></span>
+                                                                <span suppressHydrationWarning>Last Seen: <strong className="text-[var(--fg)]">{group.lastActiveAt ? (mounted ? new Date(group.lastActiveAt).toLocaleString() : group.lastActiveAt.replace("T", " ").slice(0, 19)) : "N/A"}</strong></span>
                                                                 <span>•</span>
                                                                 <span>Top Feature: <strong className="text-[var(--accent)] capitalize">{group.topFeature.name} ({group.topFeature.count}x)</strong></span>
                                                                 <span>•</span>
@@ -2220,7 +2222,7 @@ export default function QuickDbActivityDashboard({
                                                                                 {/* Timestamp & Drift */}
                                                                                 <td className="py-2.5 px-3 whitespace-nowrap">
                                                                                     <div className="flex flex-col">
-                                                                                        <span className="font-semibold text-[var(--fg)]">
+                                                                                        <span className="font-semibold text-[var(--fg)]" suppressHydrationWarning>
                                                                                             {formatRelativeTime(evt.occurred_at || evt.received_at)}
                                                                                         </span>
                                                                                         <span className="text-[10px] text-[var(--muted)]">
