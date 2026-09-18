@@ -31,6 +31,8 @@ export interface ActivityEventInput {
 
 export interface DailySyncPayload {
     device_id: string;
+    code_editor?: string;
+    editor_name?: string;
     events: ActivityEventInput[];
 }
 
@@ -210,6 +212,8 @@ class ActivityCsvService {
                                 evt.code_editor ||
                                 evt.editor_name ||
                                 (typeof evt.metadata === "object" && (evt.metadata?.code_editor || evt.metadata?.editor_name)) ||
+                                payload.code_editor ||
+                                payload.editor_name ||
                                 "Visual Studio Code";
 
                             const row = [
