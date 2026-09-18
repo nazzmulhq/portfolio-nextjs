@@ -14,12 +14,13 @@ export async function GET(req: NextRequest) {
         const feature = url.searchParams.get("feature")?.toLowerCase();
         const deviceId = url.searchParams.get("device_id");
         const os = url.searchParams.get("os")?.toLowerCase();
+        const editor = url.searchParams.get("editor")?.toLowerCase();
         const status = url.searchParams.get("status")?.toLowerCase();
 
         const data = await activityCsvService.getParsedEvents();
         let events = data.events;
 
-        const hasFilter = Boolean(range || date || startDate || endDate || q || feature || deviceId || os || status);
+        const hasFilter = Boolean(range || date || startDate || endDate || q || feature || deviceId || os || editor || status);
 
         if (hasFilter) {
             const now = new Date();
@@ -39,6 +40,7 @@ export async function GET(req: NextRequest) {
                         evt.action.toLowerCase().includes(q) ||
                         evt.device_id.toLowerCase().includes(q) ||
                         evt.device_name.toLowerCase().includes(q) ||
+                        (evt.code_editor && evt.code_editor.toLowerCase().includes(q)) ||
                         evt.location.toLowerCase().includes(q) ||
                         evt.ip_address.toLowerCase().includes(q);
                     if (!matchText) return false;
@@ -47,6 +49,7 @@ export async function GET(req: NextRequest) {
                 if (feature && evt.feature_name.toLowerCase() !== feature) return false;
                 if (deviceId && evt.device_id !== deviceId) return false;
                 if (os && evt.os_name.toLowerCase() !== os) return false;
+                if (editor && (evt.code_editor || "Visual Studio Code").toLowerCase() !== editor) return false;
                 if (status && (evt.status || "synced").toLowerCase() !== status) return false;
 
                 const rawDate = evt.occurred_at || evt.received_at;

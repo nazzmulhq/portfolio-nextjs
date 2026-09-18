@@ -13,6 +13,7 @@ export interface DeviceGroup {
     deviceId: string;
     deviceName: string;
     osName: string;
+    codeEditor?: string;
     ipAddress: string;
     location: string;
     events: ParsedActivityEvent[];
@@ -41,6 +42,7 @@ export default function QuickDbActivityDashboard({
     const [selectedFeature, setSelectedFeature] = useState<string>("all");
     const [selectedDevice, setSelectedDevice] = useState<string>("all");
     const [selectedOs, setSelectedOs] = useState<string>("all");
+    const [selectedEditor, setSelectedEditor] = useState<string>("all");
     const [selectedStatus, setSelectedStatus] = useState<string>("all");
     const [dateFilter, setDateFilter] = useState<"all" | "today" | "yesterday" | "7d" | "30d" | "single" | "range">("all");
     const [singleDate, setSingleDate] = useState<string>("");
@@ -170,6 +172,17 @@ export default function QuickDbActivityDashboard({
             .map(([name, count]) => ({ name, count }));
     }, [events]);
 
+    const availableEditors = useMemo(() => {
+        const counts: Record<string, number> = {};
+        for (const evt of events) {
+            const ed = evt.code_editor || "Visual Studio Code";
+            counts[ed] = (counts[ed] || 0) + 1;
+        }
+        return Object.entries(counts)
+            .sort((a, b) => b[1] - a[1])
+            .map(([name, count]) => ({ name, count }));
+    }, [events]);
+
     const availableStatuses = useMemo(() => {
         const counts: Record<string, number> = {};
         for (const evt of events) {
@@ -188,15 +201,17 @@ export default function QuickDbActivityDashboard({
         if (selectedFeature !== "all") count++;
         if (selectedDevice !== "all") count++;
         if (selectedOs !== "all") count++;
+        if (selectedEditor !== "all") count++;
         if (selectedStatus !== "all") count++;
         return count;
-    }, [searchQuery, dateFilter, selectedFeature, selectedDevice, selectedOs, selectedStatus]);
+    }, [searchQuery, dateFilter, selectedFeature, selectedDevice, selectedOs, selectedEditor, selectedStatus]);
 
     const handleResetAllFilters = () => {
         setSearchQuery("");
         setSelectedFeature("all");
         setSelectedDevice("all");
         setSelectedOs("all");
+        setSelectedEditor("all");
         setSelectedStatus("all");
         setDateFilter("all");
         setSingleDate("");
@@ -206,7 +221,7 @@ export default function QuickDbActivityDashboard({
         setDevicePage(1);
     };
 
-    // Filtered events with global search, feature, OS, device, status, and date filtering support
+    // Filtered events with global search, feature, OS, device, editor, status, and date filtering support
     const filteredEvents = useMemo(() => {
         const now = new Date();
         const nowTime = now.getTime();
@@ -234,6 +249,7 @@ export default function QuickDbActivityDashboard({
                 evt.action.toLowerCase().includes(query) ||
                 evt.device_id.toLowerCase().includes(query) ||
                 evt.device_name.toLowerCase().includes(query) ||
+                (evt.code_editor && evt.code_editor.toLowerCase().includes(query)) ||
                 evt.location.toLowerCase().includes(query) ||
                 evt.ip_address.toLowerCase().includes(query);
 
@@ -248,6 +264,10 @@ export default function QuickDbActivityDashboard({
             const matchesOs =
                 selectedOs === "all" ||
                 evt.os_name.toLowerCase() === selectedOs.toLowerCase();
+
+            const matchesEditor =
+                selectedEditor === "all" ||
+                (evt.code_editor || "Visual Studio Code").toLowerCase() === selectedEditor.toLowerCase();
 
             const matchesStatus =
                 selectedStatus === "all" ||
@@ -288,9 +308,9 @@ export default function QuickDbActivityDashboard({
                 }
             }
 
-            return matchesQuery && matchesFeature && matchesDevice && matchesOs && matchesStatus && matchesDate;
+            return matchesQuery && matchesFeature && matchesDevice && matchesOs && matchesEditor && matchesStatus && matchesDate;
         });
-    }, [events, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedStatus, dateFilter, singleDate, startDate, endDate]);
+    }, [events, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedEditor, selectedStatus, dateFilter, singleDate, startDate, endDate]);
 
     // Derived summary: dynamically recalculate metrics for filtered view
     const summary = useMemo(() => {
@@ -299,6 +319,7 @@ export default function QuickDbActivityDashboard({
             selectedFeature !== "all" ||
             selectedDevice !== "all" ||
             selectedOs !== "all" ||
+            selectedEditor !== "all" ||
             selectedStatus !== "all" ||
             dateFilter !== "all" ||
             Boolean(singleDate) ||
@@ -309,7 +330,7 @@ export default function QuickDbActivityDashboard({
             return rawSummary;
         }
         return computeActivitySummary(filteredEvents);
-    }, [filteredEvents, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedStatus, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
+    }, [filteredEvents, searchQuery, selectedFeature, selectedDevice, selectedOs, selectedEditor, selectedStatus, dateFilter, singleDate, startDate, endDate, rawSummary, events.length]);
 
     // Pagination for flat stream
     const totalPages = pageSize === "all" ? 1 : Math.max(1, Math.ceil(filteredEvents.length / pageSize));
@@ -330,6 +351,7 @@ export default function QuickDbActivityDashboard({
                 deviceId: id,
                 deviceName: evt.device_name || "Unknown",
                 osName: evt.os_name || "Unknown OS",
+                codeEditor: evt.code_editor || "Visual Studio Code",
                 ipAddress: evt.ip_address || "Unknown IP",
                 location: evt.location || "Unknown Location",
                 events: [],
@@ -349,6 +371,7 @@ export default function QuickDbActivityDashboard({
 
             if (evt.device_name && group.deviceName === "Unknown") group.deviceName = evt.device_name;
             if (evt.os_name && (group.osName === "Unknown OS" || group.osName === "unknown")) group.osName = evt.os_name;
+            if (evt.code_editor && (!group.codeEditor || group.codeEditor === "Visual Studio Code")) group.codeEditor = evt.code_editor;
             if (evt.ip_address && (group.ipAddress === "Unknown IP" || group.ipAddress === "unknown")) group.ipAddress = evt.ip_address;
             if (evt.location && group.location === "Unknown Location") group.location = evt.location;
         }
@@ -460,6 +483,7 @@ export default function QuickDbActivityDashboard({
             "device_id",
             "device_name",
             "os_name",
+            "code_editor",
             "ip_address",
             "location",
             "status",
@@ -477,6 +501,7 @@ export default function QuickDbActivityDashboard({
             e.device_id,
             e.device_name,
             e.os_name,
+            e.code_editor || "Visual Studio Code",
             e.ip_address,
             e.location,
             e.status,
@@ -509,6 +534,7 @@ export default function QuickDbActivityDashboard({
             "device_id",
             "device_name",
             "os_name",
+            "code_editor",
             "ip_address",
             "location",
             "status",
@@ -526,6 +552,7 @@ export default function QuickDbActivityDashboard({
             e.device_id,
             e.device_name,
             e.os_name,
+            e.code_editor || "Visual Studio Code",
             e.ip_address,
             e.location,
             e.status,
@@ -975,8 +1002,8 @@ export default function QuickDbActivityDashboard({
                         </div>
                     </div>
 
-                    {/* Row 2: Dynamic Dropdown Selectors (Feature, Device, Platform, Status) */}
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+                    {/* Row 2: Dynamic Dropdown Selectors (Feature, Device, Platform, Editor, Status) */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-3 pt-1">
                         {/* Feature Dropdown */}
                         <div className="space-y-1">
                             <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
@@ -1077,6 +1104,41 @@ export default function QuickDbActivityDashboard({
                                 {availablePlatforms.map((p) => (
                                     <option key={p.name} value={p.name}>
                                         {p.name} ({p.count})
+                                    </option>
+                                ))}
+                            </select>
+                        </div>
+
+                        {/* Code Editor / IDE Dropdown */}
+                        <div className="space-y-1">
+                            <label className="text-[11px] font-mono font-semibold uppercase tracking-wider text-[var(--muted)] flex items-center justify-between">
+                                <span>Code Editor / IDE</span>
+                                {selectedEditor !== "all" && (
+                                    <button
+                                        onClick={() => setSelectedEditor("all")}
+                                        className="text-[var(--accent)] hover:underline cursor-pointer lowercase font-normal"
+                                    >
+                                        reset
+                                    </button>
+                                )}
+                            </label>
+                            <select
+                                value={selectedEditor}
+                                onChange={(e) => {
+                                    setSelectedEditor(e.target.value);
+                                    setCurrentPage(1);
+                                    setDevicePage(1);
+                                }}
+                                className={`w-full px-3 py-2 rounded-lg text-xs font-mono bg-[var(--surface-2)] border text-[var(--fg)] focus:outline-none transition-colors cursor-pointer ${
+                                    selectedEditor !== "all"
+                                        ? "border-[var(--accent)] ring-1 ring-[var(--accent)]/30"
+                                        : "border-[var(--line)] focus:border-[var(--accent)]"
+                                }`}
+                            >
+                                <option value="all">All Editors ({availableEditors.length})</option>
+                                {availableEditors.map((ed) => (
+                                    <option key={ed.name} value={ed.name}>
+                                        {ed.name} ({ed.count})
                                     </option>
                                 ))}
                             </select>
@@ -1300,6 +1362,20 @@ export default function QuickDbActivityDashboard({
                                 </span>
                             )}
 
+                            {selectedEditor !== "all" && (
+                                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
+                                    <span className="text-[var(--muted)]">editor:</span>
+                                    <span className="font-semibold text-violet-400">{selectedEditor}</span>
+                                    <button
+                                        onClick={() => setSelectedEditor("all")}
+                                        className="text-[var(--muted)] hover:text-rose-400 ml-0.5 cursor-pointer"
+                                        title="Remove editor filter"
+                                    >
+                                        ✕
+                                    </button>
+                                </span>
+                            )}
+
                             {selectedStatus !== "all" && (
                                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-mono bg-[var(--surface-2)] border border-[var(--line)] text-[var(--fg)]">
                                     <span className="text-[var(--muted)]">status:</span>
@@ -1463,7 +1539,7 @@ export default function QuickDbActivityDashboard({
                 </div>
 
                 {/* Visual Distribution Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-4 sm:gap-6">
                     {/* Feature Breakdown */}
                     <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
                         <div className="flex items-center justify-between">
@@ -1545,6 +1621,37 @@ export default function QuickDbActivityDashboard({
                                             <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
                                                 <div
                                                     className="bg-sky-400 h-full rounded-full transition-all duration-500"
+                                                    style={{ width: `${Math.max(5, pct)}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Code Editors & IDEs */}
+                    <div className="rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4">
+                        <div className="flex items-center justify-between">
+                            <h2 className="text-sm font-semibold text-[var(--fg)]">Code Editors / IDEs</h2>
+                            <span className="text-xs font-mono text-[var(--muted)]">IDE</span>
+                        </div>
+                        <div className="space-y-3 pt-1">
+                            {summary.editorDistribution.length === 0 ? (
+                                <div className="text-xs text-[var(--muted)] py-4 text-center font-mono">No editor data</div>
+                            ) : (
+                                summary.editorDistribution.slice(0, 5).map((ed) => {
+                                    const pct = summary.totalEvents > 0 ? Math.round((ed.count / summary.totalEvents) * 100) : 0;
+                                    return (
+                                        <div key={ed.name} className="space-y-1">
+                                            <div className="flex justify-between text-xs font-mono">
+                                                <span className="text-[var(--fg)] truncate">{ed.name}</span>
+                                                <span className="text-[var(--muted)] shrink-0">{ed.count} ({pct}%)</span>
+                                            </div>
+                                            <div className="w-full bg-[var(--surface-2)] h-1.5 rounded-full overflow-hidden">
+                                                <div
+                                                    className="bg-indigo-400 h-full rounded-full transition-all duration-500"
                                                     style={{ width: `${Math.max(5, pct)}%` }}
                                                 />
                                             </div>
@@ -1690,7 +1797,7 @@ export default function QuickDbActivityDashboard({
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Event & Session</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Feature & Action</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Target Item</th>
-                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device & OS</th>
+                                            <th className="py-3 px-4 font-semibold uppercase tracking-wider">Device, OS & IDE</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Network & Geo</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider">Status & Metadata</th>
                                             <th className="py-3 px-4 font-semibold uppercase tracking-wider text-right">Actions</th>
@@ -1796,7 +1903,7 @@ export default function QuickDbActivityDashboard({
                                                             )}
                                                         </td>
 
-                                                        {/* Device & OS */}
+                                                        {/* Device, OS & IDE */}
                                                         <td className="py-3 px-4 whitespace-nowrap">
                                                             <div className="flex items-center gap-1.5 text-[var(--fg)]">
                                                                 <span>{isLaptop ? "💻" : isDesktop ? "🖥️" : "📱"}</span>
@@ -1808,6 +1915,12 @@ export default function QuickDbActivityDashboard({
                                                                 </span>
                                                                 <span className="text-[var(--faint)] truncate max-w-[70px]" title={evt.device_id}>
                                                                     {evt.device_id ? evt.device_id.slice(0, 6) + "..." : ""}
+                                                                </span>
+                                                            </div>
+                                                            <div className="mt-1">
+                                                                <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20" title={`IDE: ${evt.code_editor || "Visual Studio Code"}`}>
+                                                                    <span className="text-[10px]">⚙️</span>
+                                                                    <span className="truncate max-w-[120px]">{evt.code_editor || "Visual Studio Code"}</span>
                                                                 </span>
                                                             </div>
                                                         </td>
@@ -2024,6 +2137,9 @@ export default function QuickDbActivityDashboard({
                                                                 <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">
                                                                     {group.sessionCount} session{group.sessionCount === 1 ? "" : "s"}
                                                                 </span>
+                                                                <span className="px-2 py-0.5 rounded text-[10px] font-mono bg-violet-500/10 text-violet-400 border border-violet-500/20 font-medium">
+                                                                    ⚙️ {group.codeEditor || "Visual Studio Code"}
+                                                                </span>
                                                             </div>
                                                             <div className="flex flex-wrap items-center gap-3 mt-1 text-[11px] font-mono text-[var(--muted)]">
                                                                 <span className="flex items-center gap-1">
@@ -2191,10 +2307,16 @@ export default function QuickDbActivityDashboard({
                                                                                 {/* Status & Telemetry */}
                                                                                 <td className="py-2.5 px-3 whitespace-nowrap">
                                                                                     <div className="flex flex-col items-start gap-1">
-                                                                                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
-                                                                                            <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
-                                                                                            {statusBadge.label}
-                                                                                        </span>
+                                                                                        <div className="flex items-center gap-1.5 flex-wrap">
+                                                                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}>
+                                                                                                <span className={`w-1.5 h-1.5 rounded-full ${statusBadge.dot}`} />
+                                                                                                {statusBadge.label}
+                                                                                            </span>
+                                                                                            <span className="inline-flex items-center gap-1 text-[9px] font-mono text-violet-400 bg-violet-500/10 px-1.5 py-0.5 rounded border border-violet-500/20" title={`IDE: ${evt.code_editor || "Visual Studio Code"}`}>
+                                                                                                <span>⚙️</span>
+                                                                                                <span className="truncate max-w-[100px]">{evt.code_editor || "Visual Studio Code"}</span>
+                                                                                            </span>
+                                                                                        </div>
                                                                                         {metaChips.length > 0 && (
                                                                                             <div className="flex flex-wrap gap-1 max-w-[200px]">
                                                                                                 {metaChips.slice(0, 2).map((chip, idx) => (
@@ -2518,6 +2640,13 @@ export default function QuickDbActivityDashboard({
                                             <div className="text-[10px] text-[var(--muted)]">Platform & Type:</div>
                                             <div className="text-[var(--fg)] font-semibold capitalize">
                                                 {selectedMetadataEvent.device_name} · {selectedMetadataEvent.os_name}
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-[var(--muted)]">Code Editor / IDE:</div>
+                                            <div className="text-[var(--fg)] font-semibold flex items-center gap-1.5">
+                                                <span>⚙️</span>
+                                                <span className="text-violet-400">{selectedMetadataEvent.code_editor || "Visual Studio Code"}</span>
                                             </div>
                                         </div>
                                         <div>

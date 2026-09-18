@@ -9,6 +9,7 @@ export interface ParsedActivityEvent {
     device_id: string;
     device_name: string;
     os_name: string;
+    code_editor: string;
     ip_address: string;
     location: string;
     status: string;
@@ -24,6 +25,7 @@ export interface ActivitySummary {
     featureDistribution: Array<{ name: string; count: number; percentage: number }>;
     deviceDistribution: { laptop: number; desktop: number; mobile: number; unknown: number };
     osDistribution: Array<{ name: string; count: number }>;
+    editorDistribution: Array<{ name: string; count: number }>;
     locationDistribution: Array<{ location: string; count: number }>;
     timeline: Array<{ date: string; count: number }>;
 }
@@ -37,6 +39,7 @@ export function buildEmptyActivitySummary(): ActivitySummary {
         featureDistribution: [],
         deviceDistribution: { laptop: 0, desktop: 0, mobile: 0, unknown: 0 },
         osDistribution: [],
+        editorDistribution: [],
         locationDistribution: [],
         timeline: []
     };
@@ -47,6 +50,7 @@ export function computeActivitySummary(events: ParsedActivityEvent[]): ActivityS
     const deviceTypeMap = new Map<string, string>();
     const featureCounts: Record<string, number> = {};
     const osCounts: Record<string, number> = {};
+    const editorCounts: Record<string, number> = {};
     const locationCounts: Record<string, number> = {};
     const timelineCounts: Record<string, number> = {};
 
@@ -69,6 +73,10 @@ export function computeActivitySummary(events: ParsedActivityEvent[]): ActivityS
         // OS counts
         const os = evt.os_name || "unknown";
         osCounts[os] = (osCounts[os] || 0) + 1;
+
+        // Code editor counts
+        const editor = evt.code_editor || "Visual Studio Code";
+        editorCounts[editor] = (editorCounts[editor] || 0) + 1;
 
         // Location
         if (evt.location) {
@@ -97,6 +105,10 @@ export function computeActivitySummary(events: ParsedActivityEvent[]): ActivityS
     }
 
     const osDistribution = Object.entries(osCounts)
+        .map(([name, count]) => ({ name, count }))
+        .sort((a, b) => b.count - a.count);
+
+    const editorDistribution = Object.entries(editorCounts)
         .map(([name, count]) => ({ name, count }))
         .sort((a, b) => b.count - a.count);
 
@@ -133,6 +145,7 @@ export function computeActivitySummary(events: ParsedActivityEvent[]): ActivityS
         featureDistribution,
         deviceDistribution: deviceTypeCounts,
         osDistribution,
+        editorDistribution,
         locationDistribution,
         timeline
     };

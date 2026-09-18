@@ -22,6 +22,7 @@ const defaultSummary: ActivitySummary = {
     featureDistribution: [],
     deviceDistribution: { laptop: 0, desktop: 0, mobile: 0, unknown: 0 },
     osDistribution: [],
+    editorDistribution: [],
     locationDistribution: [],
     timeline: []
 };

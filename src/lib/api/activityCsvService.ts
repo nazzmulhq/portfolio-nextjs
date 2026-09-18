@@ -22,6 +22,8 @@ export interface ActivityEventInput {
     device_id: string;
     device_name?: string;
     os_name?: string;
+    code_editor?: string;
+    editor_name?: string;
     ip_address?: string;
     location?: string;
     metadata?: Record<string, any> | string;
@@ -51,6 +53,7 @@ const CSV_HEADER = [
     "device_id",
     "device_name",
     "os_name",
+    "code_editor",
     "ip_address",
     "location",
     "status",
@@ -203,6 +206,12 @@ class ActivityCsvService {
                         }
 
                         try {
+                            const codeEditor =
+                                evt.code_editor ||
+                                evt.editor_name ||
+                                (typeof evt.metadata === "object" && (evt.metadata?.code_editor || evt.metadata?.editor_name)) ||
+                                "Visual Studio Code";
+
                             const row = [
                                 this.escapeCsv(evt.event_id),
                                 this.escapeCsv(evt.session_id || ""),
@@ -214,6 +223,7 @@ class ActivityCsvService {
                                 this.escapeCsv(evt.device_id || payload.device_id || ""),
                                 this.escapeCsv(evt.device_name || ""),
                                 this.escapeCsv(evt.os_name || ""),
+                                this.escapeCsv(codeEditor),
                                 this.escapeCsv(evt.ip_address || clientIp || ""),
                                 this.escapeCsv(evt.location || ""),
                                 this.escapeCsv("synced"),
@@ -381,6 +391,10 @@ class ActivityCsvService {
                 };
             }
 
+            const headers = this.parseCsvLine(rawLines[0]).map((h) => h.trim().toLowerCase());
+            const hasCodeEditorCol = headers.includes("code_editor") || headers.includes("editor_name");
+            const editorColIdx = headers.indexOf("code_editor") !== -1 ? headers.indexOf("code_editor") : headers.indexOf("editor_name");
+
             const events: ParsedActivityEvent[] = [];
             // Skip header (index 0)
             for (let i = 1; i < rawLines.length; i++) {
@@ -388,13 +402,28 @@ class ActivityCsvService {
                 if (!cols[0]) continue; // skip if event_id is missing
 
                 let metadataObj: Record<string, any> | null = null;
-                if (cols[14]) {
+                const metadataRaw = hasCodeEditorCol ? cols[15] : cols[14];
+                if (metadataRaw) {
                     try {
-                        metadataObj = JSON.parse(cols[14]);
+                        metadataObj = JSON.parse(metadataRaw);
                     } catch {
-                        metadataObj = { raw: cols[14] };
+                        metadataObj = { raw: metadataRaw };
                     }
                 }
+
+                let codeEditor = "Visual Studio Code";
+                if (hasCodeEditorCol && editorColIdx !== -1 && cols[editorColIdx]) {
+                    codeEditor = cols[editorColIdx];
+                } else if (metadataObj?.code_editor) {
+                    codeEditor = String(metadataObj.code_editor);
+                } else if (metadataObj?.editor_name) {
+                    codeEditor = String(metadataObj.editor_name);
+                }
+
+                const ipAddress = hasCodeEditorCol ? (cols[11] || "") : (cols[10] || "");
+                const location = hasCodeEditorCol ? (cols[12] || "") : (cols[11] || "");
+                const status = hasCodeEditorCol ? (cols[13] || "synced") : (cols[12] || "synced");
+                const receivedAt = hasCodeEditorCol ? (cols[14] || "") : (cols[13] || "");
 
                 events.push({
                     event_id: cols[0] || "",
@@ -407,10 +436,11 @@ class ActivityCsvService {
                     device_id: cols[7] || "",
                     device_name: cols[8] || "desktop",
                     os_name: cols[9] || "unknown",
-                    ip_address: cols[10] || "",
-                    location: cols[11] || "",
-                    status: cols[12] || "synced",
-                    received_at: cols[13] || "",
+                    code_editor: codeEditor,
+                    ip_address: ipAddress,
+                    location: location,
+                    status: status,
+                    received_at: receivedAt,
                     metadata: metadataObj
                 });
             }
