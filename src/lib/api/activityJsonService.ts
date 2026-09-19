@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import seedStoreData from "../../../public/data.json";
+import { activityMongoService } from "./activityMongoService";
 import {
     ParsedActivityEvent,
     ActivitySummary,
@@ -79,8 +79,8 @@ export interface DailySyncResult {
     failed_event_ids: string[];
 }
 
-// Initial store loaded from public/data.json seed bundle
-export const DEFAULT_SEED_STORE: DeviceActivityStore = (seedStoreData as DeviceActivityStore) || {};
+// MongoDB Atlas is the source of truth
+export const DEFAULT_SEED_STORE: DeviceActivityStore = {};
 
 function parseLocation(loc?: string): { city?: string; country?: string } {
     if (!loc || typeof loc !== "string") return {};
@@ -224,6 +224,17 @@ export class ActivityJsonService {
     }
 
     public async readDeviceStore(): Promise<DeviceActivityStore> {
+        try {
+            const mongoStore = await activityMongoService.readDeviceStore();
+            if (mongoStore && Object.keys(mongoStore).length > 0) {
+                this.memoryStore = mongoStore;
+                this.isExplicitlyCleared = false;
+                return mongoStore;
+            }
+        } catch (err) {
+            console.error("Failed to read device store from MongoDB:", err);
+        }
+
         const targetPath = this.resolveReadFilePath();
         if (targetPath && fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
             try {
@@ -264,6 +275,12 @@ export class ActivityJsonService {
             this.isExplicitlyCleared = true;
         } else {
             this.isExplicitlyCleared = false;
+        }
+
+        try {
+            await activityMongoService.writeDeviceStore(store);
+        } catch (err) {
+            console.error("Failed to write device store to MongoDB:", err);
         }
 
         const jsonContent = JSON.stringify(store, null, 2);
@@ -396,6 +413,15 @@ export class ActivityJsonService {
 
     public async getParsedEvents(): Promise<{ events: ParsedActivityEvent[]; summary: ActivitySummary; deviceStore?: DeviceActivityStore }> {
         try {
+            const mongoResult = await activityMongoService.getParsedEvents();
+            if (mongoResult.events.length > 0) {
+                return mongoResult;
+            }
+        } catch (err) {
+            console.error("Error getting parsed events from MongoDB:", err);
+        }
+
+        try {
             const deviceStore = await this.readDeviceStore();
             const events = await this.readEventsFromFile();
 
@@ -433,6 +459,15 @@ export class ActivityJsonService {
         clientIp?: string,
         geoInfo?: { country?: string; city?: string }
     ): Promise<DailySyncResult> {
+        try {
+            const mongoRes = await activityMongoService.saveEvents(payload, clientIp, geoInfo);
+            if (mongoRes.success) {
+                return mongoRes;
+            }
+        } catch (err) {
+            console.error("MongoDB saveEvents error, falling back:", err);
+        }
+
         const syncId = `sync_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
         const acceptedEventIds: string[] = [];
         const duplicateEventIds: string[] = [];
@@ -725,6 +760,12 @@ export class ActivityJsonService {
     }
 
     public async clearAllEvents(): Promise<boolean> {
+        try {
+            await activityMongoService.clearAllEvents();
+        } catch (err) {
+            console.error("MongoDB clearAllEvents error:", err);
+        }
+
         return new Promise<boolean>((resolve, reject) => {
             this.writeLock = this.writeLock
                 .then(async () => {
@@ -746,3 +787,4 @@ export class ActivityJsonService {
 export const activityJsonService = new ActivityJsonService();
 export const activityCsvService = activityJsonService;
 export const activityDataService = activityJsonService;
+export { activityMongoService };

@@ -286,13 +286,13 @@ export default function QuickDbActivityDashboard({
                             </h1>
                             <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                                Live data.json Feed
+                                Live MongoDB Atlas Feed
                             </span>
                         </div>
                         <p className="text-xs sm:text-sm text-[var(--muted)]">
-                            Real-time engagement telemetry stored as unique device keys in{" "}
+                            Real-time engagement telemetry stored securely in{" "}
                             <code className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] font-mono text-xs border border-[var(--line)]">
-                                /data.json
+                                MongoDB Atlas
                             </code>
                         </p>
                     </div>
@@ -300,15 +300,15 @@ export default function QuickDbActivityDashboard({
                     {/* Toolbar buttons */}
                     <div className="flex flex-wrap items-center gap-2.5">
                         <a
-                            href="/data.json"
+                            href="/api/v1/activity/store"
                             target="_blank"
                             rel="noreferrer"
                             className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-mono font-medium bg-[var(--surface-2)] hover:bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--line)] hover:border-[var(--line-strong)] transition-all"
                         >
                             <svg className="w-3.5 h-3.5 text-[var(--accent)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4m0 5c0 2.21-3.582 4-8 4s-8-1.79-8-4" />
                             </svg>
-                            View /data.json
+                            View Store API
                         </a>
 
                         <button
@@ -480,7 +480,7 @@ export default function QuickDbActivityDashboard({
                                 <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 20l4-16m4 4l4 4-4 4M6 16l-4-4 4-4" />
                                 </svg>
-                                data.json Inspector
+                                Device Store Inspector
                             </button>
                         </div>
 
@@ -736,7 +736,7 @@ export default function QuickDbActivityDashboard({
                         <div className="flex items-center justify-between px-4 py-3 border-b border-[var(--line)] bg-[var(--surface-2)]">
                             <span className="text-xs font-mono text-[var(--muted)] flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-emerald-400" />
-                                /data.json Live Content
+                                MongoDB Atlas Device Store
                             </span>
                             <button
                                 onClick={() => handleCopy(JSON.stringify(deviceStore, null, 2), "raw_json")}
@@ -758,7 +758,7 @@ export default function QuickDbActivityDashboard({
                     <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4 shadow-xl">
                         <h3 className="text-base font-bold text-[var(--fg)]">Clear Activity Data</h3>
                         <p className="text-xs text-[var(--muted)] leading-relaxed">
-                            Are you sure you want to clear all device entries from <code className="text-[var(--accent)]">data.json</code>? This action cannot be undone.
+                            Are you sure you want to clear all device entries from <code className="text-[var(--accent)]">MongoDB Atlas</code>? This action cannot be undone.
                         </p>
                         <div className="flex items-center justify-end gap-3 pt-2">
                             <button
