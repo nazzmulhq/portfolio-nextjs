@@ -1,6 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
+import seedStoreData from "../../../public/data.json";
 import {
     ParsedActivityEvent,
     ActivitySummary,
@@ -78,8 +79,8 @@ export interface DailySyncResult {
     failed_event_ids: string[];
 }
 
-// Clean initial store - NO dummy seed data
-export const DEFAULT_SEED_STORE: DeviceActivityStore = {};
+// Initial store loaded from public/data.json seed bundle
+export const DEFAULT_SEED_STORE: DeviceActivityStore = (seedStoreData as DeviceActivityStore) || {};
 
 function parseLocation(loc?: string): { city?: string; country?: string } {
     if (!loc || typeof loc !== "string") return {};
@@ -193,14 +194,19 @@ export class ActivityJsonService {
         }
 
         try {
+            const initialSeedJson =
+                Object.keys(DEFAULT_SEED_STORE).length > 0
+                    ? JSON.stringify(DEFAULT_SEED_STORE, null, 2)
+                    : "{}";
+
             if (!fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
-                await fs.promises.writeFile(this.filePath, "{}", "utf8");
+                await fs.promises.writeFile(this.filePath, initialSeedJson, "utf8");
             }
 
             const publicFile = path.join(process.cwd(), "public", "data.json");
             if (!fs.existsSync(/*turbopackIgnore: true*/ publicFile)) {
                 try {
-                    await fs.promises.writeFile(publicFile, "{}", "utf8");
+                    await fs.promises.writeFile(publicFile, initialSeedJson, "utf8");
                 } catch {
                     // ignore if read-only
                 }
@@ -226,11 +232,11 @@ export class ActivityJsonService {
                 if (trimmed) {
                     const parsed = JSON.parse(trimmed);
                     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                        this.memoryStore = parsed as DeviceActivityStore;
-                        if (Object.keys(this.memoryStore).length > 0) {
+                        if (Object.keys(parsed).length > 0) {
+                            this.memoryStore = parsed as DeviceActivityStore;
                             this.isExplicitlyCleared = false;
+                            return this.memoryStore;
                         }
-                        return this.memoryStore;
                     }
                 }
             } catch (err) {
@@ -240,6 +246,13 @@ export class ActivityJsonService {
 
         if (this.isExplicitlyCleared && (!this.memoryStore || Object.keys(this.memoryStore).length === 0)) {
             return {};
+        }
+
+        if (!this.memoryStore || Object.keys(this.memoryStore).length === 0) {
+            if (Object.keys(DEFAULT_SEED_STORE).length > 0) {
+                this.memoryStore = JSON.parse(JSON.stringify(DEFAULT_SEED_STORE));
+                return this.memoryStore!;
+            }
         }
 
         return this.memoryStore || {};
