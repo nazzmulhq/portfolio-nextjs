@@ -5,13 +5,24 @@ export const dynamic = "force-dynamic";
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
-
-        if (!body) {
+        let body: any;
+        try {
+            body = await req.json();
+        } catch {
             return NextResponse.json(
                 {
                     success: false,
-                    message: "Invalid payload: body is required."
+                    message: "Invalid JSON payload in request body."
+                },
+                { status: 400 }
+            );
+        }
+
+        if (!body || (typeof body === "object" && !Array.isArray(body) && Object.keys(body).length === 0)) {
+            return NextResponse.json(
+                {
+                    success: false,
+                    message: "Invalid payload: body is required and cannot be empty."
                 },
                 { status: 400 }
             );

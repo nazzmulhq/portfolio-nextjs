@@ -39,7 +39,15 @@ export async function DELETE() {
 
 export async function POST(req: NextRequest) {
     try {
-        const body = await req.json();
+        let body: any;
+        try {
+            body = await req.json();
+        } catch {
+            return NextResponse.json(
+                { success: false, message: "Invalid JSON payload in request body." },
+                { status: 400 }
+            );
+        }
         const forwarded = req.headers.get("x-forwarded-for");
         const realIp = req.headers.get("x-real-ip");
         const clientIp = (forwarded ? forwarded.split(",")[0].trim() : realIp) || undefined;

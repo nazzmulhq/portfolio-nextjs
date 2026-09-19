@@ -151,15 +151,15 @@ export class ActivityJsonService {
 
     private resolveReadFilePath(): string {
         try {
-            // 1. Configured file path
-            if (fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
-                return this.filePath;
+            // 1. public/data.json primary path
+            const publicPath = path.join(process.cwd(), "public", "data.json");
+            if (fs.existsSync(/*turbopackIgnore: true*/ publicPath)) {
+                return publicPath;
             }
 
-            // 2. public/data.json fallback
-            const publicFallback = path.join(process.cwd(), "public", "data.json");
-            if (fs.existsSync(/*turbopackIgnore: true*/ publicFallback)) {
-                return publicFallback;
+            // 2. Configured file path
+            if (fs.existsSync(/*turbopackIgnore: true*/ this.filePath)) {
+                return this.filePath;
             }
 
             // 3. Serverless tmp fallback
@@ -171,7 +171,7 @@ export class ActivityJsonService {
             console.error("Error resolving activity JSON path:", err);
         }
 
-        return this.filePath;
+        return path.join(process.cwd(), "public", "data.json");
     }
 
     private async ensureInitialized(): Promise<void> {
@@ -218,38 +218,31 @@ export class ActivityJsonService {
     }
 
     public async readDeviceStore(): Promise<DeviceActivityStore> {
+        const targetPath = this.resolveReadFilePath();
+        if (targetPath && fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
+            try {
+                const content = await fs.promises.readFile(targetPath, "utf8");
+                const trimmed = content.trim();
+                if (trimmed) {
+                    const parsed = JSON.parse(trimmed);
+                    if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+                        this.memoryStore = parsed as DeviceActivityStore;
+                        if (Object.keys(this.memoryStore).length > 0) {
+                            this.isExplicitlyCleared = false;
+                        }
+                        return this.memoryStore;
+                    }
+                }
+            } catch (err) {
+                console.error("Error reading device store from data.json:", err);
+            }
+        }
+
         if (this.isExplicitlyCleared && (!this.memoryStore || Object.keys(this.memoryStore).length === 0)) {
             return {};
         }
 
-        if (this.memoryStore !== null) {
-            return this.memoryStore;
-        }
-
-        const targetPath = this.resolveReadFilePath();
-        if (!targetPath || !fs.existsSync(/*turbopackIgnore: true*/ targetPath)) {
-            this.memoryStore = {};
-            return this.memoryStore;
-        }
-
-        try {
-            const content = await fs.promises.readFile(targetPath, "utf8");
-            const trimmed = content.trim();
-            if (!trimmed) {
-                this.memoryStore = {};
-                return this.memoryStore;
-            }
-            const parsed = JSON.parse(trimmed);
-            if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                this.memoryStore = parsed as DeviceActivityStore;
-                return this.memoryStore;
-            }
-            this.memoryStore = {};
-            return this.memoryStore;
-        } catch (err) {
-            console.error("Error reading device store from data.json:", err);
-            return this.memoryStore || {};
-        }
+        return this.memoryStore || {};
     }
 
     public async writeDeviceStore(store: DeviceActivityStore): Promise<void> {
@@ -451,9 +444,43 @@ export class ActivityJsonService {
                     // Direct device store passed: { "deviceId": { "name of code editor": ... } }
                     if (!payload.device_id && !payload.deviceId && !payload.events && !Array.isArray(payload)) {
                         let hasDeviceEntry = false;
+                        const opensKey = "how many time open quickdb in a day";
                         for (const [key, val] of Object.entries(payload)) {
                             if (val && typeof val === "object" && !Array.isArray(val)) {
-                                deviceStore[key] = val as DeviceActivityRecord;
+                                const incoming = val as any;
+                                const existing = deviceStore[key];
+                                const rawIncomingOpens = incoming[opensKey] || incoming.opens || [];
+                                const formattedIncomingOpens = (Array.isArray(rawIncomingOpens) ? rawIncomingOpens : [rawIncomingOpens])
+                                    .filter(Boolean)
+                                    .map(formatOpenTimestamp);
+
+                                if (!existing) {
+                                    deviceStore[key] = {
+                                        "name of code editor": incoming["name of code editor"] || incoming.code_editor || "Visual Studio Code",
+                                        "name of country": incoming["name of country"] || incoming.country || "",
+                                        "name of city": incoming["name of city"] || incoming.city || "",
+                                        [opensKey]: Array.from(new Set(formattedIncomingOpens)).sort()
+                                    };
+                                } else {
+                                    // Merge: never lose previous data!
+                                    if (incoming["name of code editor"] || incoming.code_editor) {
+                                        existing["name of code editor"] = incoming["name of code editor"] || incoming.code_editor;
+                                    }
+                                    if (incoming["name of country"] || incoming.country) {
+                                        existing["name of country"] = incoming["name of country"] || incoming.country;
+                                    }
+                                    if (incoming["name of city"] || incoming.city) {
+                                        existing["name of city"] = incoming["name of city"] || incoming.city;
+                                    }
+                                    const existingOpens: string[] = Array.isArray(existing[opensKey])
+                                        ? existing[opensKey]!
+                                        : Array.isArray((existing as any).opens)
+                                        ? (existing as any).opens
+                                        : [];
+
+                                    existing[opensKey] = Array.from(new Set([...existingOpens, ...formattedIncomingOpens])).sort();
+                                    deviceStore[key] = existing;
+                                }
                                 hasDeviceEntry = true;
                             }
                         }
@@ -539,10 +566,10 @@ export class ActivityJsonService {
                             if (editor && editor !== "Visual Studio Code") {
                                 deviceStore[deviceId]["name of code editor"] = editor;
                             }
-                            if (country && !deviceStore[deviceId]["name of country"]) {
+                            if (country) {
                                 deviceStore[deviceId]["name of country"] = country;
                             }
-                            if (city && !deviceStore[deviceId]["name of city"]) {
+                            if (city) {
                                 deviceStore[deviceId]["name of city"] = city;
                             }
                         }
@@ -554,23 +581,38 @@ export class ActivityJsonService {
 
                         const openTimes = deviceStore[deviceId][opensKey]!;
 
-                        const rawTime =
-                            evt.occurred_at ||
-                            evt.time ||
-                            evt.timestamp ||
-                            evt.received_at ||
-                            payload.occurred_at ||
-                            payload.time ||
-                            new Date().toISOString();
+                        // Gather all timestamps from evt and payload without discarding existing opens
+                        const incomingTimes: string[] = [];
+                        if (evt.occurred_at || evt.time || evt.timestamp || evt.received_at) {
+                            incomingTimes.push(evt.occurred_at || evt.time || evt.timestamp || evt.received_at);
+                        }
+                        if (Array.isArray(evt[opensKey])) {
+                            incomingTimes.push(...evt[opensKey]);
+                        }
+                        if (Array.isArray(evt.opens)) {
+                            incomingTimes.push(...evt.opens);
+                        }
+                        if (incomingTimes.length === 0) {
+                            if (payload.occurred_at || payload.time || payload.timestamp) {
+                                incomingTimes.push(payload.occurred_at || payload.time || payload.timestamp);
+                            } else if (Array.isArray(payload[opensKey])) {
+                                incomingTimes.push(...payload[opensKey]);
+                            } else if (Array.isArray(payload.opens)) {
+                                incomingTimes.push(...payload.opens);
+                            } else {
+                                incomingTimes.push(new Date().toISOString());
+                            }
+                        }
 
-                        const formattedTime = formatOpenTimestamp(rawTime);
-
-                        if (openTimes.includes(formattedTime)) {
-                            duplicateEventIds.push(eventId);
-                        } else {
-                            openTimes.push(formattedTime);
-                            acceptedEventIds.push(eventId);
-                            this.seenEventIds?.add(eventId);
+                        for (const rawTime of incomingTimes) {
+                            const formattedTime = formatOpenTimestamp(rawTime);
+                            if (openTimes.includes(formattedTime)) {
+                                duplicateEventIds.push(eventId);
+                            } else {
+                                openTimes.push(formattedTime);
+                                acceptedEventIds.push(eventId);
+                                this.seenEventIds?.add(eventId);
+                            }
                         }
                     }
 
@@ -615,13 +657,36 @@ export class ActivityJsonService {
                     let deletedCount = 0;
 
                     for (const id of idSet) {
+                        // 1. Exact match on device ID
                         if (deviceStore[id]) {
                             delete deviceStore[id];
                             deletedCount++;
                             continue;
                         }
 
-                        for (const device of Object.values(deviceStore)) {
+                        // 2. Match reg_ event ID (e.g. reg_<deviceId> or reg_<deviceIdSlice>)
+                        if (id.startsWith("reg_")) {
+                            const regTarget = id.slice(4);
+                            let foundDev = false;
+                            for (const devId of Object.keys(deviceStore)) {
+                                if (devId === regTarget || devId.startsWith(regTarget)) {
+                                    delete deviceStore[devId];
+                                    deletedCount++;
+                                    foundDev = true;
+                                    break;
+                                }
+                            }
+                            if (foundDev) continue;
+                        }
+
+                        // 3. Match open_ event ID (scoped to the specific device)
+                        for (const [devId, device] of Object.entries(deviceStore)) {
+                            const devSlice = devId.slice(0, 10);
+                            // Ensure this open event belongs to this device
+                            if (id.startsWith("open_") && !id.startsWith(`open_${devSlice}_`)) {
+                                continue;
+                            }
+
                             const opensKey = "how many time open quickdb in a day";
                             if (Array.isArray(device[opensKey])) {
                                 const prevLen = device[opensKey]!.length;
