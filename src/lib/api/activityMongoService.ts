@@ -121,7 +121,7 @@ export class ActivityMongoService {
             const store: DeviceActivityStore = {};
 
             for (const doc of docs) {
-                let rawId = (doc.device_id || String(doc._id)) as string;
+                const rawId = (doc.device_id || String(doc._id)) as string;
                 let deviceId = rawId;
                 if (isInvalidDeviceId(rawId)) {
                     deviceId = sanitizeDeviceId(rawId, doc["name of country"] || doc.country, doc["name of city"] || doc.city);

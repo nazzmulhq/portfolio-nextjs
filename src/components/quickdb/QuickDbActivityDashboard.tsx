@@ -164,7 +164,7 @@ export default function QuickDbActivityDashboard({
 
     // Filter & Sort
     const filteredDevices = useMemo(() => {
-        let result = devicesList.filter((d) => {
+        const result = devicesList.filter((d) => {
             if (selectedEditor !== "all" && d.codeEditor.toLowerCase() !== selectedEditor.toLowerCase()) {
                 return false;
             }
