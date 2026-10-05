@@ -1,7 +1,7 @@
 import * as fs from "fs";
 import * as path from "path";
 import * as os from "os";
-import { activityMongoService } from "./activityMongoService";
+import { activityMongoService, sanitizeDeviceId } from "./activityMongoService";
 import {
     ParsedActivityEvent,
     ActivitySummary,
@@ -243,8 +243,18 @@ export class ActivityJsonService {
                 if (trimmed) {
                     const parsed = JSON.parse(trimmed);
                     if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
-                        if (Object.keys(parsed).length > 0) {
-                            this.memoryStore = parsed as DeviceActivityStore;
+                        const sanitizedStore: DeviceActivityStore = {};
+                        for (const [key, val] of Object.entries(parsed)) {
+                            if (val && typeof val === "object") {
+                                const rec = val as DeviceActivityRecord;
+                                const country = rec["name of country"] || rec.country || "";
+                                const city = rec["name of city"] || rec.city || "";
+                                const cleanKey = sanitizeDeviceId(key, country, city);
+                                sanitizedStore[cleanKey] = rec;
+                            }
+                        }
+                        if (Object.keys(sanitizedStore).length > 0) {
+                            this.memoryStore = sanitizedStore;
                             this.isExplicitlyCleared = false;
                             return this.memoryStore;
                         }
@@ -496,17 +506,23 @@ export class ActivityJsonService {
                         for (const [key, val] of Object.entries(payload)) {
                             if (val && typeof val === "object" && !Array.isArray(val)) {
                                 const incoming = val as any;
-                                const existing = deviceStore[key];
+                                const country = incoming["name of country"] || incoming.country || "";
+                                const city = incoming["name of city"] || incoming.city || "";
+                                const sanitizedKey = sanitizeDeviceId(key, country, city);
+                                if (key !== sanitizedKey && deviceStore[key]) {
+                                    delete deviceStore[key];
+                                }
+                                const existing = deviceStore[sanitizedKey];
                                 const rawIncomingOpens = incoming[opensKey] || incoming.opens || [];
                                 const formattedIncomingOpens = (Array.isArray(rawIncomingOpens) ? rawIncomingOpens : [rawIncomingOpens])
                                     .filter(Boolean)
                                     .map(formatOpenTimestamp);
 
                                 if (!existing) {
-                                    deviceStore[key] = {
+                                    deviceStore[sanitizedKey] = {
                                         "name of code editor": incoming["name of code editor"] || incoming.code_editor || "Visual Studio Code",
-                                        "name of country": incoming["name of country"] || incoming.country || "",
-                                        "name of city": incoming["name of city"] || incoming.city || "",
+                                        "name of country": country,
+                                        "name of city": city,
                                         [opensKey]: Array.from(new Set(formattedIncomingOpens)).sort()
                                     };
                                 } else {
@@ -514,11 +530,11 @@ export class ActivityJsonService {
                                     if (incoming["name of code editor"] || incoming.code_editor) {
                                         existing["name of code editor"] = incoming["name of code editor"] || incoming.code_editor;
                                     }
-                                    if (incoming["name of country"] || incoming.country) {
-                                        existing["name of country"] = incoming["name of country"] || incoming.country;
+                                    if (country) {
+                                        existing["name of country"] = country;
                                     }
-                                    if (incoming["name of city"] || incoming.city) {
-                                        existing["name of city"] = incoming["name of city"] || incoming.city;
+                                    if (city) {
+                                        existing["name of city"] = city;
                                     }
                                     const existingOpens: string[] = Array.isArray(existing[opensKey])
                                         ? existing[opensKey]!
@@ -527,7 +543,7 @@ export class ActivityJsonService {
                                         : [];
 
                                     existing[opensKey] = Array.from(new Set([...existingOpens, ...formattedIncomingOpens])).sort();
-                                    deviceStore[key] = existing;
+                                    deviceStore[sanitizedKey] = existing;
                                 }
                                 hasDeviceEntry = true;
                             }
@@ -553,7 +569,7 @@ export class ActivityJsonService {
                     for (const evt of rawEvents) {
                         if (!evt || typeof evt !== "object") continue;
 
-                        const deviceId =
+                        const rawDeviceId =
                             evt.device_id ||
                             payload.device_id ||
                             evt.deviceId ||
@@ -564,6 +580,29 @@ export class ActivityJsonService {
                             evt.event_id ||
                             evt.id ||
                             `evt_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+
+                        const locFromEvt = parseLocation(evt.location || payload.location);
+                        const country =
+                            evt["name of country"] ||
+                            evt.country ||
+                            payload["name of country"] ||
+                            payload.country ||
+                            locFromEvt.country ||
+                            (evt.metadata && (evt.metadata["name of country"] || evt.metadata.country)) ||
+                            geoInfo?.country ||
+                            "";
+
+                        const city =
+                            evt["name of city"] ||
+                            evt.city ||
+                            payload["name of city"] ||
+                            payload.city ||
+                            locFromEvt.city ||
+                            (evt.metadata && (evt.metadata["name of city"] || evt.metadata.city)) ||
+                            geoInfo?.city ||
+                            "";
+
+                        const deviceId = sanitizeDeviceId(rawDeviceId, country, city);
 
                         const editor =
                             evt["name of code editor"] ||
@@ -578,36 +617,11 @@ export class ActivityJsonService {
                             deviceStore[deviceId]?.code_editor ||
                             "Visual Studio Code";
 
-                        const locFromEvt = parseLocation(evt.location || payload.location);
-                        const country =
-                            evt["name of country"] ||
-                            evt.country ||
-                            payload["name of country"] ||
-                            payload.country ||
-                            locFromEvt.country ||
-                            (evt.metadata && (evt.metadata["name of country"] || evt.metadata.country)) ||
-                            geoInfo?.country ||
-                            deviceStore[deviceId]?.["name of country"] ||
-                            deviceStore[deviceId]?.country ||
-                            "";
-
-                        const city =
-                            evt["name of city"] ||
-                            evt.city ||
-                            payload["name of city"] ||
-                            payload.city ||
-                            locFromEvt.city ||
-                            (evt.metadata && (evt.metadata["name of city"] || evt.metadata.city)) ||
-                            geoInfo?.city ||
-                            deviceStore[deviceId]?.["name of city"] ||
-                            deviceStore[deviceId]?.city ||
-                            "";
-
                         if (!deviceStore[deviceId]) {
                             deviceStore[deviceId] = {
                                 "name of code editor": editor,
-                                "name of country": country,
-                                "name of city": city,
+                                "name of country": country || deviceStore[deviceId]?.["name of country"] || "",
+                                "name of city": city || deviceStore[deviceId]?.["name of city"] || "",
                                 "how many time open quickdb in a day": []
                             };
                         } else {

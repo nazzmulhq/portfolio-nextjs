@@ -302,7 +302,7 @@ export class ActivityMongoService {
             for (const evt of rawEvents) {
                 if (!evt || typeof evt !== "object") continue;
 
-                const deviceId =
+                const rawDeviceId =
                     evt.device_id ||
                     payload.device_id ||
                     evt.deviceId ||
@@ -344,6 +344,8 @@ export class ActivityMongoService {
                     payload.city ||
                     locFromEvt.city ||
                     geoInfo?.city;
+
+                const deviceId = sanitizeDeviceId(rawDeviceId, country, city);
 
                 if (!updatesByDevice[deviceId]) {
                     updatesByDevice[deviceId] = {
