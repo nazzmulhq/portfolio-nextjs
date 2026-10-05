@@ -38,10 +38,37 @@ export default function QuickDbActivityDashboard({
     const [expandedDevices, setExpandedDevices] = useState<Record<string, boolean>>({});
     const [showClearModal, setShowClearModal] = useState(false);
     const [isClearing, setIsClearing] = useState(false);
+    const [currentTimeZone, setCurrentTimeZone] = useState<string>("Asia/Dhaka");
+    const [deviceToDelete, setDeviceToDelete] = useState<DeviceRecord | null>(null);
+    const [isDeletingDevice, setIsDeletingDevice] = useState(false);
 
     useEffect(() => {
         setMounted(true);
     }, []);
+
+    const handleDeleteDevice = async () => {
+        if (!deviceToDelete) return;
+        setIsDeletingDevice(true);
+        try {
+            const res = await fetch(`/api/v1/activity/events?device_id=${encodeURIComponent(deviceToDelete.deviceId)}`, {
+                method: "DELETE"
+            });
+            if (res.ok) {
+                setDeviceStore((prev) => {
+                    const next = { ...prev };
+                    delete next[deviceToDelete.deviceId];
+                    return next;
+                });
+                setEvents((prev) => prev.filter((e) => e.device_id !== deviceToDelete.deviceId));
+                setDeviceToDelete(null);
+                void refreshData();
+            }
+        } catch (err) {
+            console.error("Failed to delete device:", err);
+        } finally {
+            setIsDeletingDevice(false);
+        }
+    };
 
     // Refresh data from API
     const refreshData = async () => {
@@ -247,10 +274,43 @@ export default function QuickDbActivityDashboard({
         }
     };
 
+    const formatDateTimeInZone = (timeStr?: string | null, tz: string = currentTimeZone) => {
+        if (!timeStr) return "Never";
+        let normalized = timeStr.trim();
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+            normalized = normalized.replace(" ", "T") + "Z";
+        } else if (!normalized.endsWith("Z") && !normalized.includes("+") && normalized.includes("T")) {
+            normalized = normalized + "Z";
+        }
+        const d = new Date(normalized);
+        if (isNaN(d.getTime())) return timeStr;
+
+        try {
+            return new Intl.DateTimeFormat("en-US", {
+                timeZone: tz,
+                year: "numeric",
+                month: "short",
+                day: "2-digit",
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: true,
+                timeZoneName: "short"
+            }).format(d);
+        } catch {
+            return timeStr;
+        }
+    };
+
     const formatRelativeTime = (timeStr?: string | null) => {
         if (!timeStr) return "Never";
-        if (!mounted) return timeStr.slice(0, 10);
-        const d = new Date(timeStr);
+        let normalized = timeStr.trim();
+        if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(normalized)) {
+            normalized = normalized.replace(" ", "T") + "Z";
+        } else if (!normalized.endsWith("Z") && !normalized.includes("+") && normalized.includes("T")) {
+            normalized = normalized + "Z";
+        }
+        const d = new Date(normalized);
         if (isNaN(d.getTime())) return timeStr;
         const diffMs = Date.now() - d.getTime();
         const diffMins = Math.floor(diffMs / 60000);
@@ -258,7 +318,7 @@ export default function QuickDbActivityDashboard({
         if (diffMins < 60) return `${diffMins}m ago`;
         const diffHours = Math.floor(diffMins / 60);
         if (diffHours < 24) return `${diffHours}h ago`;
-        return d.toLocaleDateString();
+        return formatDateTimeInZone(timeStr, currentTimeZone);
     };
 
     return (
@@ -288,17 +348,44 @@ export default function QuickDbActivityDashboard({
                                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                                 Live MongoDB Atlas Feed
                             </span>
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-mono bg-sky-500/10 text-sky-400 border border-sky-500/30">
+                                🇧🇩 Timezone: {currentTimeZone === "Asia/Dhaka" ? "Bangladesh Time (BST / UTC+6)" : currentTimeZone}
+                            </span>
                         </div>
                         <p className="text-xs sm:text-sm text-[var(--muted)]">
-                            Real-time engagement telemetry stored securely in{" "}
+                            Real-time engagement telemetry stored globally in{" "}
                             <code className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[var(--accent)] font-mono text-xs border border-[var(--line)]">
                                 MongoDB Atlas
                             </code>
+                            {" "}(displayed in Bangladesh Local Timezone)
                         </p>
                     </div>
 
                     {/* Toolbar buttons */}
                     <div className="flex flex-wrap items-center gap-2.5">
+                        {/* Timezone Selector */}
+                        <div className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--line)] text-xs font-mono">
+                            <span className="text-sm">🇧🇩</span>
+                            <span className="text-[var(--muted)] text-[10px] uppercase font-semibold">TZ:</span>
+                            <select
+                                value={currentTimeZone}
+                                onChange={(e) => setCurrentTimeZone(e.target.value)}
+                                className="bg-transparent text-[var(--fg)] font-semibold text-xs outline-none cursor-pointer"
+                            >
+                                <option value="Asia/Dhaka" className="bg-[var(--surface)] text-[var(--fg)]">
+                                    Asia/Dhaka (GMT+6)
+                                </option>
+                                <option value="UTC" className="bg-[var(--surface)] text-[var(--fg)]">
+                                    Global UTC (Z)
+                                </option>
+                                {typeof Intl !== "undefined" && (
+                                    <option value={Intl.DateTimeFormat().resolvedOptions().timeZone} className="bg-[var(--surface)] text-[var(--fg)]">
+                                        Local ({Intl.DateTimeFormat().resolvedOptions().timeZone})
+                                    </option>
+                                )}
+                            </select>
+                        </div>
+
                         <a
                             href="/api/v1/activity/store"
                             target="_blank"
@@ -600,10 +687,24 @@ export default function QuickDbActivityDashboard({
                                                     </button>
                                                 </div>
 
-                                                {/* Open Count Badge */}
-                                                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
-                                                    ⚡ {device.openCount} open{device.openCount === 1 ? "" : "s"} in day
-                                                </span>
+                                                <div className="flex items-center gap-2">
+                                                    {/* Open Count Badge */}
+                                                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-mono font-semibold bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 whitespace-nowrap">
+                                                        ⚡ {device.openCount} open{device.openCount === 1 ? "" : "s"}
+                                                    </span>
+
+                                                    {/* Delete Device Button */}
+                                                    <button
+                                                        onClick={() => setDeviceToDelete(device)}
+                                                        title="Delete this device from database"
+                                                        className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-mono text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer"
+                                                    >
+                                                        <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                                        </svg>
+                                                        Delete
+                                                    </button>
+                                                </div>
                                             </div>
 
                                             {/* Attribute Pills */}
@@ -642,22 +743,30 @@ export default function QuickDbActivityDashboard({
                                             </button>
 
                                             {isExpanded && (
-                                                <div className="mt-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] space-y-2 max-h-52 overflow-y-auto font-mono text-xs">
+                                                <div className="mt-3 p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] space-y-2 max-h-56 overflow-y-auto font-mono text-xs">
                                                     {device.opens.length === 0 ? (
                                                         <p className="text-[11px] text-[var(--muted)]">No open timestamps recorded.</p>
                                                     ) : (
                                                         device.opens.map((timeStr, idx) => (
                                                             <div
                                                                 key={idx}
-                                                                className="flex items-center justify-between px-2.5 py-1.5 rounded-md bg-[var(--surface)] border border-[var(--line)]/60 text-[11px]"
+                                                                className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 px-3 py-2 rounded-lg bg-[var(--surface)] border border-[var(--line)]/60 text-[11px]"
                                                             >
                                                                 <div className="flex items-center gap-2">
                                                                     <span className="text-[10px] text-[var(--muted)] font-bold">#{idx + 1}</span>
-                                                                    <span className="text-[var(--fg)] font-semibold">{timeStr}</span>
+                                                                    <span className="text-[var(--fg)] font-semibold flex items-center gap-1.5" suppressHydrationWarning>
+                                                                        <span className="text-emerald-400">🕒</span>
+                                                                        {formatDateTimeInZone(timeStr, currentTimeZone)}
+                                                                    </span>
                                                                 </div>
-                                                                <span className="text-[10px] text-[var(--muted)] font-mono" suppressHydrationWarning>
-                                                                    {formatRelativeTime(timeStr)}
-                                                                </span>
+                                                                <div className="flex items-center gap-2 self-end sm:self-auto">
+                                                                    <span className="text-[10px] text-[var(--muted)] font-mono" title="Stored UTC Timestamp">
+                                                                        (UTC: {timeStr})
+                                                                    </span>
+                                                                    <span className="px-1.5 py-0.5 rounded bg-[var(--surface-2)] text-[10px] text-[var(--accent)] font-mono" suppressHydrationWarning>
+                                                                        {formatRelativeTime(timeStr)}
+                                                                    </span>
+                                                                </div>
                                                             </div>
                                                         ))
                                                     )}
@@ -682,13 +791,14 @@ export default function QuickDbActivityDashboard({
                                     <th className="py-3 px-4 font-semibold uppercase">Country</th>
                                     <th className="py-3 px-4 font-semibold uppercase">City</th>
                                     <th className="py-3 px-4 font-semibold uppercase text-center">Daily Opens</th>
-                                    <th className="py-3 px-4 font-semibold uppercase">Last Opened</th>
+                                    <th className="py-3 px-4 font-semibold uppercase">Last Opened ({currentTimeZone === "Asia/Dhaka" ? "BST" : "Time"})</th>
+                                    <th className="py-3 px-4 font-semibold uppercase text-right">Actions</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-[var(--line)] text-[var(--fg)]">
                                 {filteredDevices.length === 0 ? (
                                     <tr>
-                                        <td colSpan={6} className="py-8 text-center text-[var(--muted)]">
+                                        <td colSpan={7} className="py-8 text-center text-[var(--muted)]">
                                             No matching devices found.
                                         </td>
                                     </tr>
@@ -720,7 +830,15 @@ export default function QuickDbActivityDashboard({
                                                 </span>
                                             </td>
                                             <td className="py-3 px-4 text-[var(--muted)]" suppressHydrationWarning>
-                                                {formatRelativeTime(device.lastOpenedAt)}
+                                                {formatDateTimeInZone(device.lastOpenedAt, currentTimeZone)}
+                                            </td>
+                                            <td className="py-3 px-4 text-right">
+                                                <button
+                                                    onClick={() => setDeviceToDelete(device)}
+                                                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-mono text-rose-400 hover:text-rose-300 bg-rose-500/10 hover:bg-rose-500/20 border border-rose-500/30 transition-all cursor-pointer"
+                                                >
+                                                    Delete
+                                                </button>
                                             </td>
                                         </tr>
                                     ))
@@ -752,7 +870,68 @@ export default function QuickDbActivityDashboard({
                 )}
             </div>
 
-            {/* Clear Confirmation Modal */}
+            {/* Delete Single Device Modal */}
+            {deviceToDelete && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
+                    <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4 shadow-xl">
+                        <div className="flex items-center gap-3">
+                            <span className="p-2.5 rounded-xl bg-rose-500/10 text-rose-400 border border-rose-500/30">
+                                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                </svg>
+                            </span>
+                            <div>
+                                <h3 className="text-base font-bold text-[var(--fg)] font-mono">Delete Device Entry</h3>
+                                <p className="text-xs text-[var(--muted)] font-mono">Remove from MongoDB Atlas permanently</p>
+                            </div>
+                        </div>
+
+                        <div className="p-3 rounded-xl bg-[var(--surface-2)] border border-[var(--line)] space-y-2 text-xs font-mono">
+                            <div className="flex justify-between">
+                                <span className="text-[var(--muted)]">Device ID:</span>
+                                <span className="text-[var(--fg)] font-semibold truncate max-w-[220px]" title={deviceToDelete.deviceId}>
+                                    {deviceToDelete.deviceId}
+                                </span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--muted)]">Code Editor:</span>
+                                <span className="text-[var(--fg)]">{deviceToDelete.codeEditor}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--muted)]">Location:</span>
+                                <span className="text-[var(--fg)]">{deviceToDelete.location}</span>
+                            </div>
+                            <div className="flex justify-between">
+                                <span className="text-[var(--muted)]">Open Count:</span>
+                                <span className="text-emerald-400 font-bold">{deviceToDelete.openCount} opens</span>
+                            </div>
+                        </div>
+
+                        <p className="text-xs text-[var(--muted)] leading-relaxed">
+                            Are you sure you want to delete this device and all its recorded timestamps? This action cannot be undone.
+                        </p>
+
+                        <div className="flex items-center justify-end gap-3 pt-2">
+                            <button
+                                onClick={() => setDeviceToDelete(null)}
+                                disabled={isDeletingDevice}
+                                className="px-4 py-2 rounded-lg text-xs font-mono text-[var(--muted)] hover:text-[var(--fg)] transition-colors cursor-pointer"
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                onClick={handleDeleteDevice}
+                                disabled={isDeletingDevice}
+                                className="inline-flex items-center gap-1.5 px-4 py-2 rounded-lg text-xs font-mono font-semibold bg-rose-500 hover:bg-rose-600 text-white transition-colors cursor-pointer disabled:opacity-50"
+                            >
+                                {isDeletingDevice ? "Deleting..." : "Yes, Delete Device"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Clear All Confirmation Modal */}
             {showClearModal && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
                     <div className="w-full max-w-md rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-6 space-y-4 shadow-xl">

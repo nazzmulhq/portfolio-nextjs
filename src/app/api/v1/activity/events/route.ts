@@ -139,6 +139,21 @@ export async function DELETE(req: NextRequest) {
             });
         }
 
+        const deviceId = url.searchParams.get("device_id") || url.searchParams.get("deviceId");
+        if (deviceId) {
+            const deleted = await activityJsonService.deleteDevice(deviceId);
+            return NextResponse.json({
+                success: true,
+                deleted,
+                message: deleted ? `Device ${deviceId} deleted successfully` : `Device ${deviceId} not found`
+            }, {
+                headers: {
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
+
         if (eventId) {
             const deleted = await activityJsonService.deleteEvent(eventId);
             return NextResponse.json({

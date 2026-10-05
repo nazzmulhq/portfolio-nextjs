@@ -1,3 +1,4 @@
+import * as crypto from "crypto";
 import { getMongoDb } from "../mongodb";
 import {
     ParsedActivityEvent,
@@ -8,6 +9,33 @@ import {
 
 export type { ParsedActivityEvent, ActivitySummary };
 export { computeActivitySummary, buildEmptyActivitySummary };
+
+export const INVALID_DEVICE_IDS = new Set([
+    "somevalue.machineid",
+    "somevalue",
+    "00000000-0000-0000-0000-000000000000",
+    "unknown_device",
+    "undefined",
+    "null",
+    ""
+]);
+
+export function isInvalidDeviceId(id?: string): boolean {
+    if (!id || typeof id !== "string") return true;
+    const trimmed = id.trim().toLowerCase();
+    if (trimmed.length < 8) return true;
+    if (INVALID_DEVICE_IDS.has(trimmed)) return true;
+    if (/^[a-z]+\.[a-z]/i.test(trimmed) && trimmed.length < 40) return true;
+    return false;
+}
+
+export function sanitizeDeviceId(id?: string, country?: string, city?: string): string {
+    if (!id || isInvalidDeviceId(id)) {
+        const seed = `sanitized_${(id || "unknown").trim().toLowerCase()}_${(country || "").trim()}_${(city || "").trim()}`;
+        return crypto.createHash("sha256").update(seed).digest("hex");
+    }
+    return id.trim();
+}
 
 export interface DeviceActivityRecord {
     "name of code editor"?: string;
@@ -93,7 +121,12 @@ export class ActivityMongoService {
             const store: DeviceActivityStore = {};
 
             for (const doc of docs) {
-                const deviceId = (doc.device_id || String(doc._id)) as string;
+                let rawId = (doc.device_id || String(doc._id)) as string;
+                let deviceId = rawId;
+                if (isInvalidDeviceId(rawId)) {
+                    deviceId = sanitizeDeviceId(rawId, doc["name of country"] || doc.country, doc["name of city"] || doc.city);
+                    col.updateOne({ _id: doc._id }, { $set: { device_id: deviceId, updated_at: new Date() } }).catch(() => {});
+                }
                 const rawOpens = Array.isArray(doc[OPENS_KEY])
                     ? doc[OPENS_KEY]
                     : Array.isArray(doc.opens)
@@ -125,8 +158,12 @@ export class ActivityMongoService {
         if (!store || typeof store !== "object") return;
         try {
             const col = await this.getCollection();
-            for (const [deviceId, devData] of Object.entries(store)) {
+            for (const [rawId, devData] of Object.entries(store)) {
                 if (!devData || typeof devData !== "object") continue;
+                const country = devData["name of country"] || devData.country || "";
+                const city = devData["name of city"] || devData.city || "";
+                const deviceId = sanitizeDeviceId(rawId, country, city);
+
                 const rawOpens =
                     devData[OPENS_KEY] || devData.opens || [];
                 const formattedOpens = (
@@ -144,14 +181,8 @@ export class ActivityMongoService {
                                 devData["name of code editor"] ||
                                 devData.code_editor ||
                                 "Visual Studio Code",
-                            "name of country":
-                                devData["name of country"] ||
-                                devData.country ||
-                                "",
-                            "name of city":
-                                devData["name of city"] ||
-                                devData.city ||
-                                "",
+                            "name of country": country,
+                            "name of city": city,
                             updated_at: new Date()
                         },
                         $addToSet: {
@@ -196,6 +227,10 @@ export class ActivityMongoService {
                 for (const [key, val] of Object.entries(payload)) {
                     if (val && typeof val === "object" && !Array.isArray(val)) {
                         const incoming = val as any;
+                        const country = incoming["name of country"] || incoming.country || "";
+                        const city = incoming["name of city"] || incoming.city || "";
+                        const sanitizedKey = sanitizeDeviceId(key, country, city);
+
                         const rawIncomingOpens =
                             incoming[OPENS_KEY] || incoming.opens || [];
                         const formattedIncomingOpens = (
@@ -207,22 +242,16 @@ export class ActivityMongoService {
                             .map(formatOpenTimestamp);
 
                         await col.updateOne(
-                            { device_id: key },
+                            { device_id: sanitizedKey },
                             {
                                 $set: {
-                                    device_id: key,
+                                    device_id: sanitizedKey,
                                     "name of code editor":
                                         incoming["name of code editor"] ||
                                         incoming.code_editor ||
                                         "Visual Studio Code",
-                                    "name of country":
-                                        incoming["name of country"] ||
-                                        incoming.country ||
-                                        "",
-                                    "name of city":
-                                        incoming["name of city"] ||
-                                        incoming.city ||
-                                        "",
+                                    "name of country": country,
+                                    "name of city": city,
                                     updated_at: new Date()
                                 },
                                 $addToSet: {
@@ -560,15 +589,31 @@ export class ActivityMongoService {
         };
     }
 
-    public async deleteEvent(eventId: string): Promise<boolean> {
-        const count = await this.deleteEvents([eventId]);
+    public async deleteDevice(deviceId: string): Promise<boolean> {
+        const count = await this.deleteDevices([deviceId]);
         return count > 0;
     }
 
+    public async deleteDevices(deviceIds: string[]): Promise<number> {
+        if (!Array.isArray(deviceIds) || deviceIds.length === 0) return 0;
+        try {
+            const col = await this.getCollection();
+            const res = await col.deleteMany({
+                device_id: { $in: deviceIds }
+            });
+            return res.deletedCount;
+        } catch (err) {
+            console.error("Error deleting devices from MongoDB:", err);
+            return 0;
+        }
+    }
+
+    public async deleteEvent(eventId: string): Promise<boolean> {
+        return this.deleteDevice(eventId);
+    }
+
     public async deleteEvents(eventIds: string[]): Promise<number> {
-        if (!Array.isArray(eventIds) || eventIds.length === 0) return 0;
-        // In MongoDB, we can remove specific timestamps matching eventIds if needed
-        return 0;
+        return this.deleteDevices(eventIds);
     }
 
     public async clearAllEvents(): Promise<boolean> {

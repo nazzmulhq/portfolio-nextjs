@@ -3,7 +3,7 @@ import { Db, MongoClient } from "mongodb";
 const DEFAULT_URI =
     "mongodb+srv://quickdb_user:QuickDB2026_SecureKey%21@quickui.jk4bdqi.mongodb.net/quickdb?retryWrites=true&w=majority&appName=quickui";
 
-const uri = DEFAULT_URI;
+const uri = process.env.MONGODB_URI || DEFAULT_URI;
 
 declare global {
 
@@ -25,7 +25,8 @@ if (process.env.NODE_ENV === "development") {
 
 export async function getMongoDb(): Promise<Db> {
     const client = await clientPromise;
-    return client.db("quickdb");
+    const dbName = process.env.MONGODB_DB_NAME || "quickdb";
+    return client.db(dbName);
 }
 
 export default clientPromise;

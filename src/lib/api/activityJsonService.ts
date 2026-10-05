@@ -688,9 +688,27 @@ export class ActivityJsonService {
         });
     }
 
-    public async deleteEvent(eventId: string): Promise<boolean> {
-        const count = await this.deleteEvents([eventId]);
+    public async deleteDevice(deviceId: string): Promise<boolean> {
+        try {
+            await activityMongoService.deleteDevice(deviceId);
+        } catch (err) {
+            console.error("Error deleting device from MongoDB:", err);
+        }
+        const count = await this.deleteEvents([deviceId]);
         return count > 0;
+    }
+
+    public async deleteDevices(deviceIds: string[]): Promise<number> {
+        try {
+            await activityMongoService.deleteDevices(deviceIds);
+        } catch (err) {
+            console.error("Error deleting devices from MongoDB:", err);
+        }
+        return this.deleteEvents(deviceIds);
+    }
+
+    public async deleteEvent(eventId: string): Promise<boolean> {
+        return this.deleteDevice(eventId);
     }
 
     public async deleteEvents(eventIds: string[]): Promise<number> {

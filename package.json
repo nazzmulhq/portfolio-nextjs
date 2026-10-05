@@ -6,7 +6,8 @@
         "dev": "next dev",
         "build": "next build",
         "start": "next start",
-        "lint": "eslint ."
+        "lint": "eslint .",
+        "sync:local-to-db": "node --env-file=.env scripts/sync-local-to-db.mjs"
     },
     "dependencies": {
         "@gsap/react": "^2.1.2",

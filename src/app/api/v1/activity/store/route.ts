@@ -21,8 +21,23 @@ export async function GET() {
     }
 }
 
-export async function DELETE() {
+export async function DELETE(req: NextRequest) {
     try {
+        const url = new URL(req.url);
+        const deviceId = url.searchParams.get("device_id") || url.searchParams.get("deviceId");
+        if (deviceId) {
+            const deleted = await activityJsonService.deleteDevice(deviceId);
+            const updatedStore = await activityJsonService.readDeviceStore();
+            return new NextResponse(JSON.stringify(updatedStore, null, 2), {
+                status: 200,
+                headers: {
+                    "Content-Type": "application/json; charset=utf-8",
+                    "Cache-Control": "no-store, no-cache, must-revalidate, max-age=0",
+                    "Access-Control-Allow-Origin": "*"
+                }
+            });
+        }
+
         await activityJsonService.clearAllEvents();
         return new NextResponse(JSON.stringify({}, null, 2), {
             status: 200,
