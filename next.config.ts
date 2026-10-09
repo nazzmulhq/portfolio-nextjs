@@ -17,6 +17,10 @@ const nextConfig: NextConfig = {
     async rewrites() {
         return [
             {
+                source: '/p/quickdb/:path*',
+                destination: '/quickdb/:path*',
+            },
+            {
                 source: '/quickdb/auth/:path*',
                 destination: '/api/quickdb/auth/:path*',
             },
