@@ -52,6 +52,7 @@ export default function QuickDbActivityDashboard({
     const [customEndDate, setCustomEndDate] = useState<string>("");
     const [specificDate, setSpecificDate] = useState<string>("");
     const [showOnlyActiveInRange, setShowOnlyActiveInRange] = useState<boolean>(true);
+    const [connectionFilter, setConnectionFilter] = useState<"all" | "new_today" | "active_today">("all");
 
     useEffect(() => {
         setMounted(true);
@@ -156,7 +157,8 @@ export default function QuickDbActivityDashboard({
                     return tA - tB;
                 });
 
-                const firstOpened = sortedOpens.length > 0 ? sortedOpens[0] : null;
+                const explicitFirst = (devObj as any).first_connected || (devObj as any).first_opened || (devObj as any).created_at || null;
+                const firstOpened = explicitFirst || (sortedOpens.length > 0 ? sortedOpens[0] : null);
                 const lastOpened = sortedOpens.length > 0 ? sortedOpens[sortedOpens.length - 1] : null;
 
                 return {
@@ -286,6 +288,22 @@ export default function QuickDbActivityDashboard({
         });
 
         const result = listWithFilter.filter((d) => {
+            // Connection Filter: new_today vs active_today
+            if (connectionFilter === "new_today") {
+                const isNewToday = Boolean(
+                    d.firstOpenedAt &&
+                    parseTsMs(d.firstOpenedAt) !== null &&
+                    getTzDateStr(parseTsMs(d.firstOpenedAt)!, currentTimeZone) === todayDateStr
+                );
+                if (!isNewToday) return false;
+            } else if (connectionFilter === "active_today") {
+                const isActiveToday = d.opens.some((ts) => {
+                    const ms = parseTsMs(ts);
+                    return ms !== null && getTzDateStr(ms, currentTimeZone) === todayDateStr;
+                });
+                if (!isActiveToday) return false;
+            }
+
             // If date filter is active and showOnlyActiveInRange is true, only include devices active in that period
             if (isDateFilterActive && showOnlyActiveInRange && d.filteredOpens.length === 0) {
                 return false;
@@ -326,6 +344,8 @@ export default function QuickDbActivityDashboard({
         devicesList,
         isDateFilterActive,
         showOnlyActiveInRange,
+        connectionFilter,
+        todayDateStr,
         datePreset,
         specificDate,
         customStartDate,
@@ -721,27 +741,96 @@ export default function QuickDbActivityDashboard({
                         </p>
                     </div>
 
-                    {/* Card 4: Today Connected Devices (Today Need Device Connect) */}
-                    <div className="relative overflow-hidden rounded-xl border border-[var(--line)] bg-[var(--surface)] p-5 shadow-sm hover:border-[var(--line-strong)] transition-all group">
+                    {/* Card 4: Today Connected Devices & New Connect Today */}
+                    <div
+                        className={`relative overflow-hidden rounded-xl border p-5 shadow-sm transition-all group ${
+                            connectionFilter === "new_today"
+                                ? "border-violet-500 bg-violet-500/10 ring-2 ring-violet-500/30"
+                                : connectionFilter === "active_today"
+                                ? "border-emerald-500 bg-emerald-500/10 ring-2 ring-emerald-500/30"
+                                : "border-[var(--line)] bg-[var(--surface)] hover:border-violet-500/50"
+                        }`}
+                    >
                         <div className="flex items-center justify-between text-xs font-mono text-[var(--muted)]">
-                            <span className="font-semibold tracking-wider">TODAY CONNECTED DEVICES</span>
-                            <span className="p-2 rounded-lg bg-violet-500/10 text-violet-400">
+                            <span className="font-semibold tracking-wider flex items-center gap-1.5">
+                                TODAY CONNECTED DEVICES
+                                {connectionFilter === "new_today" && (
+                                    <span className="px-1.5 py-0.5 rounded bg-violet-500 text-white text-[9px] font-bold">
+                                        FILTER: NEW TODAY
+                                    </span>
+                                )}
+                                {connectionFilter === "active_today" && (
+                                    <span className="px-1.5 py-0.5 rounded bg-emerald-500 text-white text-[9px] font-bold">
+                                        FILTER: ACTIVE TODAY
+                                    </span>
+                                )}
+                            </span>
+                            <span className="p-2 rounded-lg bg-violet-500/10 text-violet-400 group-hover:scale-105 transition-transform">
                                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071a10 10 0 0114.142 0M1.394 9.393a15 15 0 0121.213 0" />
                                 </svg>
                             </span>
                         </div>
-                        <div className="mt-2 flex items-baseline gap-2">
-                            <span className="text-3xl font-bold font-mono text-[var(--fg)]">
-                                {todayActiveDevices.length}
-                            </span>
-                            <span className="text-xs font-mono text-violet-400 font-medium">
-                                {todayNewlyConnectedDevices.length > 0 ? `${todayNewlyConnectedDevices.length} newly connected` : "active today"}
-                            </span>
+
+                        <div className="mt-2 flex items-baseline gap-3 flex-wrap">
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-3xl font-bold font-mono text-[var(--fg)]">
+                                    {todayActiveDevices.length}
+                                </span>
+                                <span className="text-xs font-mono text-[var(--muted)]">
+                                    active today
+                                </span>
+                            </div>
+
+                            <div className="h-4 w-px bg-[var(--line)]" />
+
+                            <div className="flex items-baseline gap-1.5">
+                                <span className="text-2xl font-bold font-mono text-violet-400">
+                                    {todayNewlyConnectedDevices.length}
+                                </span>
+                                <span className="text-xs font-mono text-violet-400 font-medium">
+                                    new connect today
+                                </span>
+                            </div>
                         </div>
-                        <p className="mt-1 text-xs text-[var(--muted)] truncate font-mono">
-                            Devices connected or open today
-                        </p>
+
+                        {/* Interactive Filter Action Buttons */}
+                        <div className="mt-3 flex items-center gap-2 pt-2 border-t border-[var(--line)]/50 text-xs font-mono">
+                            <button
+                                onClick={() => setConnectionFilter((prev) => (prev === "new_today" ? "all" : "new_today"))}
+                                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                                    connectionFilter === "new_today"
+                                        ? "bg-violet-600 text-white shadow-xs"
+                                        : "bg-violet-500/15 text-violet-300 hover:bg-violet-500/25 border border-violet-500/30"
+                                }`}
+                                title="Filter only new devices that connected today"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                                {connectionFilter === "new_today" ? "✕ Showing New" : `Filter New (${todayNewlyConnectedDevices.length})`}
+                            </button>
+
+                            <button
+                                onClick={() => setConnectionFilter((prev) => (prev === "active_today" ? "all" : "active_today"))}
+                                className={`px-2.5 py-1 rounded-md text-[11px] font-semibold transition-all cursor-pointer flex items-center gap-1 ${
+                                    connectionFilter === "active_today"
+                                        ? "bg-emerald-600 text-white shadow-xs"
+                                        : "bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 border border-emerald-500/30"
+                                }`}
+                                title="Filter devices active today"
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+                                {connectionFilter === "active_today" ? "✕ Showing Active" : `Filter Active (${todayActiveDevices.length})`}
+                            </button>
+
+                            {connectionFilter !== "all" && (
+                                <button
+                                    onClick={() => setConnectionFilter("all")}
+                                    className="ml-auto text-[10px] text-[var(--muted)] hover:text-[var(--fg)] underline cursor-pointer"
+                                >
+                                    Reset
+                                </button>
+                            )}
+                        </div>
                     </div>
                 </section>
 
@@ -757,9 +846,9 @@ export default function QuickDbActivityDashboard({
                             <div>
                                 <h2 className="text-xs font-mono font-bold uppercase tracking-wider text-[var(--fg)] flex items-center gap-2">
                                     Full-Page Date & Time Filter
-                                    {isDateFilterActive && (
+                                    {(isDateFilterActive || connectionFilter !== "all") && (
                                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 lowercase">
-                                            active: {dateFilterLabel}
+                                            active: {connectionFilter === "new_today" ? `new connect today (${todayNewlyConnectedDevices.length})` : connectionFilter === "active_today" ? `active today (${todayActiveDevices.length})` : dateFilterLabel}
                                         </span>
                                     )}
                                 </h2>
@@ -775,14 +864,28 @@ export default function QuickDbActivityDashboard({
                                 onClick={() => {
                                     setDatePreset("all");
                                     setSpecificDate("");
+                                    setConnectionFilter("all");
                                 }}
                                 className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer ${
-                                    datePreset === "all" && !specificDate
+                                    datePreset === "all" && !specificDate && connectionFilter === "all"
                                         ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-bold shadow-xs"
                                         : "bg-[var(--surface-2)] text-[var(--muted)] hover:text-[var(--fg)] border border-[var(--line)]"
                                 }`}
                             >
                                 All Time
+                            </button>
+                            <button
+                                onClick={() => {
+                                    setConnectionFilter((prev) => (prev === "new_today" ? "all" : "new_today"));
+                                }}
+                                className={`px-3 py-1.5 rounded-lg text-xs font-mono transition-all cursor-pointer flex items-center gap-1.5 ${
+                                    connectionFilter === "new_today"
+                                        ? "bg-violet-500 text-white font-bold shadow-xs border border-violet-400"
+                                        : "bg-[var(--surface-2)] text-violet-400 hover:text-white hover:bg-violet-500/20 border border-violet-500/30"
+                                }`}
+                            >
+                                <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                                ✨ New Today ({todayNewlyConnectedDevices.length})
                             </button>
                             <button
                                 onClick={() => {
@@ -990,53 +1093,122 @@ export default function QuickDbActivityDashboard({
                     </div>
 
                     {/* Search & Editor Filter Pills */}
-                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                        <div className="relative flex-1">
-                            <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                            </svg>
-                            <input
-                                type="text"
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                placeholder="Search by Device ID, Code Editor, City, or Country..."
-                                className="w-full bg-[var(--surface)] text-[var(--fg)] text-xs font-mono rounded-xl pl-10 pr-4 py-2.5 border border-[var(--line)] focus:border-[var(--accent)] outline-none transition-all placeholder:text-[var(--muted)]"
-                            />
-                            {searchQuery && (
+                    <div className="space-y-3">
+                        {/* Connection Status Filter Controls */}
+                        <div className="flex flex-wrap items-center justify-between gap-3 p-2.5 rounded-xl bg-[var(--surface-2)] border border-[var(--line)]">
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
+                                <span className="text-[11px] font-mono text-[var(--muted)] uppercase font-semibold mr-1 flex items-center gap-1">
+                                    <svg className="w-3.5 h-3.5 text-violet-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                                    </svg>
+                                    Connection:
+                                </span>
+
                                 <button
-                                    onClick={() => setSearchQuery("")}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)] hover:text-[var(--fg)] font-mono"
+                                    onClick={() => setConnectionFilter("all")}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer font-medium ${
+                                        connectionFilter === "all"
+                                            ? "bg-[var(--surface)] text-[var(--fg)] border border-[var(--line-strong)] font-bold shadow-xs"
+                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface)] border border-transparent"
+                                    }`}
                                 >
-                                    ✕
+                                    All Devices ({devicesList.length})
                                 </button>
+
+                                <button
+                                    onClick={() => setConnectionFilter((prev) => (prev === "new_today" ? "all" : "new_today"))}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                                        connectionFilter === "new_today"
+                                            ? "bg-violet-600 text-white font-bold shadow-xs border border-violet-400 ring-2 ring-violet-500/30"
+                                            : "bg-violet-500/10 text-violet-400 hover:text-white hover:bg-violet-500/25 border border-violet-500/30 font-medium"
+                                    }`}
+                                >
+                                    <span className={`w-2 h-2 rounded-full bg-violet-400 ${connectionFilter === "new_today" ? "animate-ping" : "animate-pulse"}`} />
+                                    ✨ New Connect Today ({todayNewlyConnectedDevices.length})
+                                </button>
+
+                                <button
+                                    onClick={() => setConnectionFilter((prev) => (prev === "active_today" ? "all" : "active_today"))}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer flex items-center gap-1.5 ${
+                                        connectionFilter === "active_today"
+                                            ? "bg-emerald-600 text-white font-bold shadow-xs border border-emerald-400 ring-2 ring-emerald-500/30"
+                                            : "bg-emerald-500/10 text-emerald-400 hover:text-white hover:bg-emerald-500/25 border border-emerald-500/30 font-medium"
+                                    }`}
+                                >
+                                    <span className={`w-2 h-2 rounded-full bg-emerald-400 ${connectionFilter === "active_today" ? "animate-ping" : "animate-pulse"}`} />
+                                    ⚡ Active Today ({todayActiveDevices.length})
+                                </button>
+                            </div>
+
+                            {/* Active filter notification pill */}
+                            {connectionFilter !== "all" && (
+                                <div className="flex items-center gap-2 text-xs font-mono">
+                                    <span className="text-[var(--muted)]">Active:</span>
+                                    <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg bg-violet-500/20 text-violet-300 border border-violet-500/40 font-semibold">
+                                        {connectionFilter === "new_today"
+                                            ? `✨ New Connect Today (${filteredDevices.length})`
+                                            : `⚡ Active Today (${filteredDevices.length})`}
+                                        <button
+                                            onClick={() => setConnectionFilter("all")}
+                                            className="ml-1 text-violet-300 hover:text-white cursor-pointer"
+                                            title="Clear connection filter"
+                                        >
+                                            ✕
+                                        </button>
+                                    </span>
+                                </div>
                             )}
                         </div>
 
-                        {/* Editor Filter Pills */}
-                        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
-                            <button
-                                onClick={() => setSelectedEditor("all")}
-                                className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer ${
-                                    selectedEditor === "all"
-                                        ? "bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--line-strong)] font-semibold"
-                                        : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] border border-transparent"
-                                }`}
-                            >
-                                All Editors
-                            </button>
-                            {availableEditors.map((ed) => (
+                        {/* Search Input & Editor Pills Row */}
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                            <div className="relative flex-1">
+                                <svg className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-[var(--muted)]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                                </svg>
+                                <input
+                                    type="text"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    placeholder="Search by Device ID, Code Editor, City, or Country..."
+                                    className="w-full bg-[var(--surface)] text-[var(--fg)] text-xs font-mono rounded-xl pl-10 pr-4 py-2.5 border border-[var(--line)] focus:border-[var(--accent)] outline-none transition-all placeholder:text-[var(--muted)]"
+                                />
+                                {searchQuery && (
+                                    <button
+                                        onClick={() => setSearchQuery("")}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--muted)] hover:text-[var(--fg)] font-mono"
+                                    >
+                                        ✕
+                                    </button>
+                                )}
+                            </div>
+
+                            {/* Editor Filter Pills */}
+                            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0">
                                 <button
-                                    key={ed}
-                                    onClick={() => setSelectedEditor(ed)}
+                                    onClick={() => setSelectedEditor("all")}
                                     className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer ${
-                                        selectedEditor.toLowerCase() === ed.toLowerCase()
-                                            ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold"
-                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] border border-[var(--line)]"
+                                        selectedEditor === "all"
+                                            ? "bg-[var(--surface-3)] text-[var(--fg)] border border-[var(--line-strong)] font-semibold"
+                                            : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] border border-transparent"
                                     }`}
                                 >
-                                    {ed}
+                                    All Editors
                                 </button>
-                            ))}
+                                {availableEditors.map((ed) => (
+                                    <button
+                                        key={ed}
+                                        onClick={() => setSelectedEditor(ed)}
+                                        className={`px-3 py-1.5 rounded-lg text-xs font-mono whitespace-nowrap transition-all cursor-pointer ${
+                                            selectedEditor.toLowerCase() === ed.toLowerCase()
+                                                ? "bg-[var(--accent)] text-[var(--accent-contrast)] font-semibold"
+                                                : "text-[var(--muted)] hover:text-[var(--fg)] hover:bg-[var(--surface-2)] border border-[var(--line)]"
+                                        }`}
+                                    >
+                                        {ed}
+                                    </button>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </section>
@@ -1047,9 +1219,21 @@ export default function QuickDbActivityDashboard({
                         {filteredDevices.length === 0 ? (
                             <div className="col-span-full py-16 text-center rounded-2xl border border-dashed border-[var(--line)] bg-[var(--surface)]/50 space-y-3">
                                 <p className="text-sm font-mono text-[var(--muted)]">
-                                    No devices match your search or date filter criteria.
+                                    {connectionFilter === "new_today"
+                                        ? `No new devices connected today (${todayDateStr}). All existing devices connected on earlier dates.`
+                                        : connectionFilter === "active_today"
+                                        ? `No devices active today (${todayDateStr}).`
+                                        : "No devices match your search or date filter criteria."}
                                 </p>
-                                <div className="flex items-center justify-center gap-3">
+                                <div className="flex flex-wrap items-center justify-center gap-3">
+                                    {connectionFilter !== "all" && (
+                                        <button
+                                            onClick={() => setConnectionFilter("all")}
+                                            className="px-3.5 py-1.5 rounded-lg text-xs font-mono bg-violet-600 text-white font-medium cursor-pointer hover:bg-violet-500 transition-colors"
+                                        >
+                                            Show All Devices ({devicesList.length})
+                                        </button>
+                                    )}
                                     {isDateFilterActive && (
                                         <button
                                             onClick={handleResetDateFilter}
@@ -1080,11 +1264,20 @@ export default function QuickDbActivityDashboard({
                                     const ms = parseTsMs(ts);
                                     return ms !== null && getTzDateStr(ms, currentTimeZone) === todayDateStr;
                                 });
+                                const isNewToday = Boolean(
+                                    device.firstOpenedAt &&
+                                    parseTsMs(device.firstOpenedAt) !== null &&
+                                    getTzDateStr(parseTsMs(device.firstOpenedAt)!, currentTimeZone) === todayDateStr
+                                );
 
                                 return (
                                     <div
                                         key={device.deviceId}
-                                        className="rounded-2xl border border-[var(--line)] bg-[var(--surface)] p-5 space-y-4 hover:border-[var(--line-strong)] transition-all shadow-xs flex flex-col justify-between"
+                                        className={`rounded-2xl border p-5 space-y-4 transition-all shadow-xs flex flex-col justify-between ${
+                                            isNewToday
+                                                ? "border-violet-500/40 bg-[var(--surface)] hover:border-violet-500/70"
+                                                : "border-[var(--line)] bg-[var(--surface)] hover:border-[var(--line-strong)]"
+                                        }`}
                                     >
                                         <div className="space-y-3.5">
                                             {/* Card Top: Device Index, Device Tag Badge, Status, and Actions */}
@@ -1113,7 +1306,12 @@ export default function QuickDbActivityDashboard({
                                                     </span>
 
                                                     {/* Status Badge */}
-                                                    {isActiveToday ? (
+                                                    {isNewToday ? (
+                                                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono bg-violet-500/20 text-violet-300 border border-violet-500/40 font-semibold shadow-xs">
+                                                            <span className="w-2 h-2 rounded-full bg-violet-400 animate-pulse" />
+                                                            ✨ New Connect Today
+                                                        </span>
+                                                    ) : isActiveToday ? (
                                                         <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-mono bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 font-medium">
                                                             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
                                                             Connected Today
@@ -1154,6 +1352,11 @@ export default function QuickDbActivityDashboard({
                                                 <span className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-sky-400 border border-[var(--line)] flex items-center gap-1">
                                                     💻 Tag: Device
                                                 </span>
+                                                {isNewToday && (
+                                                    <span className="px-2 py-0.5 rounded-md bg-violet-500/20 text-violet-300 border border-violet-500/40 flex items-center gap-1 font-semibold">
+                                                        ✨ New Connect Today
+                                                    </span>
+                                                )}
                                                 <span className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--fg)] border border-[var(--line)] flex items-center gap-1">
                                                     ⚙️ {device.codeEditor}
                                                 </span>
@@ -1162,7 +1365,7 @@ export default function QuickDbActivityDashboard({
                                                 </span>
                                                 {device.firstOpenedAt && (
                                                     <span className="px-2 py-0.5 rounded-md bg-[var(--surface-2)] text-[var(--muted)] border border-[var(--line)]" suppressHydrationWarning>
-                                                        🔌 First: {formatRelativeTime(device.firstOpenedAt)}
+                                                        🔌 First: {formatRelativeTime(device.firstOpenedAt, currentTimeZone)}
                                                     </span>
                                                 )}
                                             </div>
@@ -1333,9 +1536,14 @@ export default function QuickDbActivityDashboard({
                                             const ms = parseTsMs(ts);
                                             return ms !== null && getTzDateStr(ms, currentTimeZone) === todayDateStr;
                                         });
+                                        const isNewToday = Boolean(
+                                            device.firstOpenedAt &&
+                                            parseTsMs(device.firstOpenedAt) !== null &&
+                                            getTzDateStr(parseTsMs(device.firstOpenedAt)!, currentTimeZone) === todayDateStr
+                                        );
 
                                         return (
-                                            <tr key={device.deviceId} className="hover:bg-[var(--surface-2)]/50 transition-colors">
+                                            <tr key={device.deviceId} className={`transition-colors ${isNewToday ? "bg-violet-500/5 hover:bg-violet-500/10" : "hover:bg-[var(--surface-2)]/50"}`}>
                                                 <td className="py-3 px-4 font-semibold text-[var(--fg)]">
                                                     <div className="flex items-center gap-1.5">
                                                         <span className="px-1.5 py-0.5 rounded bg-sky-500/10 text-sky-400 text-[10px] border border-sky-500/30">
@@ -1352,10 +1560,15 @@ export default function QuickDbActivityDashboard({
                                                     </div>
                                                 </td>
                                                 <td className="py-3 px-4">
-                                                    {isActiveToday ? (
+                                                    {isNewToday ? (
+                                                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] bg-violet-500/20 text-violet-300 border border-violet-500/40 font-semibold">
+                                                            <span className="w-1.5 h-1.5 rounded-full bg-violet-400 animate-pulse" />
+                                                            ✨ New Today
+                                                        </span>
+                                                    ) : isActiveToday ? (
                                                         <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/30">
                                                             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-                                                            Today
+                                                            Active Today
                                                         </span>
                                                     ) : (
                                                         <span className="px-2 py-0.5 rounded-full text-[10px] bg-[var(--surface-2)] text-[var(--muted)]">

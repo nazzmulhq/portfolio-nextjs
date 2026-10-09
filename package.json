@@ -12,6 +12,7 @@
     "dependencies": {
         "@gsap/react": "^2.1.2",
         "@next/third-parties": "^16.3.0",
+        "@tanstack/react-virtual": "^3.14.13",
         "argon2": "^0.45.1",
         "bcryptjs": "^3.0.3",
         "class-transformer": "^0.5.1",
